@@ -1,79 +1,47 @@
 library(data.table)
 library(raster)
 #Set up the overstory 'A' species
-growthcurves <- c(0, 0.25, 0.5, 0.75, 1)
-MortCurves <- c(5, 10, 15, 20, 25)
-longevity <- c(150, 200, 250, 300)
-shadetolerance <- c(1,3,5)
-Attributes <- c('longevity', 'growthcurve', 'mortalityshape', "shadetolerance")
+growthcurves <- seq(0, 1, 0.1)
+MortCurves <- c(5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 20, 22, 25)
+longevity <- seq(150, 700, 25)
+mANPPproportion <- seq(1,5, 0.25)
+
+
+shadetolerance <- c(1)
+Attributes <- c('longevity', 'growthcurve', 'mortalityshape', "shadetolerance", 'mANPPproportion')
 
 #Pure stands 1:175 There will be double this amount of pure stands because I will run for different ages
-species1 <- expand.grid(longevity, growthcurves, MortCurves, shadetolerance)
+species1 <- expand.grid(longevity, growthcurves, MortCurves, shadetolerance, mANPPproportion)
 names(species1) <- Attributes
 species1$species <- paste0("A", 1:nrow(species1))
 species1 <- data.table(species1)
 #age, B, totalB, speciesProportion - added later
 
-#Make mixed stands
-species2 <- expand.grid(longevity, growthcurves, MortCurves, shadetolerance)
-names(species2) <- c("longevity", "growthcurve","mortalityshape", "shadetolerance")
-species2$species <- paste0("B", 1:nrow(species1))
-species2 <- data.table(species2)
-
-
 #Get number of pixel groups
-cohortData <- data.table(expand.grid(species1$species, species2$species))
-names(cohortData) <- c("Species1", 'Species2')
+cohortData <- data.table('species' = species1$species)
 cohortData$pixelGroup <- 1:nrow(cohortData)
-setkey(cohortData, Species1, Species2)
-
-firstSpecies <- species1[cohortData, on = c(species = "Species1")]
-secondSpecies <- species2[cohortData, on = c(species = "Species2")]
 
 #Now set the extra species column as null, set up the biomass and age
-firstSpecies[, Species2 := NULL]
-secondSpecies[, Species1 := NULL]
-firstSpecies$B <- 500
-firstSpecies$age <- 50
-secondSpecies$B <- 50
-secondSpecies$age <- 10
-firstSpecies$speciesProportion <- 500/550
-secondSpecies$speciesProportion <- 50/550
+cohortData$age <- 1
+species1$maxB <- 5000
+species1$maxANPP <- species1$maxB * species1$mANPPproportion/100
+cohortData$B <- species1$maxANPP 
+
+cohortData$speciesProportion <- 100
+cohortData$totalB <- cohortData$B #Fix 
 #Species B will always be the understory, and has identical traits to species A
 
-cohortData <- rbind(firstSpecies, secondSpecies)
-cohortData$totalB <- 550
-#Adjust pixelGroups to account for 1100 more species
-cohortData$pixelGroup <- cohortData$pixelGroup + nrow(species1)*2
-
-
-#Finally, add back in the pure stands (PureStands)
-species1$pixelGroup <- 1:nrow(species1)
-species2$pixelGroup <- species1$pixelGroup + nrow(species1)
-species2$B <- 50
-species2$age <- 10
-species1$B <- 500
-species1$age <- 50
-
-PureStands <- rbind(species1, species2)
-
-PureStands$speciesProportion <- 1
-PureStands$totalB <- PureStands$B
 
 #####Make LANDR Inputs####
-
-cohortData <- rbind(PureStands, cohortData)
-cohortData[, speciesCode := species] #
 cohortData$ecoregionGroup <- 1
 cohortData <- setcolorder(cohortData, c('species', 'pixelGroup', 'ecoregionGroup', 'age', "B", 'totalB', 'speciesProportion'))
 
-speciesEcoregion <- copy(PureStands)
-speciesEcoregion[, c("ecoregionGroup", "establishprob", "maxB", "maxANPP", "year") := .(1, 0.5, 5000, 5000/30, 0)]
-speciesEcoregion[, c("speciesProportion", "totalB", "growthcurve", "mortalityshape", "age", "B", "longevity", "pixelGroup") := NULL]
-speciesEcoregion[, "speciesCode" := species]
+speciesEcoregion <- copy(species1)
+speciesEcoregion[, c("ecoregionGroup", "establishprob", "maxB", "maxANPP", "year") := .(1, 0.5, species1$maxB, species1$maxANPP, 0)]
+speciesEcoregion[, c("mANPPproportion", "growthcurve", "mortalityshape", "longevity", "species") := NULL]
+speciesEcoregion[, "speciesCode" := species1$species]
 
-SpeciesTable <- copy(PureStands)
-SpeciesTable[, c('totalB', 'speciesProportion', 'age', 'B', 'pixelGroup') := NULL]
+SpeciesTable <- copy(species1)
 SpeciesTable[, c("sexualmature", 'SeedEffDist', 'SeedMaxDist', 'VegProb', 'MinAgeVeg', 'MaxAgeVeg', 'PostFireRegen',
                  'Leaflongevity', 'WoodDecayRate', 'LeafLignin', 'HardSoft') :=
                list(30, 0, 0, 0.5, 0, 0, 'none', 3, 0.07, 0.1, 'soft'), 'species']
@@ -82,8 +50,8 @@ SpeciesTable[, shade := shadetolerance]
 
 pixelGroupMap <- raster(res = c(1,1))
 nrow(pixelGroupMap) <- round(sqrt(max(cohortData$pixelGroup)), 0)
-ncol(pixelGroupMap) <- round(sqrt(max(cohortData$pixelGroup)), 0)
-vals <- c(1:max(cohortData$pixelGroup), rep(NA, ncell(pixelGroupMap) - max(cohortData$pixelGroup)))
+ncol(pixelGroupMap) <- round(sqrt(max(cohortData$pixelGroup)), 0) + 1
+vals <- c(1:max(cohortData$pixelGroup), rep(NA, times = ncell(pixelGroupMap) - max(cohortData$pixelGroup)))
 pixelGroupMap[] <- vals
 
 minRelativeB <- data.table("ecoregionGroup" = 1, X1 = 0.2, X2 = 0.4, X3 = 0.5, X4 = 0.7, X5 = 0.9)
@@ -97,21 +65,19 @@ levels(ecoregionMap) <- data.frame(ID = 1:max(cohortData$pixelGroup, na.rm = TRU
 sppColors <- viridis::viridis(n = nrow(SpeciesTable))
 names(sppColors) <-  SpeciesTable$species
 
-rm(species1, species2, PureStands, firstSpecies, secondSpecies)
-
-
-
 ####RUN IT#####
 library(SpaDES)
 library(raster)
 library(LandR)
 library(sp)
 
-rasterOptions(tmpdir = "temp/")
-# library(sf)
-spadesModulesDirectory <-  c(file.path("modules")) # where modules are 
+rasterOptions(tmpdir = "temp")
+spadesModulesDirectory <-  c(file.path("../Land-R/modules/")) # where modules are 
 modules <- list("LBMR")
-times <- list(start = 0, end = 1)
+times <- list(start = 0, end = 701)
+#Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real, 
+SpeciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
+
 # "PSP_Clean", "gmcsDataPrep",
 
 
@@ -123,7 +89,7 @@ rasterToMatch <- pixelGroupMap
 parameters <- list(
   LBMR = list(.plotInitialTime = NA,
               .saveInitialTime = 0,
-              .saveInterval = 20,
+              .saveInterval = 10,
               seedingAlgorithm = "noDispersal",
               useCache = TRUE,
               successionTimestep = 10,
@@ -134,7 +100,7 @@ parameters <- list(
 
 ## Paths are not workign with multiple module paths yet
 setPaths(cachePath =  file.path("temp/Cache"),
-         modulePath = file.path(getwd(), "modules"),
+         modulePath = file.path("../Land-R/modules/"),
          inputPath = file.path(getwd(), "inputs"),
          outputPath = file.path(getwd(),"outputs/sensitivityCohortData/"))
 paths <- SpaDES.core::getPaths()
@@ -143,10 +109,6 @@ options("spades.moduleCodeChecks" = FALSE)
 
 #Tree species that are important to us
 speciesLayers <- "species"
-
-speciesEcoregion[shadetolerance == 1, maxB := 3000,]
-speciesEcoregion[shadetolerance == 5, maxB := 7000,]
-speciesEcoregion$maxANPP <- speciesEcoregion$maxB/30
 
 objects <- list(
   "studyArea" = studyArea,
