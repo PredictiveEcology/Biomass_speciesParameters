@@ -24,4 +24,4 @@ modules/LBMR_1\.3\.0\.9001\.zip
 NFI_MAP_V0_metadata\.xls
 *inputs/
 cache/
-temp/
+temp/*

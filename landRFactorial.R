@@ -2,7 +2,7 @@ library(data.table)
 library(raster)
 #Set up the overstory 'A' species
 growthcurves <- seq(0, 1, 0.1)
-MortCurves <- c(5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 20, 22, 25)
+MortCurves <- seq(5, 25, 1)
 longevity <- seq(150, 700, 25)
 mANPPproportion <- seq(1,5, 0.25)
 
@@ -18,7 +18,7 @@ species1 <- data.table(species1)
 #age, B, totalB, speciesProportion - added later
 
 #Get number of pixel groups
-cohortData <- data.table('species' = species1$species)
+cohortData <- data.table('speciesCode' = species1$species)
 cohortData$pixelGroup <- 1:nrow(cohortData)
 
 #Now set the extra species column as null, set up the biomass and age
@@ -28,13 +28,13 @@ species1$maxANPP <- species1$maxB * species1$mANPPproportion/100
 cohortData$B <- species1$maxANPP 
 
 cohortData$speciesProportion <- 100
-cohortData$totalB <- cohortData$B #Fix 
+cohortData$sumB <- cohortData$B #Fix 
 #Species B will always be the understory, and has identical traits to species A
 
 
 #####Make LANDR Inputs####
 cohortData$ecoregionGroup <- 1
-cohortData <- setcolorder(cohortData, c('species', 'pixelGroup', 'ecoregionGroup', 'age', "B", 'totalB', 'speciesProportion'))
+cohortData <- setcolorder(cohortData, c('speciesCode', 'pixelGroup', 'ecoregionGroup', 'age', "B", 'sumB', 'speciesProportion'))
 
 speciesEcoregion <- copy(species1)
 speciesEcoregion[, c("ecoregionGroup", "establishprob", "maxB", "maxANPP", "year") := .(1, 0.5, species1$maxB, species1$maxANPP, 0)]
@@ -89,10 +89,10 @@ rasterToMatch <- pixelGroupMap
 parameters <- list(
   LBMR = list(.plotInitialTime = NA,
               .saveInitialTime = 0,
-              .saveInterval = 10,
+              .saveInterval = 5,
               seedingAlgorithm = "noDispersal",
               useCache = TRUE,
-              successionTimestep = 10,
+              successionTimestep = 5,
               initialBiomassSource = "cohortData",
               vegLeadingProportion = 0,
               growthAndMortalityDrivers = "LandR")
@@ -146,6 +146,7 @@ opts <- options(
 
 set.seed(161616)
 
+#EDIT ALGO 2 IN LBMR/HELPERS TO ALGO 1. 
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects,
                  paths = paths, loadOrder = unlist(modules))
 
