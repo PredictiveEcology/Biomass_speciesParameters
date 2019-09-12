@@ -2,3 +2,25 @@
 .Rhistory
 .RData
 .Ruserdata
+# History files
+.Rapp.history
+# Example code in package build process
+*-Ex.R
+# RStudio files
+.Rproj.user/
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+outputs/
+*.rda
+*.db
+GADM_2\.8_CAN_adm1\.rds
+.Rproj.user
+modules/LBMR_1\.3\.0\.9001\.zip
+*.tif
+
+NFI_MAP_V0_metadata\.xls
+*inputs/
+cache/
