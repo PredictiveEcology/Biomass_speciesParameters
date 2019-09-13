@@ -20,7 +20,7 @@ GADM_2\.8_CAN_adm1\.rds
 .Rproj.user
 modules/LBMR_1\.3\.0\.9001\.zip
 *.tif
-
+modules/
 NFI_MAP_V0_metadata\.xls
 *inputs/
 cache/
