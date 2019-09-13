@@ -24,7 +24,7 @@ cohortData$pixelGroup <- 1:nrow(cohortData)
 #Now set the extra species column as null, set up the biomass and age
 cohortData$age <- 1
 species1$maxB <- 5000
-species1$maxANPP <- species1$maxB * species1$mANPPproportion/100
+species1$maxANPP <- asInteger(species1$maxB * species1$mANPPproportion/100)
 cohortData$B <- species1$maxANPP 
 
 cohortData$speciesProportion <- 100
@@ -74,7 +74,7 @@ library(sp)
 rasterOptions(tmpdir = "temp")
 spadesModulesDirectory <-  c(file.path("../Land-R/modules/")) # where modules are 
 modules <- list("LBMR")
-times <- list(start = 0, end = 701)
+times <- list(start = 0, end = 700)
 #Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real, 
 SpeciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
 
@@ -88,11 +88,11 @@ rasterToMatch <- pixelGroupMap
 
 parameters <- list(
   LBMR = list(.plotInitialTime = NA,
-              .saveInitialTime = 0,
-              .saveInterval = 5,
+              .saveInitialTime = NA,
+              .saveInterval = NA,
               seedingAlgorithm = "noDispersal",
               useCache = TRUE,
-              successionTimestep = 5,
+              successionTimestep = 1,
               initialBiomassSource = "cohortData",
               vegLeadingProportion = 0,
               growthAndMortalityDrivers = "LandR")
@@ -100,9 +100,9 @@ parameters <- list(
 
 ## Paths are not workign with multiple module paths yet
 setPaths(cachePath =  file.path("temp/Cache"),
-         modulePath = file.path("../Land-R/modules/"),
+         modulePath = file.path("modules"),
          inputPath = file.path(getwd(), "inputs"),
-         outputPath = file.path(getwd(),"outputs/sensitivityCohortData/"))
+         outputPath = file.path(getwd(),"outputs"))
 paths <- SpaDES.core::getPaths()
 
 options("spades.moduleCodeChecks" = FALSE)
@@ -146,9 +146,23 @@ opts <- options(
 
 set.seed(161616)
 
-#EDIT ALGO 2 IN LBMR/HELPERS TO ALGO 1. 
+#EDIT ALGO 2 IN LBMR/HELPERS TO ALGO 1. #Also made succesionTimeStep 1 so calculateSumB wouldnt' return NA
+#Also had to completely remove lines in NoDiserpsal, to shut off all regeneration
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects,
                  paths = paths, loadOrder = unlist(modules))
 
 mySimOut <- spades(mySim, debug = 2)
 
+#####Pull in the files#####
+library(magrittr)
+cds <- list.files("outputs/", full.names = TRUE) %>%
+  lapply(., FUN = 'readRDS') %>%
+  rbindlist(.)
+
+# specTraits <- SpeciesTable[, .(longevity, growthcurve, mortalityshape, species)]
+# cds[specTraits, on = c("speciesCode" = 'species')]
+
+#This is dumb, the merge shouldn't be necessary on rerun
+# temp <- species1[, .(species, maxANPPpct)]
+# cds <- cds[temp, on = c("speciesCode" = 'species')]
+saveRDS(cds, file = "factorialCohortData.Rdat")
