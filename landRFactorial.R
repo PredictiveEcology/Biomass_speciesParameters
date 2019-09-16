@@ -166,3 +166,10 @@ cds <- list.files("outputs/", full.names = TRUE) %>%
 # temp <- species1[, .(species, maxANPPpct)]
 # cds <- cds[temp, on = c("speciesCode" = 'species')]
 saveRDS(cds, file = "factorialCohortData.Rdat")
+
+##### Work on function to predict ####
+
+bestTraits <- SpeciesTable[growthcurve < 0.2 & mortalityshape > 20 & maxANPP > 200 & longevity > 400]
+cdsMax <- cds[, .('maxB' = max(B)), .(speciesCode)]
+cdsMax[, achievedMaxB := cdsMax$maxB == 5000]
+cdsMax[speciesCode %in% bestTraits$species,]
