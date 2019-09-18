@@ -25,3 +25,4 @@ NFI_MAP_V0_metadata\.xls
 *inputs/
 cache/
 temp/*
+/data
