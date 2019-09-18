@@ -22,8 +22,16 @@ defineModule(sim, list(
     defineParameter(".plotInterval", "numeric", NA, NA, NA, "This describes the simulation time interval between plot events"),
     defineParameter(".saveInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first save event should occur"),
     defineParameter(".saveInterval", "numeric", NA, NA, NA, "This describes the simulation time interval between save events"),
-    defineParameter(".useCache", "logical", FALSE, NA, NA, paste("Should this entire module be run with caching activated?",
-    "This is generally intended for data-type modules, where stochasticity and time are not relevant"))
+    defineParameter(".useCache", "logical", FALSE, NA, NA, 
+                    desc = paste("Should this entire module be run with caching activated?",
+                          "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
+    defineParameter("PSPperiod", "numeric", c(1958, 2011), NA, NA, 
+                    desc = paste("The years by which to compute climate normals and subset sampling plot data. Must be a vector of at least length 2")),
+    defineParameter("useHeight", "logical", FALSE, NA, NA, 
+                    desc = paste("Should height be used to calculate biomass (in addition to DBH).
+                    Don't use if studyAreaPSP includes Alberta")),
+    defineParameter("biomassModel", "character", "Lambert2005", NA, NA, 
+                    desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
   ),
   inputObjects = bind_rows(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
@@ -121,11 +129,15 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 
 ### template initialization
 Init <- function(sim) {
-  # # ! ----- EDIT BELOW ----- ! #
-#this module needs to clean and treat the PSP data, 
-  # ! ----- STOP EDITING ----- ! #
+  
+  #prepare PSPdata
+  PSPanPPP <- prepPSPanPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
+                          PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
+                          useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomasssModel)
+  
+  
+  
 
-  return(invisible(sim))
 }
 
 ### template for save events
@@ -147,6 +159,78 @@ plotFun <- function(sim) {
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
+
+prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
+                          PSPclimData, useHeight, biomassModel,
+                          PSPperiod) {
+  
+  #Crop points to studyArea
+  tempSA <- spTransform(x = studyAreaANPP, CRSobj = crs(PSPgis)) %>%
+    st_as_sf(.)
+  message(yellow("Filtering PSPs for ANPP to study Area..."))
+  PSP_sa <- PSPgis[tempSA,] %>% #Find how to cache this. '[' did not work
+    setkey(., OrigPlotID1)
+  message(yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
+  #Restrict climate variables to only thosee of interest.. should be param
+  PSPclimData <- PSPclimData[,.("OrigPlotID1" = ID1, Year, CMI, MAT)]
+  
+  #Filter other PSP datasets to those in study Area
+  PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
+  PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
+  PSPclimData <- PSPclimData[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
+  
+  #length(PSPclimData)/length(PSP_sa) should always yield a whole number.
+  #Filter data by study period
+  message(yellow("Filtering PSPs for ANPP by study period..."))
+  PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) &
+                             MeasureYear < max(PSPperiod),]
+  PSPplot <- PSPplot[MeasureYear > min(PSPperiod) &
+                       MeasureYear < max(PSPperiod),]
+  PSPclimData[Year > min(PSPperiod) & Year < max(PSPperiod),]
+  
+  #Join data (should be small enough by now)
+  PSPmeasure <- PSPmeasure[PSPplot, on = c('MeasureID', 'OrigPlotID1', 'MeasureYear')]
+  PSPmeasure[, c('Longitude', 'Latitude', 'Easting', 'Northing', 'Zone'):= NULL]
+  
+  #Filter by > 30 trees at first measurement (P) to ensure forest.
+  forestPlots <- PSPmeasure[, .(measures = .N), OrigPlotID1] %>%
+    .[measures >= 30,]
+  PSPmeasure <- PSPmeasure[OrigPlotID1 %in% forestPlots$OrigPlotID1,]
+  PSPplot <- PSPplot[OrigPlotID1 %in% PSPmeasure$OrigPlotID1,]
+  
+  #Restrict to trees > 10 DBH (P) This gets rid of some big trees. Some 15 metres tall
+  PSPmeasure <- PSPmeasure[DBH >= 10,]
+  
+
+  #Calculate biomass
+  tempOut <- biomassCalculation(species = PSPmeasure$newSpeciesName,
+                                DBH = PSPmeasure$DBH,
+                                height = PSPmeasure$Height,
+                                includeHeight = useHeight,
+                                equationSource = biomassModel)
+  message(yellow("No PSP biomass estimate possible for these species: "))
+  print(tempOut$missedSpecies)
+  PSPmeasure$biomass <- tempOut$biomass
+  PSPmeasure <- PSPmeasure[biomass != 0]
+ 
+  #Need to join the psps with PSPgis to get the actual coords with same crs
+  browser() #you need to join plots and measures, to get age
+  PSPmeasure <- PSPgis[psp, on = c("OrigPlotID1" = 'OrigPlotID1')]
+  #remove some redundant columns from before the merge + useless GIS
+  psp[, c('geometry', 'Latitude', 'Longitude', 'Easting', 'Northing','i.MeasureYear', 'i.OrigPlotID1') := NULL]
+  
+  #standardize biomass by plotsize
+  #Note: there are still obvious errors in PSP data. e.g. plotSize 0.0029 ha, but 90 trees? yeah right buddy
+  psp$Biomass <- psp$Biomass/psp$PlotSize/10 #puts in LandR units of g/m2 and scales by plot size
+  psp$newSpeciesName <- as.factor(psp$newSpeciesName)
+  psp <- psp[standAge > 0]
+  psp <- psp[!is.na(Biomass)]
+  
+  
+  
+  return(PSPmodelData)
+}
+
 
 ### template for your event1
 Event1 <- function(sim) {
