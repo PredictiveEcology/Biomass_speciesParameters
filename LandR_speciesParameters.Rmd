@@ -1,5 +1,5 @@
 ---
-title: "estimatingANPP"
+title: "LandR_speciesParameters"
 author: ""
 date: "17 September 2019"
 output: pdf_document
@@ -34,7 +34,7 @@ parameters <- list(
   #module1 = list(param1 = value1, param2 = value2),
   #module2 = list(param1 = value1, param2 = value2)
 )
-modules <- list("estimatingANPP")
+modules <- list("LandR_speciesParameters")
 objects <- list()
 inputs <- list()
 outputs <- list()
@@ -62,7 +62,7 @@ Write what is saved.
 ## Input data
 
 How to obtain input data, and a description of the data required by the module.
-If `sourceURL` is specified, `downloadData("estimatingANPP", "path/to/modules/dir")` may be sufficient.
+If `sourceURL` is specified, `downloadData("LandR_speciesParameters", "path/to/modules/dir")` may be sufficient.
 
 ## Output data
 

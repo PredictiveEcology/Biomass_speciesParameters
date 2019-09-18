@@ -4,17 +4,17 @@
 # to all modules. Functions can be used without sim$ as they are namespaced, like functions
 # in R packages. If exact location is required, functions will be: sim$<moduleName>$FunctionName
 defineModule(sim, list(
-  name = "estimatingANPP",
+  name = "LandR_speciesParameters",
   description = NA, #"insert module description here",
   keywords = NA, # c("insert key words here"),
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@example.com", role = c("aut", "cre"))),
   childModules = character(0),
-  version = list(SpaDES.core = "0.2.6", estimatingANPP = "0.0.1"),
+  version = list(SpaDES.core = "0.2.6", LandR_speciesParameters = "0.0.1"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
-  documentation = list("README.txt", "estimatingANPP.Rmd"),
+  documentation = list("README.txt", "LandR_speciesParameters.Rmd"),
   reqdPkgs = list(),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
@@ -55,7 +55,7 @@ defineModule(sim, list(
 ## event types
 #   - type `init` is required for initialization
 
-doEvent.estimatingANPP = function(sim, eventTime, eventType) {
+doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
   switch(
     eventType,
     init = {
@@ -66,8 +66,8 @@ doEvent.estimatingANPP = function(sim, eventTime, eventType) {
       sim <- Init(sim)
 
       # schedule future event(s)
-      sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "estimatingANPP", "plot")
-      sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "estimatingANPP", "save")
+      sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "LandR_speciesParameters", "plot")
+      sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "LandR_speciesParameters", "save")
     },
     plot = {
       # ! ----- EDIT BELOW ----- ! #
@@ -77,7 +77,7 @@ doEvent.estimatingANPP = function(sim, eventTime, eventType) {
       # schedule future event(s)
 
       # e.g.,
-      #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "estimatingANPP", "plot")
+      #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "LandR_speciesParameters", "plot")
 
       # ! ----- STOP EDITING ----- ! #
     },
@@ -91,7 +91,7 @@ doEvent.estimatingANPP = function(sim, eventTime, eventType) {
       # schedule future event(s)
 
       # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "estimatingANPP", "save")
+      # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "LandR_speciesParameters", "save")
 
       # ! ----- STOP EDITING ----- ! #
     },
@@ -105,7 +105,7 @@ doEvent.estimatingANPP = function(sim, eventTime, eventType) {
       # schedule future event(s)
 
       # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + increment, "estimatingANPP", "templateEvent")
+      # sim <- scheduleEvent(sim, time(sim) + increment, "LandR_speciesParameters", "templateEvent")
 
       # ! ----- STOP EDITING ----- ! #
     },

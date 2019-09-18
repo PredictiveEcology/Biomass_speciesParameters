@@ -3,7 +3,7 @@
 # please specify the package you need to run the sim function in the test files.
 
 # to test all the test files in the tests folder:
-test_dir("C:/Ian/estimatingANPP/tests/testthat")
+test_dir("C:/Ian/LandR_speciesParameters/tests/testthat")
 
 # Alternative, you can use test_file to test individual test file, e.g.:
-test_file("C:/Ian/estimatingANPP/tests/testthat/test-template.R")
+test_file("C:/Ian/LandR_speciesParameters/tests/testthat/test-template.R")
