@@ -31,7 +31,7 @@ defineModule(sim, list(
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
                     Don't use if studyAreaPSP includes Alberta")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA, 
-                    desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
+                    desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'"))
   ),
   inputObjects = bind_rows(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
@@ -105,15 +105,6 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
     },
     event1 = {
       # ! ----- EDIT BELOW ----- ! #
-      # do stuff for this event
-
-      # e.g., call your custom functions/methods here
-      # you can define your own methods below this `doEvent` function
-
-      # schedule future event(s)
-
-      # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + increment, "LandR_speciesParameters", "templateEvent")
 
       # ! ----- STOP EDITING ----- ! #
     },
@@ -131,13 +122,9 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 Init <- function(sim) {
   
   #prepare PSPdata
-  PSPanPPP <- prepPSPanPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
+  PSPanPPP <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
                           PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
                           useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomasssModel)
-  
-  
-  
-
 }
 
 ### template for save events
@@ -161,8 +148,7 @@ plotFun <- function(sim) {
 }
 
 prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
-                          PSPclimData, useHeight, biomassModel,
-                          PSPperiod) {
+                          useHeight, biomassModel, PSPperiod) {
   
   #Crop points to studyArea
   tempSA <- spTransform(x = studyAreaANPP, CRSobj = crs(PSPgis)) %>%
@@ -171,13 +157,10 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   PSP_sa <- PSPgis[tempSA,] %>% #Find how to cache this. '[' did not work
     setkey(., OrigPlotID1)
   message(yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
-  #Restrict climate variables to only thosee of interest.. should be param
-  PSPclimData <- PSPclimData[,.("OrigPlotID1" = ID1, Year, CMI, MAT)]
   
   #Filter other PSP datasets to those in study Area
   PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
   PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
-  PSPclimData <- PSPclimData[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
   
   #length(PSPclimData)/length(PSP_sa) should always yield a whole number.
   #Filter data by study period
@@ -186,7 +169,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                              MeasureYear < max(PSPperiod),]
   PSPplot <- PSPplot[MeasureYear > min(PSPperiod) &
                        MeasureYear < max(PSPperiod),]
-  PSPclimData[Year > min(PSPperiod) & Year < max(PSPperiod),]
   
   #Join data (should be small enough by now)
   PSPmeasure <- PSPmeasure[PSPplot, on = c('MeasureID', 'OrigPlotID1', 'MeasureYear')]
@@ -226,8 +208,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   psp <- psp[standAge > 0]
   psp <- psp[!is.na(Biomass)]
   
-  
-  
   return(PSPmodelData)
 }
 
@@ -245,34 +225,25 @@ Event1 <- function(sim) {
 }
 
 .inputObjects <- function(sim) {
-  # Any code written here will be run during the simInit for the purpose of creating
-  # any objects required by this module and identified in the inputObjects element of defineModule.
-  # This is useful if there is something required before simulation to produce the module
-  # object dependencies, including such things as downloading default datasets, e.g.,
-  # downloadData("LCC2005", modulePath(sim)).
-  # Nothing should be created here that does not create a named object in inputObjects.
-  # Any other initiation procedures should be put in "init" eventType of the doEvent function.
-  # Note: the module developer can check if an object is 'suppliedElsewhere' to
-  # selectively skip unnecessary steps because the user has provided those inputObjects in the
-  # simInit call, or another module will supply or has supplied it. e.g.,
-  # if (!suppliedElsewhere('defaultColor', sim)) {
-  #   sim$map <- Cache(prepInputs, extractURL('map')) # download, extract, load file from url in sourceURL
-  # }
 
-  #cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
+  cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   if (!suppliedElsewhere("reducedFactorialCohortData", sim)) {
     sim$reducedFactorialCohortData <- prepInputs(targetFile = "reducedFactorialCD.Rdat", 
+                                                 destinationPath = dataPath(sim),
+                                                 fun = "readRDS",
                                                  url = extractURL('reducedFactorialCohortData', sim),
-                                                 useCache = TRUE)
+                                                 useCache = TRUE, userTags = c(cacheTags, "reducedFactorial"))
   }
   
   if (!suppliedElsewhere("factorialSpeciesTable", sim)) {
     sim$factorialSpeciesTable <- prepInputs(targetFile = "factorialSpeciesTable.Rdat",
+                                            destinationPath = dataPath(sim),
                                             url = extractURL('factorialSpeciesTable', sim), 
-                                            useCache = TRUE)
+                                            fun = "readRDS",
+                                            useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
