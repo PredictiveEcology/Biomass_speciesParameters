@@ -130,7 +130,9 @@ Init <- function(sim) {
   #standardize biomass by plotsize
   #Note: there are still obvious errors in PSP data. e.g. plotSize 0.0029 ha, but 90 trees? yeah right buddy
   #puts in LandR units of g/m2 and scales by plot size
-  psp$Biomass <- psp$Biomass/psp$PlotSize/10
+  pspGrowthCurves <- buildGrowthCurves(PSPdata = psp, speciesTable = sim$speciesTable)
+  
+  
 }
 
 ### template for save events
@@ -151,71 +153,6 @@ plotFun <- function(sim) {
 
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
-}
-
-prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
-                          useHeight, biomassModel, PSPperiod) {
-  
-  #Crop points to studyArea
-  tempSA <- spTransform(x = studyAreaANPP, CRSobj = crs(PSPgis)) %>%
-    st_as_sf(.)
-  message(yellow("Filtering PSPs for ANPP to study Area..."))
-  PSP_sa <- PSPgis[tempSA,] %>% #Find how to cache this. '[' did not work
-    setkey(., OrigPlotID1)
-  message(yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
-  
-  #Filter other PSP datasets to those in study Area
-  PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
-  PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
-  
-  #length(PSPclimData)/length(PSP_sa) should always yield a whole number.
-  #Filter data by study period
-  message(yellow("Filtering PSPs for ANPP by study period..."))
-  PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) &
-                             MeasureYear < max(PSPperiod),]
-  PSPplot <- PSPplot[MeasureYear > min(PSPperiod) &
-                       MeasureYear < max(PSPperiod),]
-  
-  #Join data (should be small enough by now)
-  PSPmeasure <- PSPmeasure[PSPplot, on = c('MeasureID', 'OrigPlotID1', 'MeasureYear')]
-  PSPmeasure[, c('Longitude', 'Latitude', 'Easting', 'Northing', 'Zone'):= NULL]
-  
-  #Filter by > 30 trees at first measurement (P) to ensure forest.
-  forestPlots <- PSPmeasure[, .(measures = .N), OrigPlotID1] %>%
-    .[measures >= 30,]
-  PSPmeasure <- PSPmeasure[OrigPlotID1 %in% forestPlots$OrigPlotID1,]
-  PSPplot <- PSPplot[OrigPlotID1 %in% PSPmeasure$OrigPlotID1,]
-  
-  #Restrict to trees > 10 DBH (P) This gets rid of some big trees. Some 15 metres tall
-  PSPmeasure <- PSPmeasure[DBH >= 10,]
-  
-  browser()
-
-  #Calculate biomass
-  tempOut <- biomassCalculation(species = PSPmeasure$newSpeciesName,
-                                DBH = PSPmeasure$DBH,
-                                height = PSPmeasure$Height,
-                                includeHeight = useHeight,
-                                equationSource = biomassModel)
-  message(yellow("No PSP biomass estimate possible for these species: "))
-  print(tempOut$missedSpecies)
-  PSPmeasure$biomass <- tempOut$biomass
-  PSPmeasure <- PSPmeasure[biomass != 0]
- 
-  #Need to join the psps with PSPgis to get the actual coords with same crs
-  browser() #you need to join plots and measures, to get age
-  PSPmeasure <- as.data.table(PSPgis)[PSPmeasure, on = "OrigPlotID1"]
-  PSPmeasure
-  
-  #remove some redundant columns from before the merge + useless GIS
-  PSPmeasure[, geometry := NULL]
-  
-  PSPmeasure$newSpeciesName <- as.factor(PSPmeasure$newSpeciesName)
-  PSPmeasure[, standAge := baseSA + MeasureYear - baseYear]
-  PSPmeasure <- PSPmeasure[standAge > 0]
-  PSPmeasure <- PSPmeasure[!is.na(Biomass)]
-  
-  return(PSPmeasure)
 }
 
 
