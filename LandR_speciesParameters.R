@@ -15,7 +15,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "LandR_speciesParameters.Rmd"),
-  reqdPkgs = list(),
+  reqdPkgs = list("PredictiveEcology/pemisc@development"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first plot event should occur"),
@@ -122,9 +122,15 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 Init <- function(sim) {
   
   #prepare PSPdata
-  PSPanPPP <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
+  psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
                           PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
-                          useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomasssModel)
+                          useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel)
+  
+  #need to scale biomass by area 
+  #standardize biomass by plotsize
+  #Note: there are still obvious errors in PSP data. e.g. plotSize 0.0029 ha, but 90 trees? yeah right buddy
+  #puts in LandR units of g/m2 and scales by plot size
+  psp$Biomass <- psp$Biomass/psp$PlotSize/10
 }
 
 ### template for save events
@@ -183,6 +189,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   #Restrict to trees > 10 DBH (P) This gets rid of some big trees. Some 15 metres tall
   PSPmeasure <- PSPmeasure[DBH >= 10,]
   
+  browser()
 
   #Calculate biomass
   tempOut <- biomassCalculation(species = PSPmeasure$newSpeciesName,
@@ -197,18 +204,18 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
  
   #Need to join the psps with PSPgis to get the actual coords with same crs
   browser() #you need to join plots and measures, to get age
-  PSPmeasure <- PSPgis[psp, on = c("OrigPlotID1" = 'OrigPlotID1')]
+  PSPmeasure <- as.data.table(PSPgis)[PSPmeasure, on = "OrigPlotID1"]
+  PSPmeasure
+  
   #remove some redundant columns from before the merge + useless GIS
-  psp[, c('geometry', 'Latitude', 'Longitude', 'Easting', 'Northing','i.MeasureYear', 'i.OrigPlotID1') := NULL]
+  PSPmeasure[, geometry := NULL]
   
-  #standardize biomass by plotsize
-  #Note: there are still obvious errors in PSP data. e.g. plotSize 0.0029 ha, but 90 trees? yeah right buddy
-  psp$Biomass <- psp$Biomass/psp$PlotSize/10 #puts in LandR units of g/m2 and scales by plot size
-  psp$newSpeciesName <- as.factor(psp$newSpeciesName)
-  psp <- psp[standAge > 0]
-  psp <- psp[!is.na(Biomass)]
+  PSPmeasure$newSpeciesName <- as.factor(PSPmeasure$newSpeciesName)
+  PSPmeasure[, standAge := baseSA + MeasureYear - baseYear]
+  PSPmeasure <- PSPmeasure[standAge > 0]
+  PSPmeasure <- PSPmeasure[!is.na(Biomass)]
   
-  return(PSPmodelData)
+  return(PSPmeasure)
 }
 
 
