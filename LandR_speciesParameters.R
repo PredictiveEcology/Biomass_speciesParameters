@@ -27,6 +27,8 @@ defineModule(sim, list(
                           "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
     defineParameter("PSPperiod", "numeric", c(1958, 2011), NA, NA, 
                     desc = paste("The years by which to compute climate normals and subset sampling plot data. Must be a vector of at least length 2")),
+    defineParameter("sppEquivCol", "character", "Boreal", NA, NA,
+                    "The column in sim$specieEquivalency data.table to group PSP species by"),
     defineParameter("useHeight", "logical", FALSE, NA, NA, 
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
                     Don't use if studyAreaPSP includes Alberta")),
@@ -52,6 +54,9 @@ defineModule(sim, list(
     expectsInput("speciesEcoregion", "data.table",
                  desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
+    expectsInput("sppEquiv", "data.table",
+                 desc = "table of species equivalencies. See LandR::sppEquivalencies_CA.",
+                 sourceURL = ""),
     expectsInput("studyAreaANPP", "SpatialPolygonsDataFrame", desc = "study area used to crop PSP data before building growth curves")
   ),
   outputObjects = bind_rows(
