@@ -15,7 +15,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "LandR_speciesParameters.Rmd"),
-  reqdPkgs = list("PredictiveEcology/pemisc@development"),
+  reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv'),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first plot event should occur"),
@@ -27,11 +27,13 @@ defineModule(sim, list(
                           "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
     defineParameter("PSPperiod", "numeric", c(1958, 2011), NA, NA, 
                     desc = paste("The years by which to compute climate normals and subset sampling plot data. Must be a vector of at least length 2")),
-    defineParameter("sppEquivCol", "character", "Boreal", NA, NA,
-                    "The column in sim$specieEquivalency data.table to group PSP species by"),
+    defineParameter("sppEquivCol", "character", NA, NA, NA,
+                    paste("The column in sim$specieEquivalency data.table to group species by. This parameter should share the same",
+                          "name as in Boreal_LBMRDataPrep. PSPs are aggregated by names in the PSP column and traits estimated",
+                          "for the corresponding names in the sppEquivCol")),
     defineParameter("useHeight", "logical", FALSE, NA, NA, 
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
-                    Don't use if studyAreaPSP includes Alberta")),
+                    Advise against including height unless you work ONLY in BC")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA, 
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'"))
   ),
@@ -47,21 +49,25 @@ defineModule(sim, list(
     expectsInput(objectName = "PSPmeasure", objectClass = "data.table", desc = "merged PSP and TSP individual measurements"),
     expectsInput(objectName = "PSPplot", objectClass = "data.table", desc = "merged PSP and TSP plot data"),
     expectsInput(objectName = "PSPgis", objectClass = "sf", desc = "Plot location sf object. Contains duplicates"),
-    expectsInput("species", "data.table",
+    expectsInput(objectName = "species", "data.table",
                  desc = paste("a table that has species traits such as longevity, shade tolerance, etc.",
                               "Default is partially based on Dominic Cir and Yan's project"),
                  sourceURL = "https://raw.githubusercontent.com/dcyr/LANDIS-II_IA_generalUseFiles/master/speciesTraits.csv"),
-    expectsInput("speciesEcoregion", "data.table",
+    expectsInput(objectName = "speciesEcoregion", "data.table",
                  desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
-    expectsInput("sppEquiv", "data.table",
+    expectsInput(objectName = "sppEquiv", "data.table",
                  desc = "table of species equivalencies. See LandR::sppEquivalencies_CA.",
                  sourceURL = ""),
-    expectsInput("studyAreaANPP", "SpatialPolygonsDataFrame", desc = "study area used to crop PSP data before building growth curves")
+    expectsInput(objectName = "studyAreaANPP", "SpatialPolygonsDataFrame", desc = "study area used to crop PSP data before building growth curves")
   ),
   outputObjects = bind_rows(
     #createsOutput("objectName", "objectClass", "output object description", ...),
-    createsOutput(objectName = NA, objectClass = NA, desc = NA)
+    createsOutput(objectName = 'speciesGAMMs', objectClass = 'list', 
+                  desc = paste('a list of mixed-effect general additive models (gamm) for each tree species',
+                               'modeling biomass as a function of age')),
+    createsOutput("species", "data.table",
+                  desc = "a table that has species traits such as longevity..."),
   )
 ))
 
@@ -83,28 +89,15 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "LandR_speciesParameters", "save")
     },
     plot = {
-      # ! ----- EDIT BELOW ----- ! #
-      # do stuff for this event
-
-      #plotFun(sim) # uncomment this, replace with object to plot
-      # schedule future event(s)
-
-      # e.g.,
+     
       #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "LandR_speciesParameters", "plot")
 
       # ! ----- STOP EDITING ----- ! #
     },
     save = {
-      # ! ----- EDIT BELOW ----- ! #
-      # do stuff for this event
 
-      # e.g., call your custom functions/methods here
-      # you can define your own methods below this `doEvent` function
 
-      # schedule future event(s)
-
-      # e.g.,
-      # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "LandR_speciesParameters", "save")
+    # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "LandR_speciesParameters", "save")
 
       # ! ----- STOP EDITING ----- ! #
     },
@@ -125,19 +118,29 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 
 ### template initialization
 Init <- function(sim) {
-  
+
   #prepare PSPdata
   psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
-                          PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
-                          useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel)
+                     PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
+                     useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel)
+
+  sim$speciesGAMMs <- buildGrowthCurves(PSPdata = psp, 
+                                        speciesCol = P(sim)$sppEquivCol,
+                                        sppEquiv = sim$sppEquiv)
+  classes <- lapply(sim$speciesGAMMs, FUN = 'class')
+  badModels <- classes[classes == 'try-error']
+  if (!is.null(badModels)) {
+    message("convergence failures for these PSP growth curve models: ")
+    print(names(badModels))
+  }
   
-  #need to scale biomass by area 
-  #standardize biomass by plotsize
-  #Note: there are still obvious errors in PSP data. e.g. plotSize 0.0029 ha, but 90 trees? yeah right buddy
-  #puts in LandR units of g/m2 and scales by plot size
-  pspGrowthCurves <- buildGrowthCurves(PSPdata = psp, speciesTable = sim$speciesTable)
-  
-  
+  modifedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs, 
+                                             speciesTable = sim$species,
+                                             speciesEcoregion = sim$speciesEcoregion,
+                                             factorialTraits = sim$factorialSpeciesTable,
+                                             factorialBiomass = sim$reducedFactorialCohortData,
+                                             sppEquiv = sim$sppEquiv,
+                                             sppEquivCol = P(sim)$sppEquivCol)
 }
 
 ### template for save events
