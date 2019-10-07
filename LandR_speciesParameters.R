@@ -134,13 +134,18 @@ Init <- function(sim) {
     print(names(badModels))
   }
   
-  modifedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs, 
+  modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs, 
                                              speciesTable = sim$species,
                                              speciesEcoregion = sim$speciesEcoregion,
                                              factorialTraits = sim$factorialSpeciesTable,
                                              factorialBiomass = sim$reducedFactorialCohortData,
                                              sppEquiv = sim$sppEquiv,
                                              sppEquivCol = P(sim)$sppEquivCol)
+
+  #Still have to actually collapse modifiedSpeciesTables and replace traits with it
+  newTraits <- rbindlist(modifiedSpeciesTables, fill = TRUE)
+  newTraits[is.na(mANPPproportion), c('mANPPproportion', 'inflationFactor') := .(3.33, 1)] #default mANPP
+  return(newTraits)
 }
 
 ### template for save events

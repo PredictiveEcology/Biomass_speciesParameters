@@ -126,7 +126,7 @@ modifySpeciesTable <- function(gamms, speciesTable, speciesEcoregion, factorialT
                                factorialBiomass, sppEquiv, sppEquivCol) {
  
   #change P(sim)$sppEquivCol to Match Boreal, always use PSP for this module where it is currently used
-  browser()
+ 
   factorialBiomass[, species := speciesCode]
   setkey(factorialTraits, species)
   setkey(factorialBiomass, species)
@@ -142,9 +142,9 @@ modifySpeciesTable <- function(gamms, speciesTable, speciesEcoregion, factorialT
     if (class(Gamm) == 'try-error') {
       return(traits)
     }
-   
-    agesToPredict <- round(quantile(Gamm$originalData$standAge, probs = c(0.05, 0.95)))
-    predData <- data.table(standAge = agesToPredict[1]:agesToPredict[2])
+    #We already subset the PSP ages to 90th quantile, do we need to subset again?
+    # agesToPredict <- round(quantile(Gamm$originalData$standAge, probs = c(0.05, 0.95)))
+    predData <- data.table(standAge = min(Gamm$originalData$standAge):max(Gamm$originalData$standAge))#agesToPredict)[1]:agesToPredict[2])
     output <- predict(Gamm$gam, predData, se.fit = TRUE)
 
     closestLongevity <- abs(fT$longevity - traits$longevity) == min(abs(fT$longevity - traits$longevity))
@@ -154,7 +154,7 @@ modifySpeciesTable <- function(gamms, speciesTable, speciesEcoregion, factorialT
     CandidateValues <- fB[CandidateTraits]
     
     #WARNING: THIS MAY REMOVE THE TRUE MAX BIOMASS (e.g. top of the curve) - reconsider
-    CandidateValues <- CandidateValues[age >= agesToPredict[1] & age <= agesToPredict[2]]
+    CandidateValues <- CandidateValues[age >= min(predData$standAge) & age <= max(predData$standAge)]
     pred <- data.table("age" = predData$standAge, "predBiomass" = output$fit, 'se' = output$se.fit)
     
     setkey(pred, age)
@@ -162,14 +162,14 @@ modifySpeciesTable <- function(gamms, speciesTable, speciesEcoregion, factorialT
     CandidateValues <- CandidateValues[pred]
     sMaxBs <- CandidateValues[, .('sMaxB' = max(B)), 'speciesCode']
     
-    sMaxBs[, 'scaleFactor' := sMaxB/max(pred$predBiomass)]
-    sMaxBs[, 'inflationFactor' := sMaxB/5000]
+    sMaxBs[, 'scaleFactor' := max(pred$predBiomass)/sMaxB]
+    sMaxBs[, 'inflationFactor' := 5000/sMaxB]
     #scale factor is the achieved maxB in the simulation / PSP maxB. 
     #We use this to scale simulation values to PSP
     #inflationFactor is the simulation's achieved maxB / the LANDIS speciesTrait maxB that was used (always 5000)
-    #scale factor is NOT returned. inflation factor is returned to rescale Boreal_LBMRDataPrep estimates
+    #scale factor is NOT returned. inflation factor is returned to 'inflate' Boreal_LBMRDataPrep estimates
     CandidateValues <- CandidateValues[sMaxBs, on = 'speciesCode']
-    CandidateValues[, deviation := ((B * scaleFactor - predBiomass)^2 *(1/se))]
+    CandidateValues[, deviation := (B * scaleFactor - predBiomass)^2 *(1/se)]
     Candidates <- CandidateValues[, .(sumDev = sum(deviation), 
                                             inflationFactor = mean(inflationFactor)), 
                                         .(speciesCode)]
@@ -177,15 +177,15 @@ modifySpeciesTable <- function(gamms, speciesTable, speciesEcoregion, factorialT
     #This is now the inflation factor and summed deviation - need to join with originalTraits, select min dev as best-fitting
     setkey(Candidates, speciesCode)
     CandidateTraits <- CandidateTraits[Candidates]
-    browser()
     bestTraits <- CandidateTraits[sumDev == min(sumDev),] %>%
       .[, .(mortalityshape = round(mean(mortalityshape)), 
-            growthcurve = round(mean(growthcurve)),
-            mANPPproportion = round(mean(mANPPproportion)),
-            inflationFactor = mean(inflationFactor))]
-    browser()
-    bestTraits[.(mortalityshape, growthcurve, mANPPproportion, inflationFactor)]
-    traits[, c('MortalityCurve', 'GrowthCurve', 'mANPPproportion', 'inflationFactor') :=  bestTraits]
+            growthcurve =  mean(growthcurve),
+            mANPPproportion = mean(mANPPproportion),
+            inflationFactor = mean(inflationFactor),
+            longevity = mean(longevity))]
+
+    bestTraits <- bestTraits[, .(mortalityshape, growthcurve, mANPPproportion, inflationFactor)]
+    traits[, c('mortalityshape', 'growthcurve', 'mANPPproportion', 'inflationFactor') :=  bestTraits]
     return(traits)
   })
   
