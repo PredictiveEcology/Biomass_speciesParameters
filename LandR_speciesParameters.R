@@ -15,7 +15,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "LandR_speciesParameters.Rmd"),
-  reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv'),
+  reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv', 'fpCompare'),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first plot event should occur"),
@@ -35,7 +35,13 @@ defineModule(sim, list(
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
                     Advise against including height unless you work ONLY in BC")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA, 
-                    desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'"))
+                    desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
+    defineParameter("constrainGrowthCurve", "numeric", c(0.5, 0.5), 0, 1, 
+                    desc = paste("constraints on range of potential growth curves when fitting traits. This parameter exists",
+                                 "because growth curve is confounded by aNPPproportion when estimating traits")),
+    defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25, 
+                    desc = paste("constraints on mortality shape when fitting traits. low mortality curve needs to excessive",
+                                 "cohorts with very little biomass as longevity is approached, adding computation strain"))
   ),
   inputObjects = bind_rows(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
@@ -101,11 +107,6 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 
       # ! ----- STOP EDITING ----- ! #
     },
-    event1 = {
-      # ! ----- EDIT BELOW ----- ! #
-
-      # ! ----- STOP EDITING ----- ! #
-    },
 
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
@@ -136,16 +137,20 @@ Init <- function(sim) {
   
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs, 
                                              speciesTable = sim$species,
-                                             speciesEcoregion = sim$speciesEcoregion,
                                              factorialTraits = sim$factorialSpeciesTable,
                                              factorialBiomass = sim$reducedFactorialCohortData,
                                              sppEquiv = sim$sppEquiv,
-                                             sppEquivCol = P(sim)$sppEquivCol)
+                                             sppEquivCol = P(sim)$sppEquivCol,
+                                             mortConstraints = P(sim)$constrainMortalityShape,
+                                             growthConstraints = P(sim)$constrainGrowthCurve)
 
-  #Still have to actually collapse modifiedSpeciesTables and replace traits with it
-  newTraits <- rbindlist(modifiedSpeciesTables, fill = TRUE)
-  newTraits[is.na(mANPPproportion), c('mANPPproportion', 'inflationFactor') := .(3.33, 1)] #default mANPP
-  return(newTraits)
+  sim$species <- modifiedSpeciesTables
+  browser()
+  modifiedSpeciesEcoregion <- modifySpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
+                                                       speciesTable = sim$species)
+  sim$speciesEcoregion <- modifiedSpeciesEcoregion
+  
+  return(sim)
 }
 
 ### template for save events
@@ -160,26 +165,11 @@ Save <- function(sim) {
 
 ### template for plot events
 plotFun <- function(sim) {
-  # ! ----- EDIT BELOW ----- ! #
-  # do stuff for this event
-  #Plot(sim$object)
 
-  # ! ----- STOP EDITING ----- ! #
+  # not sure we need to plot anything
   return(invisible(sim))
 }
 
-
-### template for your event1
-Event1 <- function(sim) {
-  # ! ----- EDIT BELOW ----- ! #
-  # THE NEXT TWO LINES ARE FOR DUMMY UNIT TESTS; CHANGE OR DELETE THEM.
-  # sim$event1Test1 <- " this is test for event 1. " # for dummy unit test
-  # sim$event1Test2 <- 999 # for dummy unit test
-
-
-  # ! ----- STOP EDITING ----- ! #
-  return(invisible(sim))
-}
 
 .inputObjects <- function(sim) {
 
