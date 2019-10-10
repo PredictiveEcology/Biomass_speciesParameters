@@ -71,8 +71,8 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 }
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =  95){
+  
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
-
   gcSpecies <- unique(sppEquiv[[speciesCol]])
   message("building growth curves from PSP data for these species: ")
   print(gcSpecies)
@@ -182,10 +182,12 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                       inflationFactor = mean(inflationFactor)), .(speciesCode)]
     
     bestCandidate <- CandidateTraits[Candidates, on = c("species" = 'speciesCode')] %>%
-      .[LogLikelihood == min(LogLikelihood)]
-    
+      .[LogLikelihood == max(LogLikelihood)]
+
     # What to do witht he LogLikelihood? Report? 
     bestTraits <- bestCandidate[, .(mortalityshape, growthcurve, mANPPproportion, inflationFactor)]
+    #if there are multiple rows due to undifferentiated curves, then mortality hasn't kicked in. Take the max mortalityshape
+    bestTraits <- bestTraits[mortalityshape == max(mortalityshape)]
     traits[, c('mortalityshape', 'growthcurve', 'mANPPproportion', 'inflationFactor') :=  bestTraits]
     return(traits)
   })
@@ -193,6 +195,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   #Collapse new traits and replace old traits
   newTraits <- rbindlist(outputTraits, fill = TRUE)
   newTraits[is.na(mANPPproportion), c('mANPPproportion', 'inflationFactor') := .(3.33, 1)] #default mANPP
+  
   return(newTraits)
 }
 
@@ -205,5 +208,6 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
   newSpeciesEcoregion[, maxANPP := maxB * mANPPproportion/100]
   cols <- names(speciesEcoregion)
   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
+  
   return(newSpeciesEcoregion)
 }

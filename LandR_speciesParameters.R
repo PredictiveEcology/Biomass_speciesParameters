@@ -130,6 +130,7 @@ Init <- function(sim) {
                                         sppEquiv = sim$sppEquiv)
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
   badModels <- classes[classes == 'try-error']
+  
   if (!is.null(badModels)) {
     message("convergence failures for these PSP growth curve models: ")
     print(names(badModels))
@@ -145,11 +146,11 @@ Init <- function(sim) {
                                              growthConstraints = P(sim)$constrainGrowthCurve)
 
   sim$species <- modifiedSpeciesTables
-  browser()
+
   modifiedSpeciesEcoregion <- modifySpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
                                                        speciesTable = sim$species)
   sim$speciesEcoregion <- modifiedSpeciesEcoregion
-  
+
   return(sim)
 }
 
