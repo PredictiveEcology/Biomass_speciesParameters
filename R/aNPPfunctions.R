@@ -123,11 +123,12 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv, 
                                sppEquivCol, mortConstraints, growthConstraints) {
-  #Join these two tables to make the Omega Traits table
+  #Join these two tables to make the full speciesTraits table
   factorialBiomass[, species := speciesCode]
   setkey(factorialTraits, species)
   setkey(factorialBiomass, species)
   
+  #for each species (ie Gamm), find best fit
   outputTraits <- lapply(names(gamms), function(name, gamm = gamms, traits = speciesTable, fT = factorialTraits,
                                                 fB = factorialBiomass, speciesEquiv = sppEquiv, sppCol = sppEquivCol) {
     
@@ -146,7 +147,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     
     
     closestLongevity <- abs(fT$longevity - traits$longevity) == min(abs(fT$longevity - traits$longevity))
-    #subset traits by closest longevity b/c I simulated in 25-year increments
+    #subset traits by closest longevity 
     CandidateTraits <- fT[closestLongevity]
     
     #Constrain growth curve - this is because the effect is conflated with maxANPP
@@ -168,7 +169,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     CandidateValues <- CandidateValues[predData]
     scaleFactors <- CandidateValues[, .(scaleFactor = mean(predData$predBiomass/B),
                                         sMaxB = max(B)), 'speciesCode']
-    
+
     scaleFactors[, 'inflationFactor' := 5000/sMaxB]
     #scale factor is the achieved maxB in the simulation / PSP maxB. We use this to scale simulation values to PSP
     #inflationFactor is the simulation's achieved maxB / the LANDIS speciesTrait maxB that was used (always 5000)
@@ -177,7 +178,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     
     #Find best possible candidate species
     CandidateValues[, se := sd(B * scaleFactor - predBiomass), by = 'speciesCode']
-    Candidates <- CandidateValues[, .(LogLikelihood = -sum(dnorm(x = B * scaleFactor, mean = predBiomass,
+    Candidates <- CandidateValues[, .(LogLikelihood = sum(dnorm(x = B * scaleFactor, mean = predBiomass,
                                                                  sd = se, log = TRUE)),
                                       inflationFactor = mean(inflationFactor)), .(speciesCode)]
     

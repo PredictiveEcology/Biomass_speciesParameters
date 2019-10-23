@@ -131,11 +131,11 @@ Init <- function(sim) {
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
   badModels <- classes[classes == 'try-error']
   
-  if (!is.null(badModels)) {
+  if (length(badModels) == 0) {
     message("convergence failures for these PSP growth curve models: ")
     print(names(badModels))
   }
-  
+
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs, 
                                              speciesTable = sim$species,
                                              factorialTraits = sim$factorialSpeciesTable,
