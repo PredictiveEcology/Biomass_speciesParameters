@@ -131,7 +131,7 @@ Init <- function(sim) {
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
   badModels <- classes[classes == 'try-error']
   
-  if (length(badModels) == 0) {
+  if (!length(badModels) == 0) {
     message("convergence failures for these PSP growth curve models: ")
     print(names(badModels))
   }
