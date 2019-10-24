@@ -120,9 +120,9 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 ### template initialization
 Init <- function(sim) {
   
-  if (is.na(P(sim)$sppEquivCol) {
+  if (is.na(P(sim)$sppEquivCol)) {
     stop("Please supply sppEquivCol in parameters of LandR_speciesParameters")
-  })
+  }
     
   #prepare PSPdata
   psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
