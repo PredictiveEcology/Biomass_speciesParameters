@@ -102,9 +102,10 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =
     Fakeweights <- rep(1, times = nrow(simulatedData))
     simData$Weights <- c(Realweights, Fakeweights)
     
+    browser()
     #What the hell is this non-contrasts warning - ask Ceres or Eliot
     speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = biomass ~ s(standAge, k = 4, pc = 0), 
-                                   random = list(MeasureYear = ~1, OrigPlotID1 = ~1), weights = Weights, verbosePQL = FALSE, 
+                                   random = list(MeasureYear = ~1, OrigPlotID1 = ~1), weights = varFunc(~Weights), verbosePQL = FALSE, 
                                    niterPQL = 10),
                        silent = TRUE))
     
