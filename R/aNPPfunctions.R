@@ -192,7 +192,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     traits[, c('mortalityshape', 'growthcurve', 'mANPPproportion', 'inflationFactor') :=  bestTraits]
     return(traits)
   })
-  
+
   #Collapse new traits and replace old traits
   newTraits <- rbindlist(outputTraits, fill = TRUE)
   newTraits[is.na(mANPPproportion), c('mANPPproportion', 'inflationFactor') := .(3.33, 1)] #default mANPP

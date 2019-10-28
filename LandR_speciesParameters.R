@@ -121,17 +121,20 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 Init <- function(sim) {
 
   #prepare PSPdata
-  psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
+  psp <- Cache(prepPSPaNPP, studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
                      PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
-                     useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel)
+                     useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel,
+               userTags = c(currentModule(sim), "prepPSPaNPP"))
 
-  sim$speciesGAMMs <- buildGrowthCurves(PSPdata = psp, 
+  sim$speciesGAMMs <- Cache(buildGrowthCurves, PSPdata = psp, 
                                         speciesCol = P(sim)$sppEquivCol,
-                                        sppEquiv = sim$sppEquiv)
+                                        sppEquiv = sim$sppEquiv,
+                            userTags = c(currentModule(sim), "buildGrowthCurves"))
+  
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
   badModels <- classes[classes == 'try-error']
   
-  if (length(badModels) == 0) {
+  if (!length(badModels) == 0) {
     message("convergence failures for these PSP growth curve models: ")
     print(names(badModels))
   }
