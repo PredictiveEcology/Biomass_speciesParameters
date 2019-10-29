@@ -1,6 +1,6 @@
 prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                         useHeight, biomassModel, PSPperiod) {
-  
+
   #Crop points to studyArea
   if (!is.null(studyAreaANPP)) {
     tempSA <- spTransform(x = studyAreaANPP, CRSobj = crs(PSPgis)) %>%

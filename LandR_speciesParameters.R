@@ -119,16 +119,21 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 
 ### template initialization
 Init <- function(sim) {
-
+  
+  if (is.na(P(sim)$sppEquivCol)) {
+    stop("Please supply sppEquivCol in parameters of LandR_speciesParameters")
+  }
+    
   #prepare PSPdata
   psp <- Cache(prepPSPaNPP, studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
-                     PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
-                     useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel,
+               PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
+               useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel,
                userTags = c(currentModule(sim), "prepPSPaNPP"))
 
   sim$speciesGAMMs <- Cache(buildGrowthCurves, PSPdata = psp, 
-                                        speciesCol = P(sim)$sppEquivCol,
-                                        sppEquiv = sim$sppEquiv,
+                            useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel,
+                            speciesCol = P(sim)$sppEquivCol,
+                            sppEquiv = sim$sppEquiv,
                             userTags = c(currentModule(sim), "buildGrowthCurves"))
   
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
