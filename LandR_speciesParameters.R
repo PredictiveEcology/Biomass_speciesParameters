@@ -131,7 +131,6 @@ Init <- function(sim) {
                userTags = c(currentModule(sim), "prepPSPaNPP"))
 
   sim$speciesGAMMs <- Cache(buildGrowthCurves, PSPdata = psp, 
-                            useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel,
                             speciesCol = P(sim)$sppEquivCol,
                             sppEquiv = sim$sppEquiv,
                             userTags = c(currentModule(sim), "buildGrowthCurves"))
