@@ -200,6 +200,15 @@ plotFun <- function(sim) {
                                             fun = "readRDS",
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
+  
+  if (!suppliedElsewhere("speciesEcoregion", sim)) {
+    sim$speciesEcoregion <- data.table(ecoregionGroup = "x", speciesCode = "Popu_tre", establishprob = 0.5,
+                                       maxB = 5000, maxANPP = 5000/30, year = 0)
+  }
+  
+  if (!suppliedElsewhere("species", sim)) {
+    sim$species <- data.table(species = "Popu_tre", longevity = 200, mortalityshape = 15, growthcurve = 0)
+  }
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
