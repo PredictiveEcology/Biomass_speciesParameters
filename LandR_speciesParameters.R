@@ -15,7 +15,8 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "LandR_speciesParameters.Rmd"),
-  reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv', 'fpCompare'),
+  reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv', 'fpCompare', 
+                  'PredictiveEcology/LandR@development', 'crayon'),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first plot event should occur"),
@@ -27,7 +28,7 @@ defineModule(sim, list(
                           "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
     defineParameter("PSPperiod", "numeric", c(1958, 2011), NA, NA, 
                     desc = paste("The years by which to compute climate normals and subset sampling plot data. Must be a vector of at least length 2")),
-    defineParameter("sppEquivCol", "character", NA, NA, NA,
+    defineParameter("sppEquivCol", "character", 'LandR', NA, NA,
                     paste("The column in sim$specieEquivalency data.table to group species by. This parameter should share the same",
                           "name as in Boreal_LBMRDataPrep. PSPs are aggregated by names in the PSP column and traits estimated",
                           "for the corresponding names in the sppEquivCol")),
@@ -202,12 +203,38 @@ plotFun <- function(sim) {
   }
   
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
-    sim$speciesEcoregion <- data.table(ecoregionGroup = "x", speciesCode = "Popu_tre", establishprob = 0.5,
-                                       maxB = 5000, maxANPP = 5000/30, year = 0)
+    sim$speciesEcoregion <- data.table(ecoregionGroup = "x", 
+                                       speciesCode = c("Abie_las", 'Abie_bal', 'Betu_pap','Pice_eng',
+                                                       'Pice_gla', 'Pice_mar', 'Pinu_ban', 
+                                                       'Pinu_con', 'Pseu_men', "Popu_tre"),
+                                       establishprob = 0.5, maxB = 5000, maxANPP = 5000/30, year = 0)
   }
   
   if (!suppliedElsewhere("species", sim)) {
-    sim$species <- data.table(species = "Popu_tre", longevity = 200, mortalityshape = 15, growthcurve = 0)
+    sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap','Pice_eng',
+                                          'Pice_gla', 'Pice_mar', 'Pinu_ban', 
+                                          'Pinu_con', 'Pseu_men', "Popu_tre"),
+                              longevity = c(300, 150, 150, 450, 400, 250, 150, 325, 600, 200),
+                              mortalityshape = 15, growthcurve = 0)
+  }
+  
+  if (!suppliedElsewhere("sppEquiv", sim)) {
+
+    sppEquivalencies_CA <-  LandR::sppEquivalencies_CA
+    sppEquivalencies_CA[grep("Pin", LandR), `:=`(EN_generic_short = "Pine",
+                                                 EN_generic_full = "Pine",
+                                                 Leading = "Pine leading")]
+    
+    sppEquivalencies_CA[, RIA := c(Pice_mar = "Pice_mar", Pice_gla = "Pice_gla",
+                                   Pinu_con = "Pinu_con", Popu_tre = "Popu_tre", 
+                                   Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
+                                   Pseu_men = "Pseu_men", Abie_bal = "Abie_bal",
+                                   Pinu_ban = "Pinu_ban")[LandR]]
+    sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS"]$RIA <- "Abie_las"
+    sppEquivalencies_CA <- sppEquivalencies_CA[!LANDIS_traits == "PINU.CON.CON"]
+    sppEquivalencies_CA <- sppEquivalencies_CA[!is.na(RIA)]
+    sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS", LandR := "Abie_las"]
+    sim$sppEquiv <- sppEquivalencies_CA
   }
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))

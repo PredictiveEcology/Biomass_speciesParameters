@@ -85,9 +85,10 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =
   spsp[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
   
   outputGCs <- lapply(gcSpecies, FUN = function(species, psp = spsp, speciesEquiv = sppEquiv, sppCol = speciesCol) {
+
     matchingSpecies <- speciesEquiv[speciesEquiv[[speciesCol]] == species, .(PSP),]
     #Need to calculate stand dominance first - remove all stands < 50% dominance, and of wrong species 
-    spDominant <- spsp[newSpeciesName %in% matchingSpecies & spDom > 0.5,]
+    spDominant <- spsp[newSpeciesName %in% unique(matchingSpecies) & spDom > 0.5,]
     spDominant <- spDominant[, .(PlotSize = mean(PlotSize), standAge = mean(standAge), 
                                  biomass = mean(plotBiomass), spDom = mean(spDom)), 
                              .(MeasureYear, OrigPlotID1)]
@@ -166,8 +167,8 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     
     setkey(predData, age)
     setkey(CandidateValues, age)
-    CandidateValues <- CandidateValues[predData]
-    scaleFactors <- CandidateValues[, .(scaleFactor = mean(predData$predBiomass/B),
+    CandidateValues <- na.exclude(CandidateValues[predData])
+    scaleFactors <- CandidateValues[, .(scaleFactor = mean(predBiomass/B),
                                         sMaxB = max(B)), 'speciesCode']
 
     scaleFactors[, 'inflationFactor' := 5000/sMaxB]

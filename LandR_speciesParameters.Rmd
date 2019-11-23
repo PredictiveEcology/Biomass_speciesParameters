@@ -23,18 +23,17 @@ For help writing in R Markdown, see http://rmarkdown.rstudio.com/.
 ```{r module_usage}
 library(SpaDES)
 
-setPaths(modulePath = file.path("C:/Ian"))
+setPaths(modulePath = file.path("../"))
 getPaths() # shows where the 4 relevant paths are
 
 times <- list(start = 0, end = 10)
 
 parameters <- list(
-  #.progress = list(type = "text", interval = 1), # for a progress bar
-  ## If there are further modules, each can have its own set of parameters:
-  #module1 = list(param1 = value1, param2 = value2),
-  #module2 = list(param1 = value1, param2 = value2)
+  sppEquivCol = "RIA"
+  # , constraintGrowthCurve = c(0, 1)
+  # , constrainMortalityShape = c(5, 25)
 )
-modules <- list("LandR_speciesParameters")
+modules <- list("LandR_speciesParameters", 'PSP_Clean')
 objects <- list()
 inputs <- list()
 outputs <- list()
