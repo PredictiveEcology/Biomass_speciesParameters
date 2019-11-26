@@ -162,6 +162,8 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     #subset the simulation values by potential species
     CandidateValues <- fB[CandidateTraits]
     
+    #This has to happen before age is subset, or it will underestimate
+    CandidateValues[, inflationFactor := 5000/max(B), .(speciesCode)]
     #subset the simulation values by age for which curve is represented
     CandidateValues <- CandidateValues[age >= min(predData$age) & age <= max(predData$age),]
     
@@ -169,9 +171,9 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     setkey(CandidateValues, age)
     CandidateValues <- na.exclude(CandidateValues[predData])
     scaleFactors <- CandidateValues[, .(scaleFactor = mean(predBiomass/B),
-                                        sMaxB = max(B)), 'speciesCode']
+                                        sMaxB = max(B),
+                                        inflationFactor = mean(inflationFactor)), 'speciesCode']
 
-    scaleFactors[, 'inflationFactor' := 5000/sMaxB]
     #scale factor is the achieved maxB in the simulation / PSP maxB. We use this to scale simulation values to PSP
     #inflationFactor is the simulation's achieved maxB / the LANDIS speciesTrait maxB that was used (always 5000)
     #scale factor is NOT returned. inflation factor is returned to 'inflate' Boreal_LBMRDataPrep estimates
