@@ -1,3 +1,3 @@
 "file" "checksum" "filesize" "algorithm"
-"reducedFactorialCD.Rdat" "4843c0af965c1ada" "254117605" "xxhash64"
-"factorialSpeciesTable.Rdat" "c50adf3a6f54254e" "264683" "xxhash64"
+"reducedFactorialCD.Rdat" "639b10f06d82d6b7" "511728128" "xxhash64"
+"factorialSpeciesTable.Rdat" "00a3c56c459c4a70" "549393" "xxhash64"
