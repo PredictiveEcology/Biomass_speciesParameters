@@ -28,7 +28,7 @@ defineModule(sim, list(
                           "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
     defineParameter("PSPperiod", "numeric", c(1958, 2011), NA, NA, 
                     desc = paste("The years by which to compute climate normals and subset sampling plot data. Must be a vector of at least length 2")),
-    defineParameter("sppEquivCol", "character", 'LandR', NA, NA,
+    defineParameter("sppEquivCol", "character", 'default', NA, NA,
                     paste("The column in sim$specieEquivalency data.table to group species by. This parameter should share the same",
                           "name as in Boreal_LBMRDataPrep. PSPs are aggregated by names in the PSP column and traits estimated",
                           "for the corresponding names in the sppEquivCol")),
@@ -219,20 +219,16 @@ plotFun <- function(sim) {
   }
   
   if (!suppliedElsewhere("sppEquiv", sim)) {
-
+    #pass a default sppEquivalencies_CA for common species in western Canada
     sppEquivalencies_CA <-  LandR::sppEquivalencies_CA
-    sppEquivalencies_CA[grep("Pin", LandR), `:=`(EN_generic_short = "Pine",
-                                                 EN_generic_full = "Pine",
-                                                 Leading = "Pine leading")]
-    
-    sppEquivalencies_CA[, RIA := c(Pice_mar = "Pice_mar", Pice_gla = "Pice_gla",
+    sppEquivalencies_CA[, default := c(Pice_mar = "Pice_mar", Pice_gla = "Pice_gla",
                                    Pinu_con = "Pinu_con", Popu_tre = "Popu_tre", 
                                    Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
                                    Pseu_men = "Pseu_men", Abie_bal = "Abie_bal",
                                    Pinu_ban = "Pinu_ban")[LandR]]
-    sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS"]$RIA <- "Abie_las"
+    sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS"]$default <- "Abie_las"
     sppEquivalencies_CA <- sppEquivalencies_CA[!LANDIS_traits == "PINU.CON.CON"]
-    sppEquivalencies_CA <- sppEquivalencies_CA[!is.na(RIA)]
+    sppEquivalencies_CA <- sppEquivalencies_CA[!is.na(default)]
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS", LandR := "Abie_las"]
     sim$sppEquiv <- sppEquivalencies_CA
   }
