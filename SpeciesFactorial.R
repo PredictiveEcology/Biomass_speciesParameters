@@ -1,16 +1,20 @@
+#This script is for running the species traits factorial design
+#It 
+library(LandR)
 library(data.table)
 library(raster)
-#Set up the overstory 'A' species
+library(crayon)
+#set out the combinations for factorial
 growthcurves <- seq(0, 1, 0.1)
 MortCurves <- seq(5, 25, 1)
 longevity <- seq(150, 700, 25)
-mANPPproportion <- seq(1,5, 0.25)
+mANPPproportion <- seq(0.25,10, 0.25)
 
+shadetolerance <- c(1) #turns out shade tolerance is unimportant for this particular scenario
+#as it only controls probability of establishment, not ANPP (previously factorial had understories)
 
-shadetolerance <- c(1)
 Attributes <- c('longevity', 'growthcurve', 'mortalityshape', "shadetolerance", 'mANPPproportion')
 
-#Pure stands 1:175 There will be double this amount of pure stands because I will run for different ages
 species1 <- expand.grid(longevity, growthcurves, MortCurves, shadetolerance, mANPPproportion)
 names(species1) <- Attributes
 species1$species <- paste0("A", 1:nrow(species1))
@@ -28,8 +32,7 @@ species1$maxANPP <- asInteger(species1$maxB * species1$mANPPproportion/100)
 cohortData$B <- species1$maxANPP 
 
 cohortData$speciesProportion <- 100
-cohortData$sumB <- cohortData$B #Fix 
-#Species B will always be the understory, and has identical traits to species A
+cohortData$sumB <- cohortData$B  
 
 
 #####Make LANDR Inputs####
@@ -94,9 +97,8 @@ parameters <- list(
               useCache = TRUE,
               successionTimestep = 1,
               initialBiomassSource = "cohortData",
-              vegLeadingProportion = 0,
-              growthAndMortalityDrivers = "LandR")
-)
+              vegLeadingProportion = 0
+  ))
 
 ## Paths are not workign with multiple module paths yet
 setPaths(cachePath =  file.path("temp/Cache"),
@@ -147,7 +149,10 @@ opts <- options(
 set.seed(161616)
 
 #EDIT ALGO 2 IN LBMR/HELPERS TO ALGO 1. #Also made succesionTimeStep 1 so calculateSumB wouldnt' return NA
-#Also had to completely remove lines in NoDiserpsal, to shut off all regeneration
+#Also had to completely remove lines in NoDiserpsal, to shut off all regeneration.
+#removed all LandR.CS references Nov 28th
+####NOTE: This will fail at year 700, because every cohort is dead. Not sure why that fails yet... 
+#files are still output so it isn't a problem
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects,
                  paths = paths, loadOrder = unlist(modules))
 
@@ -159,17 +164,13 @@ cds <- list.files("outputs/", full.names = TRUE) %>%
   lapply(., FUN = 'readRDS') %>%
   rbindlist(.)
 
-# specTraits <- SpeciesTable[, .(longevity, growthcurve, mortalityshape, species)]
-# cds[specTraits, on = c("speciesCode" = 'species')]
 
 #This is dumb, the merge shouldn't be necessary on rerun
 # temp <- species1[, .(species, maxANPPpct)]
 # cds <- cds[temp, on = c("speciesCode" = 'species')]
-saveRDS(cds, file = "factorialCohortData.Rdat")
+# saveRDS(cds, file = "factorialCohortData.Rdat")
+reducedFactorial <- cds[, .(speciesCode, age, B)]
+factorialSpeciesTable <- species1[,.(species, longevity, growthcurve, mortalityshape, mANPPproportion)]
 
-##### Work on function to predict ####
-
-bestTraits <- SpeciesTable[growthcurve < 0.2 & mortalityshape > 20 & maxANPP > 200 & longevity > 400]
-cdsMax <- cds[, .('maxB' = max(B)), .(speciesCode)]
-cdsMax[, achievedMaxB := cdsMax$maxB == 5000]
-cdsMax[speciesCode %in% bestTraits$species,]
+saveRDS(reducedFactorial, file = "data/reducedFactorialCD.Rdat")
+saveRDS(factorialSpeciesTable, file = "data/factorialSpeciesTable.Rdat")

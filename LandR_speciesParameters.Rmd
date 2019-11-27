@@ -29,10 +29,11 @@ getPaths() # shows where the 4 relevant paths are
 times <- list(start = 0, end = 10)
 
 parameters <- list(
-  sppEquivCol = "RIA"
-  # , constraintGrowthCurve = c(0, 1)
-  # , constrainMortalityShape = c(5, 25)
-)
+  LandR_speciesParameters = list(
+    sppEquivCol = "RIA"
+  , constrainGrowthCurve = c(0, 1)
+  , constrainMortalityShape = c(5, 25)
+))
 modules <- list("LandR_speciesParameters", 'PSP_Clean')
 objects <- list()
 inputs <- list()
