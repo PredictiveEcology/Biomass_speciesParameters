@@ -22,27 +22,79 @@ For help writing in R Markdown, see http://rmarkdown.rstudio.com/.
 
 ```{r module_usage}
 library(SpaDES)
+library(SpaDES.experiment)
 
 setPaths(modulePath = file.path("../"))
 getPaths() # shows where the 4 relevant paths are
 
 times <- list(start = 0, end = 10)
 
-parameters <- list(
-  LandR_speciesParameters = list(
-    sppEquivCol = "RIA"
-  , constrainGrowthCurve = c(0, 1)
-  , constrainMortalityShape = c(5, 25)
-))
 modules <- list("LandR_speciesParameters", 'PSP_Clean')
 objects <- list()
 inputs <- list()
 outputs <- list()
 
-mySim <- simInit(times = times, params = parameters, modules = modules,
-                 objects = objects)
+
+mySim <- simInit(times = times, params = constrainBothP, modules = modules,
+        objects = objects)
+
+
 
 mySimOut <- spades(mySim)
+
+
+```
+
+
+```{experiment}
+#To compare the effect of various constraints on growthcurve and mortalityshape 
+#(note the default is to constrain growth curve to 0.5, and mortalityshape to 15-25)
+BothP <- list(
+  LandR_speciesParameters = list(
+  # , constrainGrowthCurve = c(0, 1)
+  # , constrainMortalityShape = c(5, 25)
+))
+
+MortP <- list(
+ LandR_speciesParameters = list(
+  constrainGrowthCurve = c(0, 1)
+  # , constrainMortalityShape = c(5, 25)
+))
+
+GrowthP <- list(
+ LandR_speciesParameters = list(
+ # constrainGrowthCurve = c(0, 1),
+ constrainMortalityShape = c(5, 25)
+))
+
+NeitherP <- list(
+ LandR_speciesParameters = list(
+  constrainGrowthCurve = c(0, 1)
+  , constrainMortalityShape = c(5, 25)
+))
+
+
+BothConstrained <- simInit(params = BothP, times = times, modules = modules, objects = objects)
+MortConstrained <- simInit(params = MortP, times = times, modules = modules, objects = objects)
+GrowthConstrained <- simInit(params = GrowthP, times = times, modules = modules, objects = objects)
+NeitherConstrained <- simInit(params = NeitherP, times = times, modules = modules, objects = objects)
+
+myExperiment <- experiment2(BothConstrained, GrowthConstrained, MortConstrained, NeitherConstrained, 
+                            replicates = 1, 
+                            clearSimEnv = FALSE, 
+                            createUniquePaths = 'outputPath')
+
+myExperiment$`1_rep1`$species$params <- "both constrained"
+myExperiment$`2_rep1`$species$params <- "growth constrained"
+myExperiment$`3_rep1`$species$params <- "mortality constrained"
+myExperiment$`4_rep1`$species$params <- "no constraints"
+
+selectedTraits <- rbind(myExperiment$`1_rep1`$species,
+                myExperiment$`2_rep1`$species,
+                myExperiment$`3_rep1`$species,
+                myExperiment$`4_rep1`$species)
+
+
 ```
 
 # Events
