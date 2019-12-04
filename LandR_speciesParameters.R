@@ -126,15 +126,31 @@ Init <- function(sim) {
   }
     
   #prepare PSPdata
-  psp <- Cache(prepPSPaNPP, studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
-               PSPgis = sim$PSPgis, PSPmeasure = sim$PSPmeasure, PSPplot = sim$PSPplot,
-               useHeight = P(sim)$useHeight, biomassModel = P(sim)$biomassModel,
-               userTags = c(currentModule(sim), "prepPSPaNPP"))
-
-  sim$speciesGAMMs <- Cache(buildGrowthCurves, PSPdata = psp, 
-                            speciesCol = P(sim)$sppEquivCol,
-                            sppEquiv = sim$sppEquiv,
-                            userTags = c(currentModule(sim), "buildGrowthCurves"))
+  
+  makePSPgamms <- function(...) {
+    dots <- list(...)
+    psp <- prepPSPaNPP(studyAreaANPP = dots$studyAreaANPP, PSPperiod = dots$PSPperiod,
+                       PSPgis = dots$PSPgis, PSPmeasure = dots$PSPmeasure, PSPplot = dots$PSPplot,
+                       useHeight = dots$useHeight, biomassModel = dots$biomassModel)
+    
+    #Wrapper used to avoid caching psp object - too large
+    speciesGAMMs <- buildGrowthCurves(PSPdata = psp,
+                                      speciesCol = dots$speciesCol,
+                                      sppEquiv = dots$sppEquiv)
+    return(speciesGAMMs)
+  }
+  
+  speciesGAMMs <- Cache(makePSPgamms, studyAreaANPP = sim$studyAreaANPP,
+                        PSPperiod = P(sim)$PSPperiod,
+                        PSPgis = sim$PSPgis, 
+                        PSPmeasure = sim$PSPmeasure, 
+                        PSPplot = sim$PSPplot,
+                        useHeight = P(sim)$useHeight,
+                        biomassModel = P(sim)$biomassModel,
+                        speciesCol = P(sim)$sppEquivCol,
+                        sppEquiv = sim$sppEquiv,
+                        userTags = c(currentModule(sim), "makePSPgamms"))
+  sim$speciesGAMMs <- speciesGAMMs
   
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
   badModels <- classes[classes == 'try-error']
