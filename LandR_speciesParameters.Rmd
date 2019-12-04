@@ -34,8 +34,9 @@ objects <- list()
 inputs <- list()
 outputs <- list()
 
+parameters <- list()
 
-mySim <- simInit(times = times, params = constrainBothP, modules = modules,
+mySim <- simInit(times = times, params = parameters, modules = modules,
         objects = objects)
 
 
