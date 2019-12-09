@@ -220,17 +220,17 @@ plotFun <- function(sim) {
   
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     sim$speciesEcoregion <- data.table(ecoregionGroup = "x", 
-                                       speciesCode = c("Abie_las", 'Abie_bal', 'Betu_pap','Pice_eng',
+                                       speciesCode = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
                                                        'Pice_gla', 'Pice_mar', 'Pinu_ban', 
                                                        'Pinu_con', 'Pseu_men', "Popu_tre"),
                                        establishprob = 0.5, maxB = 5000, maxANPP = 5000/30, year = 0)
   }
   
   if (!suppliedElsewhere("species", sim)) {
-    sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap','Pice_eng',
+    sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
                                           'Pice_gla', 'Pice_mar', 'Pinu_ban', 
                                           'Pinu_con', 'Pseu_men', "Popu_tre"),
-                              longevity = c(300, 150, 150, 450, 400, 250, 150, 325, 600, 200),
+                              longevity = c(300, 150, 150, 150, 450, 400, 250, 150, 325, 600, 200),
                               mortalityshape = 15, growthcurve = 0)
   }
   
@@ -241,12 +241,18 @@ plotFun <- function(sim) {
                                    Pinu_con = "Pinu_con", Popu_tre = "Popu_tre", 
                                    Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
                                    Pseu_men = "Pseu_men", Abie_bal = "Abie_bal",
-                                   Pinu_ban = "Pinu_ban")[LandR]]
+                                   Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar")[LandR]]
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS"]$default <- "Abie_las"
     sppEquivalencies_CA <- sppEquivalencies_CA[!LANDIS_traits == "PINU.CON.CON"]
     sppEquivalencies_CA <- sppEquivalencies_CA[!is.na(default)]
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS", LandR := "Abie_las"]
     sim$sppEquiv <- sppEquivalencies_CA
+  }
+  browser()
+  if (!suppliedElsewhere("PSPmeasure", sim) |
+      !suppliedElsewhere("PSPplot", sim) |
+      !suppliedElsewhere("PSPgis", sim)) {
+    stop("This module requires PSP objects. Try including the module PSP_Clean or contact ian.eddy@canada.ca")
   }
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
