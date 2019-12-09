@@ -1,5 +1,5 @@
 prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
-                        useHeight, biomassModel, PSPperiod) {
+                        useHeight, biomassModel, PSPperiod, MeasureYear = NULL) {
 
   #Crop points to studyArea
   if (!is.null(studyAreaANPP)) {
@@ -18,11 +18,13 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   
   #length(PSPclimData)/length(PSP_sa) should always yield a whole number.
   #Filter data by study period
-  message(yellow("Filtering PSPs for ANPP by study period..."))
+  if (exists("MeasureYear")){ # when you are not simulating MeasureYear doesn't exist. I added in the call and an if statment here. ~TM
+      message(yellow("Filtering PSPs for ANPP by study period..."))
   PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) &
                              MeasureYear < max(PSPperiod),]
   PSPplot <- PSPplot[MeasureYear > min(PSPperiod) &
                        MeasureYear < max(PSPperiod),]
+    }
   
   #Join data (should be small enough by now)
   PSPmeasure <- PSPmeasure[PSPplot, on = c('MeasureID', 'OrigPlotID1', 'MeasureYear')]
