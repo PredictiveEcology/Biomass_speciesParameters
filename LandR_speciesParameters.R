@@ -26,6 +26,16 @@ defineModule(sim, list(
     defineParameter(".useCache", "logical", FALSE, NA, NA, 
                     desc = paste("Should this entire module be run with caching activated?",
                           "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
+    defineParameter("biomassModel", "character", "Lambert2005", NA, NA, 
+                    desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
+    defineParameter("constrainGrowthCurve", "numeric", c(0.5, 0.5), 0, 1, 
+                    desc = paste("constraints on range of potential growth curves when fitting traits. This parameter exists",
+                                 "because growth curve is confounded by aNPPproportion when estimating traits")),
+    defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25, 
+                    desc = paste("constraints on mortality shape when fitting traits. low mortality curve needs to excessive",
+                                 "cohorts with very little biomass as longevity is approached, adding computation strain")),
+    defineParameter("GAMMiterations", "numeric", 8, 1, NA, desc = paste('number of iterations for GAMMs. Too high and some species',
+                    "may have poorly estimated traits instead of the default. Too low and some species may not converge")),
     defineParameter("PSPperiod", "numeric", c(1958, 2011), NA, NA, 
                     desc = paste("The years by which to compute climate normals and subset sampling plot data. Must be a vector of at least length 2")),
     defineParameter("sppEquivCol", "character", 'default', NA, NA,
@@ -34,15 +44,7 @@ defineModule(sim, list(
                           "for the corresponding names in the sppEquivCol")),
     defineParameter("useHeight", "logical", FALSE, NA, NA, 
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
-                    Advise against including height unless you are certain it is present in every PSP")),
-    defineParameter("biomassModel", "character", "Lambert2005", NA, NA, 
-                    desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
-    defineParameter("constrainGrowthCurve", "numeric", c(0.5, 0.5), 0, 1, 
-                    desc = paste("constraints on range of potential growth curves when fitting traits. This parameter exists",
-                                 "because growth curve is confounded by aNPPproportion when estimating traits")),
-    defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25, 
-                    desc = paste("constraints on mortality shape when fitting traits. low mortality curve needs to excessive",
-                                 "cohorts with very little biomass as longevity is approached, adding computation strain"))
+                    Advise against including height unless you are certain it is present in every PSP"))
   ),
   inputObjects = bind_rows(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
@@ -136,7 +138,8 @@ Init <- function(sim) {
     #Wrapper used to avoid caching psp object - too large
     speciesGAMMs <- buildGrowthCurves(PSPdata = psp,
                                       speciesCol = dots$speciesCol,
-                                      sppEquiv = dots$sppEquiv)
+                                      sppEquiv = dots$sppEquiv,
+                                      NoOfIterations = P(sim)$GAMMiterations)
     return(speciesGAMMs)
   }
   
@@ -248,7 +251,7 @@ plotFun <- function(sim) {
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS", LandR := "Abie_las"]
     sim$sppEquiv <- sppEquivalencies_CA
   }
-  browser()
+
   if (!suppliedElsewhere("PSPmeasure", sim) |
       !suppliedElsewhere("PSPplot", sim) |
       !suppliedElsewhere("PSPgis", sim)) {

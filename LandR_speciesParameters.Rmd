@@ -39,8 +39,6 @@ parameters <- list()
 mySim <- simInit(times = times, params = parameters, modules = modules,
         objects = objects)
 
-
-
 mySimOut <- spades(mySim)
 
 

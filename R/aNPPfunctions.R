@@ -70,7 +70,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   return(PSPmeasure)
 }
 
-buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =  95){
+buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =  95, NoOfIterations){
   
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   gcSpecies <- unique(sppEquiv[[speciesCol]])
@@ -84,7 +84,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =
   spsp[, 'spPlotBiomass' := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
   spsp[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
   
-  outputGCs <- lapply(gcSpecies, FUN = function(species, psp = spsp, speciesEquiv = sppEquiv, sppCol = speciesCol) {
+  outputGCs <- lapply(gcSpecies, FUN = function(species, psp = spsp, speciesEquiv = sppEquiv, sppCol = speciesCol, NoOfIters = NoOfIterations) {
 
     matchingSpecies <- speciesEquiv[speciesEquiv[[speciesCol]] == species, .(PSP),]
     #Need to calculate stand dominance first - remove all stands < 50% dominance, and of wrong species 
@@ -106,7 +106,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =
     #What the hell is this non-contrasts warning - ask Ceres or Eliot
     speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = biomass ~ s(standAge, k = 4, pc = 0), 
                                    random = list(MeasureYear = ~1, OrigPlotID1 = ~1), weights = varFunc(~Weights), verbosePQL = FALSE, 
-                                   niterPQL = 10),
+                                   niterPQL = NoOfIters),
                        silent = TRUE))
     
     #Append the true data to speciesGamm, so we don't have the 0s involved when we subset by age quantile
@@ -192,6 +192,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     bestTraits <- bestCandidate[, .(mortalityshape, growthcurve, mANPPproportion, inflationFactor)]
     #if there are multiple rows due to undifferentiated curves, then mortality hasn't kicked in. Take the max mortalityshape
     bestTraits <- bestTraits[mortalityshape == max(mortalityshape)]
+    bestTraits[, mortalityshape := asInteger(mortalityshape)]
     traits[, c('mortalityshape', 'growthcurve', 'mANPPproportion', 'inflationFactor') :=  bestTraits]
     return(traits)
   })
