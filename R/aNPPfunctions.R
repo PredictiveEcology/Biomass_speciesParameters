@@ -213,6 +213,7 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
   newSpeciesEcoregion[, maxANPP := maxB * mANPPproportion/100]
   cols <- names(speciesEcoregion)
   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
-  
+  newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
+  newSpeciesEcoregion[, maxB := asInteger(maxB)]
   return(newSpeciesEcoregion)
 }
