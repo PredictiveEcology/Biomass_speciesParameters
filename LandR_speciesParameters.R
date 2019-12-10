@@ -29,15 +29,25 @@ defineModule(sim, list(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA, 
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
     defineParameter("constrainGrowthCurve", "numeric", c(0.5, 0.5), 0, 1, 
-                    desc = paste("constraints on range of potential growth curves when fitting traits. This parameter exists",
-                                 "because growth curve is confounded by aNPPproportion when estimating traits")),
+                    desc = paste("constraints on range of potential growth curves when fitting traits. This module accepts a",
+                    "list of vectors, with names equal to sppEquivCol, so that traits are customizable")),
     defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25, 
-                    desc = paste("constraints on mortality shape when fitting traits. low mortality curve needs to excessive",
-                                 "cohorts with very little biomass as longevity is approached, adding computation strain")),
-    defineParameter("GAMMiterations", "numeric", 8, 1, NA, desc = paste('number of iterations for GAMMs. Too high and some species',
-                    "may have poorly estimated traits instead of the default. Too low and some species may not converge")),
-    defineParameter("PSPperiod", "numeric", c(1958, 2011), NA, NA, 
-                    desc = paste("The years by which to compute climate normals and subset sampling plot data. Must be a vector of at least length 2")),
+                    desc = paste('constraints on mortality shape when fitting traits. low mortality curve needs to excessive',
+                                 'cohorts with very little biomass as longevity is approached, adding computation strain.',
+                                 'This module accepts a list of vectors, with names equal to sppEquivCol',
+                                 'so that GAMMS are customizable')),
+    defineParameter("GAMMiterations", "numeric", 8, 1, NA, desc = paste('number of iterations for GAMMs. This module accepts a',
+                    "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
+    defineParameter("GAMMknots", "numeric", 3, NA, NA, 
+                    desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
+                    "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
+    defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA, desc = paste("minimum number of PSP plots before building GAMM")),
+    defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA, 
+                    desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
+    defineParameter("quantileAgeSubset", "numeric", 95, 1, 100, 
+                    desc = paste("quantile by which to subset PSP data. As older stands are sparsely represented, the oldest measurements",
+                                 "become vastly more influential. This parameter accepts both a single value and a list of vectors",
+                                 "named by sppEquivCol. The PSP stand ages are found in sim$speciesGAMMs$<species>$originalData")),
     defineParameter("sppEquivCol", "character", 'default', NA, NA,
                     paste("The column in sim$specieEquivalency data.table to group species by. This parameter should share the same",
                           "name as in Boreal_LBMRDataPrep. PSPs are aggregated by names in the PSP column and traits estimated",
@@ -139,7 +149,10 @@ Init <- function(sim) {
     speciesGAMMs <- buildGrowthCurves(PSPdata = psp,
                                       speciesCol = dots$speciesCol,
                                       sppEquiv = dots$sppEquiv,
-                                      NoOfIterations = P(sim)$GAMMiterations)
+                                      NoOfIterations = dots$NoOfIterations,
+                                      knots = dots$knots,
+                                      minimumSampleSize = dots$minimumSampleSize,
+                                      quantileAgeSubset = dots$quantileAgeSubset)
     return(speciesGAMMs)
   }
   
@@ -152,6 +165,10 @@ Init <- function(sim) {
                         biomassModel = P(sim)$biomassModel,
                         speciesCol = P(sim)$sppEquivCol,
                         sppEquiv = sim$sppEquiv,
+                        NoOfIterations = P(sim)$GAMMiterations,
+                        knots = P(sim)$GAMMknots,
+                        minimumSampleSize = P(sim)$minimumPlotsPerGamm,
+                        quantileAgeSubset = P(sim)$quantileAgeSubset,
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs
   
@@ -233,7 +250,7 @@ plotFun <- function(sim) {
     sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
                                           'Pice_gla', 'Pice_mar', 'Pinu_ban', 
                                           'Pinu_con', 'Pseu_men', "Popu_tre"),
-                              longevity = c(300, 150, 150, 150, 450, 400, 250, 150, 325, 600, 200),
+                              longevity = c(300, 300, 150, 150, 450, 400, 250, 150, 325, 600, 200),
                               mortalityshape = 15, growthcurve = 0)
   }
   

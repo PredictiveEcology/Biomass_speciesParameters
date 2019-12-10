@@ -34,67 +34,58 @@ objects <- list()
 inputs <- list()
 outputs <- list()
 
-parameters <- list()
+parameters <- list(LandR_speciesParameters = 
+                     list(GAMMiterations = 2, 
+                          GAMMknots = list(
+                            "Abie_bal" = 3,
+                            "Abie_las" = 3,
+                            "Betu_pap" = 3,
+                            "Lari_lar" = 4,
+                            "Pice_eng" = 4,
+                            "Pice_gla" = 3,
+                            "Pice_mar" = 4,
+                            "Pinu_ban" = 3,
+                            "Pinu_con" = 4, 
+                            "Popu_tre" = 4,
+                            "Pseu_men" = 3),
+                          minimumPlotsPerGamm = 40,
+                          constrainMortalityShape = list(
+                            "Abie_bal" = c(15,25),
+                            "Abie_las" = c(15,25),
+                            "Betu_pap" = c(15,25),
+                            "Lari_lar" = c(20,25),
+                            "Pice_eng" = c(15,25),
+                            "Pice_gla" = c(15,25),
+                            "Pice_mar" = c(15,25),
+                            "Pinu_ban" = c(15,25),
+                            "Pinu_con" = c(15,25), 
+                            "Popu_tre" = c(15,25),
+                            "Pseu_men" = c(20,25)
+                          ),
+                          quantileAgeSubset = list(
+                            "Abie_bal" = 95, #N = 43 w/ 95 subset
+                            "Abie_las" = 95, #N = 250 '' 
+                            "Betu_pap" = 95, #N = 96
+                            "Lari_lar" = 95, #N = 45
+                            "Pice_eng" = 95, #N = 130
+                            "Pice_gla" = 95, #N = 1849
+                            "Pice_mar" = 95, #N = 785
+                            "Pinu_ban" = 95, #N = 603
+                            "Pinu_con" = 99, # N = 3172, 99 not an improvement. Maybe 97
+                            "Popu_tre" = 99, # N = 1997, trying 99
+                            "Pseu_men" = 99 # N = 2797, 99 is an improvement
+                          )
+                     ))
+
 
 mySim <- simInit(times = times, params = parameters, modules = modules,
-        objects = objects)
+                 objects = objects)
 
 mySimOut <- spades(mySim)
 
 
 ```
 
-
-```{experiment}
-#To compare the effect of various constraints on growthcurve and mortalityshape 
-#(note the default is to constrain growth curve to 0.5, and mortalityshape to 15-25)
-BothP <- list(
-  LandR_speciesParameters = list(
-  # , constrainGrowthCurve = c(0, 1)
-  # , constrainMortalityShape = c(5, 25)
-))
-
-MortP <- list(
- LandR_speciesParameters = list(
-  constrainGrowthCurve = c(0, 1)
-  # , constrainMortalityShape = c(5, 25)
-))
-
-GrowthP <- list(
- LandR_speciesParameters = list(
- # constrainGrowthCurve = c(0, 1),
- constrainMortalityShape = c(5, 25)
-))
-
-NeitherP <- list(
- LandR_speciesParameters = list(
-  constrainGrowthCurve = c(0, 1)
-  , constrainMortalityShape = c(5, 25)
-))
-
-
-BothConstrained <- simInit(params = BothP, times = times, modules = modules, objects = objects)
-MortConstrained <- simInit(params = MortP, times = times, modules = modules, objects = objects)
-GrowthConstrained <- simInit(params = GrowthP, times = times, modules = modules, objects = objects)
-NeitherConstrained <- simInit(params = NeitherP, times = times, modules = modules, objects = objects)
-
-myExperiment <- experiment2(BothConstrained, GrowthConstrained, MortConstrained, NeitherConstrained, 
-                            replicates = 1, 
-                            clearSimEnv = FALSE, 
-                            createUniquePaths = 'outputPath')
-
-myExperiment$`1_rep1`$species$params <- "both constrained"
-myExperiment$`2_rep1`$species$params <- "growth constrained"
-myExperiment$`3_rep1`$species$params <- "mortality constrained"
-myExperiment$`4_rep1`$species$params <- "no constraints"
-
-selectedTraits <- rbind(myExperiment$`1_rep1`$species,
-                myExperiment$`2_rep1`$species,
-                myExperiment$`3_rep1`$species,
-                myExperiment$`4_rep1`$species)
-
-
-```
 
 # Events
 

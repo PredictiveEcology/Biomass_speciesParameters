@@ -70,8 +70,9 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   return(PSPmeasure)
 }
 
-buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =  95, NoOfIterations){
-  
+buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset, 
+                              minimumSampleSize, NoOfIterations, knots){
+
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   gcSpecies <- unique(sppEquiv[[speciesCol]])
   message("building growth curves from PSP data for these species: ")
@@ -84,17 +85,37 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =
   spsp[, 'spPlotBiomass' := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
   spsp[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
   
-  outputGCs <- lapply(gcSpecies, FUN = function(species, psp = spsp, speciesEquiv = sppEquiv, sppCol = speciesCol, NoOfIters = NoOfIterations) {
+  outputGCs <- lapply(gcSpecies, FUN = function(species, psp = spsp, speciesEquiv = sppEquiv, 
+                                                sppCol = speciesCol, NoOfIters = NoOfIterations, 
+                                                K = knots, minSize = minimumSampleSize, q = quantileAgeSubset) {
 
     matchingSpecies <- speciesEquiv[speciesEquiv[[speciesCol]] == species, .(PSP),]
+
+    #subset the parameters that may be lists
+    if (class(NoOfIters) == "list"){
+      NoOfIters <- NoOfIters[[species]]
+    }
+    if (class(K) == "list"){
+      K <- K[[species]]
+    }
+    
+    if (class(q) == "list") {
+      q <- q[[species]]
+    }
     #Need to calculate stand dominance first - remove all stands < 50% dominance, and of wrong species 
     spDominant <- spsp[newSpeciesName %in% unique(matchingSpecies) & spDom > 0.5,]
     spDominant <- spDominant[, .(PlotSize = mean(PlotSize), standAge = mean(standAge), 
                                  biomass = mean(plotBiomass), spDom = mean(spDom)), 
                              .(MeasureYear, OrigPlotID1)]
     
-    #Try removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
-    spDominant <- spDominant[standAge < quantile(spDominant$standAge, probs = quantileAgeSubset/100),]
+    #test if there are sufficient plots to estimate traits
+    if (nrow(spDominant) < minSize) {
+      speciesGamm <- "insufficient data"
+      names(speciesGamm) <- species
+      return(speciesGamm)
+    }
+    #By default removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
+    spDominant <- spDominant[standAge < quantile(spDominant$standAge, probs = q/100),]
     simulatedData <- simulateYoungStands(cohortData = spDominant, N = 50)
     simData <- rbind(spDominant, simulatedData)
     
@@ -103,10 +124,9 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =
     Fakeweights <- rep(1, times = nrow(simulatedData))
     simData$Weights <- c(Realweights, Fakeweights)
     
-    #What the hell is this non-contrasts warning - ask Ceres or Eliot
-    speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = biomass ~ s(standAge, k = 4, pc = 0), 
+    speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = biomass ~ s(standAge, k = K, pc = 0), 
                                    random = list(MeasureYear = ~1, OrigPlotID1 = ~1), weights = varFunc(~Weights), verbosePQL = FALSE, 
-                                   niterPQL = NoOfIters),
+                                   niterPQL = NofIters),
                        silent = TRUE))
     
     #Append the true data to speciesGamm, so we don't have the 0s involved when we subset by age quantile
@@ -124,6 +144,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset =
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv, 
                                sppEquivCol, mortConstraints, growthConstraints) {
+
   #Join these two tables to make the full speciesTraits table
   factorialBiomass[, species := speciesCode]
   setkey(factorialTraits, species)
@@ -138,7 +159,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     #Subset traits to PSP species, return unchanged if no Gamm present
     traits <- traits[species == name]
     
-    if (class(Gamm) == 'try-error') {
+    if (class(Gamm) == 'try-error' | class(Gamm) == 'character') {
       return(traits)
     }
     
@@ -152,12 +173,24 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     CandidateTraits <- fT[closestLongevity]
     
     #Constrain growth curve - this is because the effect is conflated with maxANPP
-    CandidateTraits <- CandidateTraits[growthcurve >= min(growthConstraints)
-                                       & growthcurve <= max(growthConstraints),]
+    if (class(growthConstraints) == 'list') {
+      growthConstraint <- growthConstraints[[name]]
+    } else {
+      growthConstraint <- growthConstraints
+    }
+    
+    CandidateTraits <- CandidateTraits[growthcurve >= min(growthConstraint)
+                                       & growthcurve <= max(growthConstraint),]
     
     #Constrain mortality shape - limited available information on mortalitity in PSPs, too low adds computation strain
-    CandidateTraits <- CandidateTraits[mortalityshape >= min(mortConstraints) 
-                                       & mortalityshape <= max(mortConstraints)]
+    if (class(mortConstraints) == 'list') {
+      mortConstraint <- mortConstraints[[name]]
+    } else {
+      mortConstraint <- mortConstraints
+    }
+    
+    CandidateTraits <- CandidateTraits[mortalityshape >= min(mortConstraint) 
+                                       & mortalityshape <= max(mortConstraint)]
     
     #subset the simulation values by potential species
     CandidateValues <- fB[CandidateTraits]
@@ -199,8 +232,12 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
 
   #Collapse new traits and replace old traits
   newTraits <- rbindlist(outputTraits, fill = TRUE)
-  newTraits[is.na(mANPPproportion), c('mANPPproportion', 'inflationFactor') := .(3.33, 1)] #default mANPP
   
+  if (!is.null(newTraits$mANPPproportion)) {
+    newTraits[is.na(mANPPproportion), c('mANPPproportion', 'inflationFactor') := .(3.33, 1)] #default mANPP
+  } else {
+    message("no GAMMs converged :( Consider revising your parameters")
+  }
   return(newTraits)
 }
 
