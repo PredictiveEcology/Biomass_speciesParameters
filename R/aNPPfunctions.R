@@ -178,9 +178,9 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     } else {
       growthConstraint <- growthConstraints
     }
-    
-    CandidateTraits <- CandidateTraits[growthcurve >= min(growthConstraint)
-                                       & growthcurve <= max(growthConstraint),]
+
+    CandidateTraits <- CandidateTraits[growthcurve %>=% min(growthConstraint) 
+                                       & growthcurve %<=% max(growthConstraint),]
     
     #Constrain mortality shape - limited available information on mortalitity in PSPs, too low adds computation strain
     if (class(mortConstraints) == 'list') {
