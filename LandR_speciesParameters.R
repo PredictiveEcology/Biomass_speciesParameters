@@ -38,9 +38,10 @@ defineModule(sim, list(
                                  'so that GAMMS are customizable')),
     defineParameter("GAMMiterations", "numeric", 8, 1, NA, desc = paste('number of iterations for GAMMs. This module accepts a',
                     "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
-    defineParameter("GAMMknots", "numeric", 3, NA, NA, 
-                    desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
-                    "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
+    defineParameter("GAMMknots", "numeric", 4, NA, NA, 
+                    # desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
+                    # "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
+                    desc = paste("this is currently fixed at 4 until a caching solution is identified ")),
     defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA, desc = paste("minimum number of PSP plots before building GAMM")),
     defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA, 
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
@@ -138,24 +139,6 @@ Init <- function(sim) {
   }
     
   #prepare PSPdata
-  
-  makePSPgamms <- function(...) {
-    dots <- list(...)
-    psp <- prepPSPaNPP(studyAreaANPP = dots$studyAreaANPP, PSPperiod = dots$PSPperiod,
-                       PSPgis = dots$PSPgis, PSPmeasure = dots$PSPmeasure, PSPplot = dots$PSPplot,
-                       useHeight = dots$useHeight, biomassModel = dots$biomassModel)
-    
-    #Wrapper used to avoid caching psp object - too large
-    speciesGAMMs <- buildGrowthCurves(PSPdata = psp,
-                                      speciesCol = dots$speciesCol,
-                                      sppEquiv = dots$sppEquiv,
-                                      NoOfIterations = dots$NoOfIterations,
-                                      knots = dots$knots,
-                                      minimumSampleSize = dots$minimumSampleSize,
-                                      quantileAgeSubset = dots$quantileAgeSubset)
-    return(speciesGAMMs)
-  }
-  
   speciesGAMMs <- Cache(makePSPgamms, studyAreaANPP = sim$studyAreaANPP,
                         PSPperiod = P(sim)$PSPperiod,
                         PSPgis = sim$PSPgis, 
