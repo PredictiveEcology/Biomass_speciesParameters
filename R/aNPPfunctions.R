@@ -72,7 +72,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset, 
                               minimumSampleSize, NoOfIterations, knots){
-
+  browser()
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   gcSpecies <- unique(sppEquiv[[speciesCol]])
   message("building growth curves from PSP data for these species: ")
@@ -134,7 +134,7 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
 makeGAMMdata <- function(species, psp, speciesEquiv, 
                          sppCol, NoOfIters, K, minSize, q) {
-  
+  browser()
   matchingSpecies <- speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),]
   
   #subset the parameters that may be lists
@@ -171,9 +171,10 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   simData$Weights <- c(Realweights, Fakeweights)
   
 
-  speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = gammFormula, 
-                                                  random = list(MeasureYear = randomFormula, 
-                                                                OrigPlotID1 = randomFormula), 
+  speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = eval(gammFormula, envir = environment()), 
+                                                  random = list(MeasureYear = eval(randomFormula, envir = baseenv()), 
+                                                                OrigPlotID1 = eval(randomFormula, envir = baseenv())
+                                                                ), 
                                                   weights = varFunc(~Weights), verbosePQL = FALSE, 
                                                   niterPQL = NoOfIters),
                                       silent = TRUE))
@@ -228,8 +229,8 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
     growthConstraint <- growthConstraints
   }
   
-  CandidateTraits <- CandidateTraits[growthcurve >= min(growthConstraint)
-                                     & growthcurve <= max(growthConstraint),]
+  CandidateTraits <- CandidateTraits[growthcurve %>=% min(growthConstraint)
+                                     & growthcurve %<=% max(growthConstraint),]
   
   #Constrain mortality shape - limited available information on mortalitity in PSPs, too low adds computation strain
   if (class(mortConstraints) == 'list') {
@@ -283,6 +284,7 @@ makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                          PSPplot, useHeight, biomassModel, speciesCol,
                          sppEquiv, NoOfIterations, knots, minimumSampleSize,
                          quantileAgeSubset) {
+  browser()
   #this function is just a wrapper around these functions, for caching purposess
   psp <- prepPSPaNPP(studyAreaANPP = studyAreaANPP, PSPperiod = PSPperiod,
                      PSPgis = PSPgis, PSPmeasure = PSPmeasure, PSPplot = PSPplot,
@@ -296,5 +298,5 @@ makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
   return(speciesGAMMs)
 }
 
-gammFormula <- biomass ~ s(standAge, k = 4, pc = 0)
+gammFormula <- biomass ~ s(standAge, k = eval(K), pc = 0)
 randomFormula <- ~1
