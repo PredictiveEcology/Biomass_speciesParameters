@@ -72,7 +72,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset, 
                               minimumSampleSize, NoOfIterations, knots){
-  browser()
+
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   gcSpecies <- unique(sppEquiv[[speciesCol]])
   message("building growth curves from PSP data for these species: ")
