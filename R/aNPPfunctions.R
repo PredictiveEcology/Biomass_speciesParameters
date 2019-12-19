@@ -134,7 +134,7 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
 makeGAMMdata <- function(species, psp, speciesEquiv, 
                          sppCol, NoOfIters, K, minSize, q) {
-  browser()
+
   matchingSpecies <- speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),]
   
   #subset the parameters that may be lists
@@ -284,7 +284,7 @@ makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                          PSPplot, useHeight, biomassModel, speciesCol,
                          sppEquiv, NoOfIterations, knots, minimumSampleSize,
                          quantileAgeSubset) {
-  browser()
+
   #this function is just a wrapper around these functions, for caching purposess
   psp <- prepPSPaNPP(studyAreaANPP = studyAreaANPP, PSPperiod = PSPperiod,
                      PSPgis = PSPgis, PSPmeasure = PSPmeasure, PSPplot = PSPplot,
