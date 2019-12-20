@@ -170,8 +170,8 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   Fakeweights <- rep(1, times = nrow(simulatedData))
   simData$Weights <- c(Realweights, Fakeweights)
   
-
-  speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = eval(gammFormula, envir = parent.env(environment())), 
+  localEnv <- environment()
+  speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = eval(gammFormula, enclos = localEnv), 
                                                   random = list(MeasureYear = eval(randomFormula, envir = baseenv()), 
                                                                 OrigPlotID1 = eval(randomFormula, envir = baseenv())
                                                                 ), 
@@ -298,5 +298,5 @@ makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
   return(speciesGAMMs)
 }
 
-gammFormula <- biomass ~ s(standAge, k = K, pc = 0)
-randomFormula <- ~1
+gammFormula <- quote(biomass ~ s(standAge, k = K, pc = 0))
+randomFormula <- quote(~1)
