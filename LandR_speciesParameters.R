@@ -136,7 +136,7 @@ Init <- function(sim) {
   if (is.na(P(sim)$sppEquivCol)) {
     stop("Please supply sppEquivCol in parameters of LandR_speciesParameters")
   }
-  browser()
+
   #prepare PSPdata
   speciesGAMMs <- Cache(makePSPgamms, studyAreaANPP = sim$studyAreaANPP,
                         PSPperiod = P(sim)$PSPperiod,
