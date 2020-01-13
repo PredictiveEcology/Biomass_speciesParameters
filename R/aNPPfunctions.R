@@ -72,7 +72,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset, 
                               minimumSampleSize, NoOfIterations, knots){
-
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   gcSpecies <- unique(sppEquiv[[speciesCol]])
   message("building growth curves from PSP data for these species: ")
@@ -84,7 +83,6 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   spsp  <- spsp[, 'plotBiomass' := sum(areaAdjustedB), .(MeasureID)]
   spsp[, 'spPlotBiomass' := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
   spsp[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
-  
   outputGCs <- lapply(gcSpecies, FUN = makeGAMMdata, psp = spsp, speciesEquiv = sppEquiv, 
                       sppCol = speciesCol, NoOfIters = NoOfIterations, 
                       K = knots, minSize = minimumSampleSize, q = quantileAgeSubset)
@@ -134,9 +132,24 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
 makeGAMMdata <- function(species, psp, speciesEquiv, 
                          sppCol, NoOfIters, K, minSize, q) {
-
+  
   matchingSpecies <- speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),]
   
+  #~~~~~~~~~~~~~~~~~~ Data Sanity Check ~~~~~~~~~~~~~~~~~~~
+  if (all(class(K) == "list", !species %in% names(K))){
+    stop("At least one of the species to calculate the model is not in the parameter's list. 
+         Please make sure the species names in sppEquivCol match the names in GAMMknots parameter")
+  }
+  if (all(class(NoOfIters) == "list", !species %in% names(NoOfIters))){
+    stop("At least one of the species to calculate the model is not in the parameter's list. 
+         Please make sure the species names in sppEquivCol match the names in GAMMknots parameter")
+  }
+  if (all(class(q) == "list", !species %in% names(q))){
+    stop("At least one of the species to calculate the model is not in the parameter's list. 
+         Please make sure the species names in sppEquivCol match the names in quantileAgeSubset parameter")
+  }
+  #~~~~~~~~~~~~~~~~~~ Data Sanity Check ~~~~~~~~~~~~~~~~~~~
+  #
   #subset the parameters that may be lists
   if (class(NoOfIters) == "list"){
     NoOfIters <- NoOfIters[[species]]
@@ -217,10 +230,20 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
   output <- predict(Gamm$gam, predData, se.fit = TRUE)
   predData <- data.table("age" = predData$standAge, "predBiomass" = output$fit, 'predSE' = output$se.fit)
   
-  
   closestLongevity <- abs(fT$longevity - traits$longevity) == min(abs(fT$longevity - traits$longevity))
   #subset traits by closest longevity 
   CandidateTraits <- fT[closestLongevity]
+  
+  #~~~~~~~~~~~~~~~~~~ Data Sanity Check ~~~~~~~~~~~~~~~~~~~
+  if (all(class(mortConstraints) == "list", !name %in% names(mortConstraints))){
+    stop("At least one of the species to calculate the model is not in the parameter's list. 
+         Please make sure the species names in sppEquivCol match the names in constrainMortalityShape parameter")
+  }
+  if (all(class(growthConstraints) == "list", !name %in% names(growthConstraints))){
+    stop("At least one of the species to calculate the model is not in the parameter's list. 
+         Please make sure the species names in sppEquivCol match the names in constrainGrowthCurve parameter")
+  }
+  #~~~~~~~~~~~~~~~~~~ Data Sanity Check ~~~~~~~~~~~~~~~~~~~
   
   #Constrain growth curve - this is because the effect is conflated with maxANPP
   if (class(growthConstraints) == 'list') {
