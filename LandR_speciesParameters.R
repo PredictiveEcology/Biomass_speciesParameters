@@ -207,7 +207,7 @@ plotFun <- function(sim) {
   if (!suppliedElsewhere("reducedFactorialCohortData", sim)) {
     sim$reducedFactorialCohortData <- prepInputs(targetFile = "reducedFactorialCD.Rdat",
                                                  destinationPath = dataPath(sim),
-                                                 fun = "readRDS",
+                                                 fun = "readRDS", overwrite = TRUE,
                                                  url = extractURL('reducedFactorialCohortData', sim),
                                                  useCache = TRUE, userTags = c(cacheTags, "reducedFactorial"))
   }
@@ -216,7 +216,7 @@ plotFun <- function(sim) {
     sim$factorialSpeciesTable <- prepInputs(targetFile = "factorialSpeciesTable.Rdat",
                                             destinationPath = dataPath(sim),
                                             url = extractURL('factorialSpeciesTable', sim),
-                                            fun = "readRDS",
+                                            fun = "readRDS", overwrite = TRUE,
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
 
