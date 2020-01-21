@@ -15,7 +15,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "LandR_speciesParameters.Rmd"),
-  reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv', 'fpCompare', 
+  reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv', 'fpCompare',
                   'PredictiveEcology/LandR@development', 'crayon'),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
@@ -23,47 +23,47 @@ defineModule(sim, list(
     defineParameter(".plotInterval", "numeric", NA, NA, NA, "This describes the simulation time interval between plot events"),
     defineParameter(".saveInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first save event should occur"),
     defineParameter(".saveInterval", "numeric", NA, NA, NA, "This describes the simulation time interval between save events"),
-    defineParameter(".useCache", "logical", FALSE, NA, NA, 
+    defineParameter(".useCache", "logical", FALSE, NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                           "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
-    defineParameter("biomassModel", "character", "Lambert2005", NA, NA, 
+    defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
-    defineParameter("constrainGrowthCurve", "numeric", c(0.5, 0.5), 0, 1, 
+    defineParameter("constrainGrowthCurve", "numeric", c(0.5, 0.5), 0, 1,
                     desc = paste("constraints on range of potential growth curves when fitting traits. This module accepts a",
                     "list of vectors, with names equal to sppEquivCol, so that traits are customizable")),
-    defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25, 
+    defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25,
                     desc = paste('constraints on mortality shape when fitting traits. low mortality curve needs to excessive',
                                  'cohorts with very little biomass as longevity is approached, adding computation strain.',
                                  'This module accepts a list of vectors, with names equal to sppEquivCol',
                                  'so that GAMMS are customizable')),
     defineParameter("GAMMiterations", "numeric", 8, 1, NA, desc = paste('number of iterations for GAMMs. This module accepts a',
                     "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
-    defineParameter("GAMMknots", "numeric", 3, NA, NA, 
+    defineParameter("GAMMknots", "numeric", 3, NA, NA,
                     desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
                     "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
     defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA, desc = paste("minimum number of PSP plots before building GAMM")),
-    defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA, 
+    defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA,
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
-    defineParameter("quantileAgeSubset", "numeric", 95, 1, 100, 
+    defineParameter("quantileAgeSubset", "numeric", 95, 1, 100,
                     desc = paste("quantile by which to subset PSP data. As older stands are sparsely represented, the oldest measurements",
                                  "become vastly more influential. This parameter accepts both a single value and a list of vectors",
                                  "named by sppEquivCol. The PSP stand ages are found in sim$speciesGAMMs$<species>$originalData")),
     defineParameter("sppEquivCol", "character", 'default', NA, NA,
                     paste("The column in sim$specieEquivalency data.table to group species by. This parameter should share the same",
-                          "name as in Boreal_LBMRDataPrep. PSPs are aggregated by names in the PSP column and traits estimated",
+                          "name as in Biomass_borealDataPrep PSPs are aggregated by names in the PSP column and traits estimated",
                           "for the corresponding names in the sppEquivCol")),
-    defineParameter("useHeight", "logical", FALSE, NA, NA, 
+    defineParameter("useHeight", "logical", FALSE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
                     Advise against including height unless you are certain it is present in every PSP"))
   ),
   inputObjects = bind_rows(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
-    expectsInput(objectName = "factorialSpeciesTable", objectClass = "data.table", 
+    expectsInput(objectName = "factorialSpeciesTable", objectClass = "data.table",
                  desc = paste("table with species traits for matching to factorialCohortData"),
                  sourceURL = "https://drive.google.com/open?id=1q0ou0CBzD9GqGSparpHqf318IWK6ycty"),
-    expectsInput(objectName = "reducedFactorialCohortData", objectClass = "data.table", 
+    expectsInput(objectName = "reducedFactorialCohortData", objectClass = "data.table",
                  desc = paste("results of factorial species trait simulation. This can be found by running",
-                              "SpeciesFactorial.R but requires a specific commit of Boreal_Biomass"), 
+                              "SpeciesFactorial.R but requires a specific commit of Boreal_Biomass"),
                  sourceURL = "https://drive.google.com/open?id=1h8StXE0vm8xyDycRomCkwIaL7wfh5Irj"),
     expectsInput(objectName = "PSPmeasure", objectClass = "data.table", desc = "merged PSP and TSP individual measurements"),
     expectsInput(objectName = "PSPplot", objectClass = "data.table", desc = "merged PSP and TSP plot data"),
@@ -82,7 +82,7 @@ defineModule(sim, list(
   ),
   outputObjects = bind_rows(
     #createsOutput("objectName", "objectClass", "output object description", ...),
-    createsOutput(objectName = 'speciesGAMMs', objectClass = 'list', 
+    createsOutput(objectName = 'speciesGAMMs', objectClass = 'list',
                   desc = paste('a list of mixed-effect general additive models (gamm) for each tree species',
                                'modeling biomass as a function of age')),
     createsOutput("species", "data.table",
@@ -108,7 +108,7 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "LandR_speciesParameters", "save")
     },
     plot = {
-     
+
       #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "LandR_speciesParameters", "plot")
 
       # ! ----- STOP EDITING ----- ! #
@@ -132,7 +132,7 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 
 ### template initialization
 Init <- function(sim) {
-  
+
   if (is.na(P(sim)$sppEquivCol)) {
     stop("Please supply sppEquivCol in parameters of LandR_speciesParameters")
   }
@@ -140,8 +140,8 @@ Init <- function(sim) {
   #prepare PSPdata
   speciesGAMMs <- Cache(makePSPgamms, studyAreaANPP = sim$studyAreaANPP,
                         PSPperiod = P(sim)$PSPperiod,
-                        PSPgis = sim$PSPgis, 
-                        PSPmeasure = sim$PSPmeasure, 
+                        PSPgis = sim$PSPgis,
+                        PSPmeasure = sim$PSPmeasure,
                         PSPplot = sim$PSPplot,
                         useHeight = P(sim)$useHeight,
                         biomassModel = P(sim)$biomassModel,
@@ -153,16 +153,16 @@ Init <- function(sim) {
                         quantileAgeSubset = P(sim)$quantileAgeSubset,
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs
-  
+
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
   badModels <- classes[classes == 'try-error']
-  
+
   if (!length(badModels) == 0) {
     message("convergence failures for these PSP growth curve models: ")
     print(names(badModels))
   }
 
-  modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs, 
+  modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                              speciesTable = sim$species,
                                              factorialTraits = sim$factorialSpeciesTable,
                                              factorialBiomass = sim$reducedFactorialCohortData,
@@ -205,42 +205,42 @@ plotFun <- function(sim) {
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   if (!suppliedElsewhere("reducedFactorialCohortData", sim)) {
-    sim$reducedFactorialCohortData <- prepInputs(targetFile = "reducedFactorialCD.Rdat", 
-                                                 destinationPath = dataPath(sim),
-                                                 fun = "readRDS",
+    sim$reducedFactorialCohortData <- prepInputs(targetFile = "reducedFactorialCD.Rdat",
+                                                 destinationPath = dPath,
+                                                 fun = "readRDS", overwrite = TRUE,
                                                  url = extractURL('reducedFactorialCohortData', sim),
                                                  useCache = TRUE, userTags = c(cacheTags, "reducedFactorial"))
   }
-  
+
   if (!suppliedElsewhere("factorialSpeciesTable", sim)) {
     sim$factorialSpeciesTable <- prepInputs(targetFile = "factorialSpeciesTable.Rdat",
-                                            destinationPath = dataPath(sim),
-                                            url = extractURL('factorialSpeciesTable', sim), 
-                                            fun = "readRDS",
+                                            destinationPath = dPath,
+                                            url = extractURL('factorialSpeciesTable', sim),
+                                            fun = "readRDS", overwrite = TRUE,
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
-  
+
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
-    sim$speciesEcoregion <- data.table(ecoregionGroup = "x", 
+    sim$speciesEcoregion <- data.table(ecoregionGroup = "x",
                                        speciesCode = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
-                                                       'Pice_gla', 'Pice_mar', 'Pinu_ban', 
+                                                       'Pice_gla', 'Pice_mar', 'Pinu_ban',
                                                        'Pinu_con', 'Pseu_men', "Popu_tre"),
                                        establishprob = 0.5, maxB = 5000, maxANPP = 5000/30, year = 0)
   }
-  
+
   if (!suppliedElsewhere("species", sim)) {
     sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
-                                          'Pice_gla', 'Pice_mar', 'Pinu_ban', 
+                                          'Pice_gla', 'Pice_mar', 'Pinu_ban',
                                           'Pinu_con', 'Pseu_men', "Popu_tre"),
                               longevity = c(300, 300, 150, 150, 450, 400, 250, 150, 325, 600, 200),
                               mortalityshape = 15, growthcurve = 0)
   }
-  
+
   if (!suppliedElsewhere("sppEquiv", sim)) {
     #pass a default sppEquivalencies_CA for common species in western Canada
     sppEquivalencies_CA <-  LandR::sppEquivalencies_CA
     sppEquivalencies_CA[, default := c(Pice_mar = "Pice_mar", Pice_gla = "Pice_gla",
-                                   Pinu_con = "Pinu_con", Popu_tre = "Popu_tre", 
+                                   Pinu_con = "Pinu_con", Popu_tre = "Popu_tre",
                                    Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
                                    Pseu_men = "Pseu_men", Abie_bal = "Abie_bal",
                                    Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar")[LandR]]

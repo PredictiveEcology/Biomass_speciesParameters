@@ -1,5 +1,5 @@
 #This script is for running the species traits factorial design
-#It 
+#It
 library(LandR)
 library(data.table)
 library(raster)
@@ -29,10 +29,10 @@ cohortData$pixelGroup <- 1:nrow(cohortData)
 cohortData$age <- 1
 species1$maxB <- 5000
 species1$maxANPP <- asInteger(species1$maxB * species1$mANPPproportion/100)
-cohortData$B <- species1$maxANPP 
+cohortData$B <- species1$maxANPP
 
 cohortData$speciesProportion <- 100
-cohortData$sumB <- cohortData$B  
+cohortData$sumB <- cohortData$B
 
 
 #####Make LANDR Inputs####
@@ -75,16 +75,16 @@ library(LandR)
 library(sp)
 
 rasterOptions(tmpdir = "temp")
-spadesModulesDirectory <-  c(file.path("../Land-R/modules/")) # where modules are 
+spadesModulesDirectory <-  c(file.path("../Land-R/modules/")) # where modules are
 modules <- list("LBMR")
 times <- list(start = 0, end = 700)
-#Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real, 
+#Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real,
 SpeciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
 
 # "PSP_Clean", "gmcsDataPrep",
 
 
-studyArea <- as(extent(pixelGroupMap), 'SpatialPolygons') 
+studyArea <- as(extent(pixelGroupMap), 'SpatialPolygons')
 crs(studyArea) <- crs(pixelGroupMap)
 rasterToMatch <- pixelGroupMap
 
@@ -126,7 +126,7 @@ objects <- list(
   sppEquiv = data.table(),
   sppColorVect = sppColors
 )
-                 
+
 
 opts <- options(
   "future.globals.maxSize" = 1000*1024^2,
@@ -151,7 +151,7 @@ set.seed(161616)
 #EDIT ALGO 2 IN LBMR/HELPERS TO ALGO 1. #Also made succesionTimeStep 1 so calculateSumB wouldnt' return NA
 #Also had to completely remove lines in NoDiserpsal, to shut off all regeneration.
 #removed all LandR.CS references Nov 28th
-####NOTE: This will fail at year 700, because every cohort is dead. Not sure why that fails yet... 
+####NOTE: This will fail at year 700, because every cohort is dead. Not sure why that fails yet...
 #files are still output so it isn't a problem
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects,
                  paths = paths, loadOrder = unlist(modules))
