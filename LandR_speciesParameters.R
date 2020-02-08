@@ -25,22 +25,23 @@ defineModule(sim, list(
     defineParameter(".saveInterval", "numeric", NA, NA, NA, "This describes the simulation time interval between save events"),
     defineParameter(".useCache", "logical", FALSE, NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
-                          "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
+                                 "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
     defineParameter("constrainGrowthCurve", "numeric", c(0.5, 0.5), 0, 1,
                     desc = paste("constraints on range of potential growth curves when fitting traits. This module accepts a",
-                    "list of vectors, with names equal to sppEquivCol, so that traits are customizable")),
+                                 "list of vectors, with names equal to sppEquivCol, so that traits are customizable")),
     defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25,
                     desc = paste('constraints on mortality shape when fitting traits. low mortality curve needs to excessive',
                                  'cohorts with very little biomass as longevity is approached, adding computation strain.',
                                  'This module accepts a list of vectors, with names equal to sppEquivCol',
                                  'so that GAMMS are customizable')),
-    defineParameter("GAMMiterations", "numeric", 8, 1, NA, desc = paste('number of iterations for GAMMs. This module accepts a',
-                    "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
+    defineParameter("GAMMiterations", "numeric", 8, 1, NA,
+                    desc = paste("number of iterations for GAMMs. This module accepts a",
+                                 "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
     defineParameter("GAMMknots", "numeric", 3, NA, NA,
                     desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
-                    "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
+                                 "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
     defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA, desc = paste("minimum number of PSP plots before building GAMM")),
     defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA,
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
@@ -119,7 +120,7 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
     save = {
 
 
-    # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "LandR_speciesParameters", "save")
+      # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "LandR_speciesParameters", "save")
 
       # ! ----- STOP EDITING ----- ! #
     },
@@ -166,18 +167,18 @@ Init <- function(sim) {
   }
 
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
-                                             speciesTable = sim$species,
-                                             factorialTraits = sim$factorialSpeciesTable,
-                                             factorialBiomass = sim$reducedFactorialCohortData,
-                                             sppEquiv = sim$sppEquiv,
-                                             sppEquivCol = P(sim)$sppEquivCol,
-                                             mortConstraints = P(sim)$constrainMortalityShape,
-                                             growthConstraints = P(sim)$constrainGrowthCurve)
+                                              speciesTable = sim$species,
+                                              factorialTraits = sim$factorialSpeciesTable,
+                                              factorialBiomass = sim$reducedFactorialCohortData,
+                                              sppEquiv = sim$sppEquiv,
+                                              sppEquivCol = P(sim)$sppEquivCol,
+                                              mortConstraints = P(sim)$constrainMortalityShape,
+                                              growthConstraints = P(sim)$constrainGrowthCurve)
 
   sim$species <- modifiedSpeciesTables
 
   modifiedSpeciesEcoregion <- modifySpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
-                                                       speciesTable = sim$species)
+                                                          speciesTable = sim$species)
   sim$speciesEcoregion <- modifiedSpeciesEcoregion
 
   return(sim)
@@ -243,10 +244,10 @@ plotFun <- function(sim) {
     #pass a default sppEquivalencies_CA for common species in western Canada
     sppEquivalencies_CA <-  LandR::sppEquivalencies_CA
     sppEquivalencies_CA[, default := c(Pice_mar = "Pice_mar", Pice_gla = "Pice_gla",
-                                   Pinu_con = "Pinu_con", Popu_tre = "Popu_tre",
-                                   Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
-                                   Pseu_men = "Pseu_men", Abie_bal = "Abie_bal",
-                                   Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar")[LandR]]
+                                       Pinu_con = "Pinu_con", Popu_tre = "Popu_tre",
+                                       Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
+                                       Pseu_men = "Pseu_men", Abie_bal = "Abie_bal",
+                                       Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar")[LandR]]
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS"]$default <- "Abie_las"
     sppEquivalencies_CA <- sppEquivalencies_CA[!LANDIS_traits == "PINU.CON.CON"]
     sppEquivalencies_CA <- sppEquivalencies_CA[!is.na(default)]
