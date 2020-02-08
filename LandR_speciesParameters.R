@@ -82,6 +82,9 @@ defineModule(sim, list(
   ),
   outputObjects = bind_rows(
     #createsOutput("objectName", "objectClass", "output object description", ...),
+    createsOutput(objectName = "speciesEcoregion", "data.table",
+                  desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
+                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
     createsOutput(objectName = 'speciesGAMMs', objectClass = 'list',
                   desc = paste('a list of mixed-effect general additive models (gamm) for each tree species',
                                'modeling biomass as a function of age')),
