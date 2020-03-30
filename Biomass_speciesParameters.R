@@ -4,17 +4,17 @@
 # to all modules. Functions can be used without sim$ as they are namespaced, like functions
 # in R packages. If exact location is required, functions will be: sim$<moduleName>$FunctionName
 defineModule(sim, list(
-  name = "LandR_speciesParameters",
+  name = "Biomass_speciesParameters",
   description = NA, #"insert module description here",
   keywords = NA, # c("insert key words here"),
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@example.com", role = c("aut", "cre"))),
   childModules = character(0),
-  version = list(SpaDES.core = "0.2.6", LandR_speciesParameters = "0.0.1"),
+  version = list(SpaDES.core = "0.2.6", Biomass_speciesParameters = "0.0.1"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
-  documentation = list("README.txt", "LandR_speciesParameters.Rmd"),
+  documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
   reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv', 'fpCompare',
                   'PredictiveEcology/LandR@development', 'crayon'),
   parameters = rbind(
@@ -97,7 +97,7 @@ defineModule(sim, list(
 ## event types
 #   - type `init` is required for initialization
 
-doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
+doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
   switch(
     eventType,
     init = {
@@ -108,19 +108,19 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
       sim <- Init(sim)
 
       # schedule future event(s)
-      sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "LandR_speciesParameters", "plot")
-      sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "LandR_speciesParameters", "save")
+      sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "Biomass_speciesParameters", "plot")
+      sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "Biomass_speciesParameters", "save")
     },
     plot = {
 
-      #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "LandR_speciesParameters", "plot")
+      #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "Biomass_speciesParameters", "plot")
 
       # ! ----- STOP EDITING ----- ! #
     },
     save = {
 
 
-      # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "LandR_speciesParameters", "save")
+      # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "Biomass_speciesParameters", "save")
 
       # ! ----- STOP EDITING ----- ! #
     },
@@ -138,7 +138,7 @@ doEvent.LandR_speciesParameters = function(sim, eventTime, eventType) {
 Init <- function(sim) {
 
   if (is.na(P(sim)$sppEquivCol)) {
-    stop("Please supply sppEquivCol in parameters of LandR_speciesParameters")
+    stop("Please supply sppEquivCol in parameters of Biomass_speciesParameters")
   }
 
   #prepare PSPdata

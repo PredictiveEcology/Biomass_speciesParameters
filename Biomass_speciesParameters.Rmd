@@ -1,5 +1,5 @@
 ---
-title: "LandR_speciesParameters"
+title: "Biomass_speciesParameters"
 author: ""
 date: "17 September 2019"
 output: pdf_document
@@ -29,12 +29,12 @@ getPaths() # shows where the 4 relevant paths are
 
 times <- list(start = 0, end = 10)
 
-modules <- list("LandR_speciesParameters", 'PSP_Clean')
+modules <- list("Biomass_speciesParameters", 'PSP_Clean')
 objects <- list()
 inputs <- list()
 outputs <- list()
 
-parameters <- list(LandR_speciesParameters = 
+parameters <- list(Biomass_speciesParameters = 
                      list(GAMMiterations = 2, 
                           GAMMknots = list(
                             "Abie_bal" = 3,
@@ -104,7 +104,7 @@ Write what is saved.
 ## Input data
 
 How to obtain input data, and a description of the data required by the module.
-If `sourceURL` is specified, `downloadData("LandR_speciesParameters", "path/to/modules/dir")` may be sufficient.
+If `sourceURL` is specified, `downloadData("Biomass_speciesParameters", "path/to/modules/dir")` may be sufficient.
 
 ## Output data
 
