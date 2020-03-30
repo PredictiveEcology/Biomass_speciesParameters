@@ -1,5 +1,8 @@
-#This script is for running the species traits factorial design
-#It
+#This script is for running the species traits factorial design. 
+# it requires a version of Biomass_core that is gitIgnored. The versino had many changes to accomodate the 'no regeneration' scenario
+# Many of the other changes have been subsequently incorporated into Biomass_core, so it may work with a newer version
+
+library(magrittr)
 library(LandR)
 library(data.table)
 library(raster)
@@ -81,9 +84,6 @@ times <- list(start = 0, end = 700)
 #Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real,
 SpeciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
 
-# "PSP_Clean", "gmcsDataPrep",
-
-
 studyArea <- as(extent(pixelGroupMap), 'SpatialPolygons')
 crs(studyArea) <- crs(pixelGroupMap)
 rasterToMatch <- pixelGroupMap
@@ -112,6 +112,7 @@ options("spades.moduleCodeChecks" = FALSE)
 #Tree species that are important to us
 speciesLayers <- "species"
 
+#sppEquiv needed or module stops, but object unused, likewise with speciesLayers
 objects <- list(
   "studyArea" = studyArea,
   "rasterToMatch" = rasterToMatch,
@@ -159,7 +160,7 @@ mySim <- simInit(times = times, params = parameters, modules = modules, objects 
 mySimOut <- spades(mySim, debug = 2)
 
 #####Pull in the files#####
-library(magrittr)
+
 cds <- list.files("outputs/", full.names = TRUE) %>%
   lapply(., FUN = 'readRDS') %>%
   rbindlist(.)
