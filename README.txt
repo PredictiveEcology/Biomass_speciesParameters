@@ -1,11 +1,11 @@
 
 Any other details that a user may need to know, like where to get more information,
 where to download data, etc.
+This module matches simulated growth curves of theoretical species with varying maxANPP, growth curve and mortality shape values (using LandR Biomass_core) against growth curves derived from Permanent Sample Plots (PSP data) across Western Canada to find the most likely combination of traits, and to adjust the maxB trait in respect to the observed maximum biomass on the landscape.
 
-This module uses LandR to simulate biomass for a factorial combination of species traits. 
-Each species grows as a single cohort with no understory (ie, no dispersal, regeneration, or disturbance). 
-It contains a 'frozen' version of Boreal_Biomass (called LBMR at the time), that has been modified
-to allow for understory regeneration, as well as to avoid some bugs in the code (read, errors that are edge cases).
+As of 2020-04-08, the PSP data needed for this module is not freely available, and data sharing agreements must be obtained from the governments of SK, AB, and BC. 
+
+Each species grows as a single cohort with no understory (ie, no dispersal, regeneration, or disturbance).
 The full factorial included mortalityshape 5 to 25, in increments of 1, growthcurve 0 to 1, in increments of 0.1, 
 mANPPproportion (the proportion of max ANPP to maxB) from .25 to 10 in increments of .25, and longevity from 150 to 700 in increments of 25. 
 The results were saved in a combination of tables so that the module can be run without needing to simulate the factorial.

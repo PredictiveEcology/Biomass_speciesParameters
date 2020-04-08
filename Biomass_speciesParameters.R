@@ -5,7 +5,7 @@
 # in R packages. If exact location is required, functions will be: sim$<moduleName>$FunctionName
 defineModule(sim, list(
   name = "Biomass_speciesParameters",
-  description = NA, #"insert module description here",
+  description = "For estimating LANDIS-II species traits from PSP-derived growth curves",
   keywords = NA, # c("insert key words here"),
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@example.com", role = c("aut", "cre"))),
   childModules = character(0),
