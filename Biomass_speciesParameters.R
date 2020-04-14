@@ -77,9 +77,9 @@ defineModule(sim, list(
                  desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
     expectsInput(objectName = "sppEquiv", "data.table",
-                 desc = "table of species equivalencies. See LandR::sppEquivalencies_CA.",
-                 sourceURL = ""),
-    expectsInput(objectName = "studyAreaANPP", "SpatialPolygonsDataFrame", desc = "study area used to crop PSP data before building growth curves")
+                 desc = "table of species equivalencies. See LandR::sppEquivalencies_CA."),
+    expectsInput(objectName = "studyAreaANPP", "SpatialPolygonsDataFrame",
+                 desc = "study area used to crop PSP data before building growth curves")
   ),
   outputObjects = bind_rows(
     #createsOutput("objectName", "objectClass", "output object description", ...),
