@@ -51,7 +51,7 @@ defineModule(sim, list(
                                  "named by sppEquivCol. The PSP stand ages are found in sim$speciesGAMMs$<species>$originalData")),
     defineParameter("sppEquivCol", "character", 'default', NA, NA,
                     paste("The column in sim$specieEquivalency data.table to group species by. This parameter should share the same",
-                          "name as in Biomass_borealDataPrep PSPs are aggregated by names in the PSP column and traits estimated",
+                          "name as in Biomass_borealDataPrep. PSPs are aggregated by names in the PSP column and traits estimated",
                           "for the corresponding names in the sppEquivCol")),
     defineParameter("useHeight", "logical", FALSE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
