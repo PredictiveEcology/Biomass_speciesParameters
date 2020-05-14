@@ -83,8 +83,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   spsp  <- spsp[, 'plotBiomass' := sum(areaAdjustedB), .(MeasureID)]
   spsp[, 'spPlotBiomass' := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
   spsp[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
-  outputGCs <- lapply(gcSpecies, FUN = makeGAMMdata, psp = spsp, speciesEquiv = sppEquiv, 
-                      sppCol = speciesCol, NoOfIters = NoOfIterations, 
+  outputGCs <- lapply(gcSpecies, FUN = makeGAMMdata, psp = spsp, speciesEquiv = sppEquiv,
+                      sppCol = speciesCol, NoOfIters = NoOfIterations,
                       K = knots, minSize = minimumSampleSize, q = quantileAgeSubset)
 
   names(outputGCs) <- gcSpecies
@@ -132,9 +132,9 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
 makeGAMMdata <- function(species, psp, speciesEquiv,
                          sppCol, NoOfIters, K, minSize, q) {
-  
+
   matchingSpecies <- speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),]
-  
+
   #subset the parameters that may be lists
   if (class(NoOfIters) == "list"){
     NoOfIters <- NoOfIters[[species]]
@@ -214,12 +214,12 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
   predData <- data.table(standAge = min(Gamm$originalData$standAge):max(Gamm$originalData$standAge))
   output <- predict(Gamm$gam, predData, se.fit = TRUE)
   predData <- data.table("age" = predData$standAge, "predBiomass" = output$fit, 'predSE' = output$se.fit)
-  
-  
+
+
   closestLongevity <- abs(fT$longevity - traits$longevity) == min(abs(fT$longevity - traits$longevity))
   #subset traits by closest longevity
   CandidateTraits <- fT[closestLongevity]
-  
+
   #Constrain growth curve - this is because the effect is conflated with maxANPP
   if (class(growthConstraints) == 'list') {
     growthConstraint <- growthConstraints[[name]]
@@ -256,7 +256,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
                                       inflationFactor = mean(inflationFactor)), 'speciesCode']
 
   #scale factor is the achieved maxB in the simulation / PSP maxB. We use this to scale simulation values to PSP
-  #inflationFactor is the simulation's achieved maxB / the LANDIS speciesTrait maxB that was used (always 5000)
+  #inflationFactor is the the LANDIS speciesTrait maxB that was used (always 5000) / simulation's achieved maxB
   #scale factor is NOT returned. inflation factor is returned to 'inflate' Biomass_borealDataPrep estimates
   CandidateValues <- CandidateValues[scaleFactors, on = 'speciesCode']
 
