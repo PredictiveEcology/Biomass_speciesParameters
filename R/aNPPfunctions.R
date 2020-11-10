@@ -227,9 +227,11 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
     growthConstraint <- growthConstraints
   }
 
-  CandidateTraits <- CandidateTraits[growthcurve %>=% min(growthConstraint)
-                                     & growthcurve %<=% max(growthConstraint),]
-
+  #growth constraint may be NULL if user passed constraints on partial list of species
+  if (!is.null(growthConstraint)){
+    CandidateTraits <- CandidateTraits[growthcurve %>=% min(growthConstraint)
+                                       & growthcurve %<=% max(growthConstraint),]
+  }
   #Constrain mortality shape - limited available information on mortalitity in PSPs, too low adds computation strain
   if (class(mortConstraints) == 'list') {
     mortConstraint <- mortConstraints[[name]]
@@ -237,9 +239,11 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
     mortConstraint <- mortConstraints
   }
 
-  CandidateTraits <- CandidateTraits[mortalityshape >= min(mortConstraint)
-                                     & mortalityshape <= max(mortConstraint)]
-
+  if (!is.null(mortConstraints)) {
+    CandidateTraits <- CandidateTraits[mortalityshape >= min(mortConstraint)
+                                       & mortalityshape <= max(mortConstraint)]
+  }
+  
   #subset the simulation values by potential species
   CandidateValues <- fB[CandidateTraits]
 
