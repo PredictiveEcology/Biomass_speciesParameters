@@ -169,11 +169,12 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   simData$Weights <- c(Realweights, Fakeweights)
 
   localEnv <- environment()
-  speciesGamm <- suppressWarnings(try(expr = gamm(data = simData, formula = eval(gammFormula, enclos = localEnv),
+
+  speciesGamm <- suppressWarnings(try(expr = mgcv::gamm(data = simData, formula = eval(gammFormula, enclos = localEnv),
                                                   random = list(MeasureYear = eval(randomFormula, envir = baseenv()),
                                                                 OrigPlotID1 = eval(randomFormula, envir = baseenv())
                                                                 ),
-                                                  weights = varFunc(~Weights), verbosePQL = FALSE,
+                                                  weights = nlme::varFunc(~Weights), verbosePQL = FALSE,
                                                   niterPQL = NoOfIters),
                                       silent = TRUE))
 
