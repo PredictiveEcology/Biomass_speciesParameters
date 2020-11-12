@@ -57,7 +57,7 @@ defineModule(sim, list(
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
                     Advise against including height unless you are certain it is present in every PSP"))
   ),
-  inputObjects = bind_rows(
+  inputObjects = bindrows(
     #expectsInput("objectName", "objectClass", "input object description", sourceURL, ...),
     expectsInput(objectName = "factorialSpeciesTable", objectClass = "data.table",
                  desc = paste("table with species traits for matching to factorialCohortData"),
@@ -81,7 +81,7 @@ defineModule(sim, list(
     expectsInput(objectName = "studyAreaANPP", "SpatialPolygonsDataFrame",
                  desc = "study area used to crop PSP data before building growth curves")
   ),
-  outputObjects = bind_rows(
+  outputObjects = bindrows(
     #createsOutput("objectName", "objectClass", "output object description", ...),
     createsOutput(objectName = "speciesEcoregion", "data.table",
                   desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
