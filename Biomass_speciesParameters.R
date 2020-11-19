@@ -29,13 +29,17 @@ defineModule(sim, list(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
     defineParameter("constrainGrowthCurve", "numeric", c(0.5, 0.5), 0, 1,
-                    desc = paste("constraints on range of potential growth curves when fitting traits. This module accepts a",
+                    desc = paste("upper and lower bounds on range of potential growth curves when fitting traits. This module accepts a",
                                  "list of vectors, with names equal to sppEquivCol, so that traits are customizable")),
     defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25,
-                    desc = paste('constraints on mortality shape when fitting traits. low mortality curve needs to excessive',
+                    desc = paste('upper and lower bounds on mortality shape when fitting traits. low mortality curve needs to excessive',
                                  'cohorts with very little biomass as longevity is approached, adding computation strain.',
-                                 'This module accepts a list of vectors, with names equal to sppEquivCol',
-                                 'so that GAMMS are customizable')),
+                                 'alternatively accepts a list of vectors, with names equal to sppEquivCol')),
+    defineParameter("constrainMaxANPP", 'numeric', c(2.0, 5.0), 1, 10, 
+                    desc = paste("upper and lower bounds on maxANPP when fitting traits. cohorts are initiated with B = maxANPP",
+                                 "which may be unreasonably high if mANPP is also high. Both mANPP and growthcurve params",
+                                 "control when maxB is reached. High mANPP results in earlier peaks",
+                                 'alternatively accepts a list of vectors, with names equal to sppEquivCol')),
     defineParameter("GAMMiterations", "numeric", 8, 1, NA,
                     desc = paste("number of iterations for GAMMs. This module accepts a",
                                  "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
@@ -173,7 +177,8 @@ Init <- function(sim) {
                                               sppEquiv = sim$sppEquiv,
                                               sppEquivCol = P(sim)$sppEquivCol,
                                               mortConstraints = P(sim)$constrainMortalityShape,
-                                              growthConstraints = P(sim)$constrainGrowthCurve)
+                                              growthConstraints = P(sim)$constrainGrowthCurve,
+                                              mANPPconstraints = P(sim)$constrainMaxANPP)
 
   sim$species <- modifiedSpeciesTables
 
@@ -225,6 +230,7 @@ plotFun <- function(sim) {
   }
 
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
+    warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
     sim$speciesEcoregion <- data.table(ecoregionGroup = "x",
                                        speciesCode = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
                                                        'Pice_gla', 'Pice_mar', 'Pinu_ban',
@@ -233,10 +239,11 @@ plotFun <- function(sim) {
   }
 
   if (!suppliedElsewhere("species", sim)) {
+    warning("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
     sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
                                           'Pice_gla', 'Pice_mar', 'Pinu_ban',
                                           'Pinu_con', 'Pseu_men', "Popu_tre"),
-                              longevity = c(300, 300, 150, 150, 450, 400, 250, 150, 325, 600, 200),
+                              longevity = c(300, 300, 150, 140, 450, 400, 250, 150, 325, 600, 200),
                               mortalityshape = 15, growthcurve = 0)
   }
 

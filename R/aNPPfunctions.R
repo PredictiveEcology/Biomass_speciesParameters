@@ -92,7 +92,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 }
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
-                               sppEquivCol, mortConstraints, growthConstraints) {
+                               sppEquivCol, mortConstraints, growthConstraints, mANPPconstraints) {
 
   #Join these two tables to make the full speciesTraits table
   factorialBiomass[, species := speciesCode]
@@ -103,7 +103,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   outputTraits <- lapply(names(gamms), FUN = editSpeciesTraits, gamm = gamms,
                          traits = speciesTable, fT = factorialTraits, fB = factorialBiomass,
                          speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
-                         growthConstraints = growthConstraints)
+                         growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints)
 
   #Collapse new traits and replace old traits
   newTraits <- rbindlist(outputTraits, fill = TRUE)
@@ -200,8 +200,8 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
 
 }
 
-editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
-                              sppCol, mortConstraints, growthConstraints) {
+editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
+                              mortConstraints, growthConstraints, mANPPconstraints) {
 
   Gamm <- gamm[[name]]
 
@@ -244,6 +244,20 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
     CandidateTraits <- CandidateTraits[mortalityshape >= min(mortConstraint)
                                        & mortalityshape <= max(mortConstraint)]
   }
+  
+  #Constrain growth curve - this is because the effect is conflated with maxANPP
+  if (class(mANPPconstraints) == 'list') {
+    mANPPconstraint <- mANPPconstraints[[name]]
+  } else {
+    mANPPconstraint <- mANPPconstraints
+  }
+  
+  #growth constraint may be NULL if user passed constraints on partial list of species
+  if (!is.null(mANPPconstraint)){
+    CandidateTraits <- CandidateTraits[mANPPproportion %>=% min(mANPPconstraint)
+                                       & mANPPproportion %<=% max(mANPPconstraint),]
+  }
+  
   
   #subset the simulation values by potential species
   CandidateValues <- fB[CandidateTraits]
