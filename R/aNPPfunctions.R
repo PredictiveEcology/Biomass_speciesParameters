@@ -213,6 +213,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
   }
 
   predData <- data.table(standAge = min(Gamm$originalData$standAge):max(Gamm$originalData$standAge))
+  Require('nlme')
   output <- predict(Gamm$gam, predData, se.fit = TRUE)
   predData <- data.table("age" = predData$standAge, "predBiomass" = output$fit, 'predSE' = output$se.fit)
 
@@ -244,7 +245,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv,
     CandidateTraits <- CandidateTraits[mortalityshape >= min(mortConstraint)
                                        & mortalityshape <= max(mortConstraint)]
   }
-  
+
   #subset the simulation values by potential species
   CandidateValues <- fB[CandidateTraits]
 

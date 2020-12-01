@@ -225,6 +225,7 @@ plotFun <- function(sim) {
   }
 
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
+    warning("using simulated speciesEcoregion data")
     sim$speciesEcoregion <- data.table(ecoregionGroup = "x",
                                        speciesCode = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
                                                        'Pice_gla', 'Pice_mar', 'Pinu_ban',
@@ -233,6 +234,7 @@ plotFun <- function(sim) {
   }
 
   if (!suppliedElsewhere("species", sim)) {
+    warning("using simulated species data")
     sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
                                           'Pice_gla', 'Pice_mar', 'Pinu_ban',
                                           'Pinu_con', 'Pseu_men', "Popu_tre"),
