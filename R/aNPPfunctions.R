@@ -118,7 +118,6 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
 
 modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
   message("modifying speciesEcoregion table based on traits derived from PSP Gamms")
-
   #modify things by species
   newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c('speciesCode' = 'species')]
   newSpeciesEcoregion[, maxB := maxB * inflationFactor]
@@ -213,7 +212,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   }
 
   predData <- data.table(standAge = min(Gamm$originalData$standAge):max(Gamm$originalData$standAge))
-  Require('nlme')
+  library('mgcv')
   output <- predict(Gamm$gam, predData, se.fit = TRUE)
   predData <- data.table("age" = predData$standAge, "predBiomass" = output$fit, 'predSE' = output$se.fit)
 
