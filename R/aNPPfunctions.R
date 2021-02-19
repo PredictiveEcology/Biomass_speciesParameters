@@ -208,6 +208,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   traits <- traits[species == name]
 
   if (class(Gamm) == 'try-error' | class(Gamm) == 'character') {
+    message(paste("not estimating growth/mortality traits for", name))
     return(traits)
   }
 
