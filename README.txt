@@ -1,6 +1,4 @@
 
-Any other details that a user may need to know, like where to get more information,
-where to download data, etc.
 This module matches simulated growth curves of theoretical species with varying maxANPP, growth curve and mortality shape values (using LandR Biomass_core) against growth curves derived from Permanent Sample Plots (PSP data) across Western Canada to find the most likely combination of traits, and to adjust the maxB trait in respect to the observed maximum biomass on the landscape.
 
 As of 2020-04-08, the PSP data needed for this module is not freely available, and data sharing agreements must be obtained from the governments of SK, AB, and BC. 
