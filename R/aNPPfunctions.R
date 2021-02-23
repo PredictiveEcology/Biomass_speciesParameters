@@ -1,5 +1,5 @@
 prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
-                        useHeight, biomassModel, PSPperiod) {
+                        useHeight, biomassModel, PSPperiod, minDBH) {
 
   #Crop points to studyArea
   if (!is.null(studyAreaANPP)) {
@@ -35,8 +35,8 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   PSPmeasure <- PSPmeasure[OrigPlotID1 %in% forestPlots$OrigPlotID1,]
   PSPplot <- PSPplot[OrigPlotID1 %in% PSPmeasure$OrigPlotID1,]
 
-  #Restrict to trees > 10 DBH (P) This gets rid of some big trees. Some 15 metres tall. Necessary because they are inconsistently recorded
-  # PSPmeasure <- PSPmeasure[DBH >= 10,]
+  #Restrict to trees >= ## DBH. Maybe necessary to get rid of small trees when they are inconsistently recorded
+  PSPmeasure <- PSPmeasure[DBH >= minDBH,]
   #decide what to do about above line and stem/density. PES approach is to just fix the data...
 
   #Calculate biomass
@@ -302,12 +302,12 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
 makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                          PSPplot, useHeight, biomassModel, speciesCol,
                          sppEquiv, NoOfIterations, knots, minimumSampleSize,
-                         quantileAgeSubset) {
+                         quantileAgeSubset, minDBH) {
 
   #this function is just a wrapper around these functions, for caching purposess
   psp <- prepPSPaNPP(studyAreaANPP = studyAreaANPP, PSPperiod = PSPperiod,
                      PSPgis = PSPgis, PSPmeasure = PSPmeasure, PSPplot = PSPplot,
-                     useHeight = useHeight, biomassModel = biomassModel)
+                     useHeight = useHeight, biomassModel = biomassModel, minDBH = minDBH)
 
   #Wrapper used to avoid caching psp object - too large
   speciesGAMMs <- buildGrowthCurves(PSPdata = psp, speciesCol = speciesCol,

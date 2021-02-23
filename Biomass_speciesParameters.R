@@ -47,6 +47,9 @@ defineModule(sim, list(
                     desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
                                  "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
     defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA, desc = paste("minimum number of PSP plots before building GAMM")),
+    defineParameter("minDBH", "integer", 0L, 0L, NA,
+                    desc = paste("minimum diameter at breast height (DBH) in cm used to filter PSP data.",
+                                 "Defaults to 0cm, i.e. all tree measurements are used.")),
     defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA,
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
     defineParameter("quantileAgeSubset", "numeric", 95, 1, 100,
@@ -159,6 +162,7 @@ Init <- function(sim) {
                         knots = P(sim)$GAMMknots,
                         minimumSampleSize = P(sim)$minimumPlotsPerGamm,
                         quantileAgeSubset = P(sim)$quantileAgeSubset,
+                        minDBH = P(sim)$minDBH,
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs
 
