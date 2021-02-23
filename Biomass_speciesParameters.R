@@ -170,6 +170,15 @@ Init <- function(sim) {
     print(names(badModels))
   }
 
+  noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
+    x == "insufficient data"
+  }, FUN.VALUE = logical(1))
+
+  if (any(noData)) {
+    message("The following species did not have sufficient data for model estimation: ")
+    print(names(sim$speciesGAMMs)[noData])
+  }
+
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                               speciesTable = sim$species,
                                               factorialTraits = sim$factorialSpeciesTable,
