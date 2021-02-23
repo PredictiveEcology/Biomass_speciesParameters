@@ -160,7 +160,6 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
     return(speciesGamm)
   }
   #By default removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
-  browser()
   spDominant <- spDominant[standAge < quantile(spDominant$standAge, probs = q/100),]
   simulatedData <- simulateYoungStands(cohortData = spDominant, N = 50)
   simData <- rbind(spDominant, simulatedData)
