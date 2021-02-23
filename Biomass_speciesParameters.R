@@ -182,7 +182,7 @@ Init <- function(sim) {
 
   if (any(noData)) {
     message("The following species did not have sufficient data for model estimation: ")
-    print(names(sim$speciesGAMMs)[noData])
+    print(names(noData))
   }
 
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
