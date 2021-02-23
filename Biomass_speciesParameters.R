@@ -9,14 +9,16 @@ defineModule(sim, list(
   keywords = NA, # c("insert key words here"),
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@example.com", role = c("aut", "cre"))),
   childModules = character(0),
-  version = list(SpaDES.core = "0.2.6", Biomass_speciesParameters = "0.0.1"),
+  version = list(Biomass_speciesParameters = "0.0.1"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
-  reqdPkgs = list("PredictiveEcology/pemisc@development", 'mgcv', 'nlme', 'fpCompare',
-                  'PredictiveEcology/LandR@development', 'crayon'),
+  reqdPkgs = list("mgcv", "nlme", "fpCompare", "crayon",
+                  "PredictiveEcology/LandR@development",
+                  "PredictiveEcology/pemisc@development",
+                  "PredictiveEcology/SpaDES.core@development (>= 0.2.6)"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
     defineParameter(".plotInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first plot event should occur"),
@@ -47,6 +49,9 @@ defineModule(sim, list(
                     desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
                                  "list of vectors, with names equal to sppEquivCol, so that GAMMS are customizable")),
     defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA, desc = paste("minimum number of PSP plots before building GAMM")),
+    defineParameter("minDBH", "integer", 0L, 0L, NA,
+                    desc = paste("minimum diameter at breast height (DBH) in cm used to filter PSP data.",
+                                 "Defaults to 0cm, i.e. all tree measurements are used.")),
     defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA,
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
     defineParameter("quantileAgeSubset", "numeric", 95, 1, 100,
@@ -159,6 +164,7 @@ Init <- function(sim) {
                         knots = P(sim)$GAMMknots,
                         minimumSampleSize = P(sim)$minimumPlotsPerGamm,
                         quantileAgeSubset = P(sim)$quantileAgeSubset,
+                        minDBH = P(sim)$minDBH,
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs
 
@@ -168,6 +174,15 @@ Init <- function(sim) {
   if (!length(badModels) == 0) {
     message("convergence failures for these PSP growth curve models: ")
     print(names(badModels))
+  }
+
+  noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
+    x == "insufficient data"
+  }, FUN.VALUE = logical(1))
+
+  if (any(noData)) {
+    message("The following species did not have sufficient data for model estimation: ")
+    print(names(sim$speciesGAMMs)[noData])
   }
 
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
