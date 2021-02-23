@@ -132,7 +132,7 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 makeGAMMdata <- function(species, psp, speciesEquiv,
                          sppCol, NoOfIters, K, minSize, q) {
 
-  matchingSpecies <- speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),]
+  matchingSpecies <- unique(speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),])
 
   #subset the parameters that may be lists
   if (class(NoOfIters) == "list"){
@@ -145,11 +145,13 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   if (class(q) == "list") {
     q <- q[[species]]
   }
+
   #Need to calculate stand dominance first - remove all stands < 50% dominance, and of wrong species
-  spDominant <- psp[newSpeciesName %in% unique(matchingSpecies) & spDom > 0.5,]
+  spDominant <- matchingSpecies[psp, nomatch = 0, on = "PSP==newSpeciesName"]  ## filter species first
+  spDominant <- spDominant[spDom > 0.5]
   spDominant <- spDominant[, .(PlotSize = mean(PlotSize), standAge = mean(standAge),
                                biomass = mean(plotBiomass), spDom = mean(spDom)),
-                           .(MeasureYear, OrigPlotID1)]
+                           by = .(MeasureYear, OrigPlotID1)]
 
   #test if there are sufficient plots to estimate traits
   if (nrow(spDominant) < minSize) {
