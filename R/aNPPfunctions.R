@@ -25,8 +25,8 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                        MeasureYear < max(PSPperiod),]
 
   #Join data (should be small enough by now)
-  PSPmeasure <- PSPmeasure[PSPplot, on = c('MeasureID', 'OrigPlotID1', 'MeasureYear')]
-  PSPmeasure[, c('Longitude', 'Latitude', 'Easting', 'Northing', 'Zone'):= NULL]
+  PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear")]
+  PSPmeasure[, c("Longitude", "Latitude", "Easting", "Northing", "Zone"):= NULL]
 
   #Filter by > 30 trees at first measurement (P) to ensure forest.
   forestPlots <- PSPmeasure[, .(measures = .N), OrigPlotID1] %>%
@@ -79,9 +79,9 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 
   #summed psp - need year and origPlotID as random effects
   spsp <- copy(PSPdata)
-  spsp[, 'areaAdjustedB' := biomass/PlotSize]
-  spsp  <- spsp[, 'plotBiomass' := sum(areaAdjustedB), .(MeasureID)]
-  spsp[, 'spPlotBiomass' := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
+  spsp[, "areaAdjustedB" := biomass/PlotSize]
+  spsp  <- spsp[, "plotBiomass" := sum(areaAdjustedB), .(MeasureID)]
+  spsp[, "spPlotBiomass" := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
   spsp[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
   outputGCs <- lapply(gcSpecies, FUN = makeGAMMdata, psp = spsp, speciesEquiv = sppEquiv,
                       sppCol = speciesCol, NoOfIters = NoOfIterations,
@@ -109,7 +109,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   newTraits <- rbindlist(outputTraits, fill = TRUE)
 
   if (!is.null(newTraits$mANPPproportion)) {
-    newTraits[is.na(mANPPproportion), c('mANPPproportion', 'inflationFactor') := .(3.33, 1)] #default mANPP
+    newTraits[is.na(mANPPproportion), c("mANPPproportion", "inflationFactor") := .(3.33, 1)] #default mANPP
   } else {
     message("no GAMMs converged :( Consider revising your parameters")
   }
@@ -119,7 +119,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
 modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
   message("modifying speciesEcoregion table based on traits derived from PSP Gamms")
   #modify things by species
-  newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c('speciesCode' = 'species')]
+  newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
   newSpeciesEcoregion[, maxB := maxB * inflationFactor]
   newSpeciesEcoregion[, maxANPP := maxB * mANPPproportion/100]
   cols <- names(speciesEcoregion)
@@ -160,6 +160,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
     return(speciesGamm)
   }
   #By default removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
+  browser()
   spDominant <- spDominant[standAge < quantile(spDominant$standAge, probs = q/100),]
   simulatedData <- simulateYoungStands(cohortData = spDominant, N = 50)
   simData <- rbind(spDominant, simulatedData)
@@ -173,8 +174,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
 
   speciesGamm <- suppressWarnings(try(expr = mgcv::gamm(data = simData, formula = eval(gammFormula, enclos = localEnv),
                                                   random = list(MeasureYear = eval(randomFormula, envir = baseenv()),
-                                                                OrigPlotID1 = eval(randomFormula, envir = baseenv())
-                                                                ),
+                                                                OrigPlotID1 = eval(randomFormula, envir = baseenv())),
                                                   weights = nlme::varFunc(~Weights), verbosePQL = FALSE,
                                                   niterPQL = NoOfIters),
                                       silent = TRUE))
@@ -198,7 +198,6 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   }
 
   return(speciesGamm)
-
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
@@ -209,15 +208,14 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #Subset traits to PSP species, return unchanged if no Gamm present
   traits <- traits[species == name]
 
-  if (class(Gamm) == 'try-error' | class(Gamm) == 'character') {
+  if (class(Gamm) == "try-error" | class(Gamm) == "character") {
     message(paste("not estimating growth/mortality traits for", name))
     return(traits)
   }
 
   predData <- data.table(standAge = min(Gamm$originalData$standAge):max(Gamm$originalData$standAge))
-  library('mgcv')
   output <- predict(Gamm$gam, predData, se.fit = TRUE)
-  predData <- data.table("age" = predData$standAge, "predBiomass" = output$fit, 'predSE' = output$se.fit)
+  predData <- data.table("age" = predData$standAge, "predBiomass" = output$fit, "predSE" = output$se.fit)
 
 
   closestLongevity <- abs(fT$longevity - traits$longevity) == min(abs(fT$longevity - traits$longevity))
@@ -225,7 +223,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   CandidateTraits <- fT[closestLongevity]
 
   #Constrain growth curve - this is because the effect is conflated with maxANPP
-  if (class(growthConstraints) == 'list') {
+  if (class(growthConstraints) == "list") {
     growthConstraint <- growthConstraints[[name]]
   } else {
     growthConstraint <- growthConstraints
@@ -237,7 +235,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
                                        & growthcurve %<=% max(growthConstraint),]
   }
   #Constrain mortality shape - limited available information on mortalitity in PSPs, too low adds computation strain
-  if (class(mortConstraints) == 'list') {
+  if (class(mortConstraints) == "list") {
     mortConstraint <- mortConstraints[[name]]
   } else {
     mortConstraint <- mortConstraints
@@ -249,7 +247,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   }
 
   #Constrain growth curve - this is because the effect is conflated with maxANPP
-  if (class(mANPPconstraints) == 'list') {
+  if (class(mANPPconstraints) == "list") {
     mANPPconstraint <- mANPPconstraints[[name]]
   } else {
     mANPPconstraint <- mANPPconstraints
@@ -274,20 +272,20 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   CandidateValues <- na.exclude(CandidateValues[predData])
   scaleFactors <- CandidateValues[, .(scaleFactor = mean(predBiomass/B),
                                       sMaxB = max(B),
-                                      inflationFactor = mean(inflationFactor)), 'speciesCode']
+                                      inflationFactor = mean(inflationFactor)), "speciesCode"]
 
   #scale factor is the achieved maxB in the simulation / PSP maxB. We use this to scale simulation values to PSP
   #inflationFactor is the the LANDIS speciesTrait maxB that was used (always 5000) / simulation's achieved maxB
   #scale factor is NOT returned. inflation factor is returned to 'inflate' Biomass_borealDataPrep estimates
-  CandidateValues <- CandidateValues[scaleFactors, on = 'speciesCode']
+  CandidateValues <- CandidateValues[scaleFactors, on = "speciesCode"]
 
   #Find best possible candidate species
-  CandidateValues[, se := sd(B * scaleFactor - predBiomass), by = 'speciesCode']
+  CandidateValues[, se := sd(B * scaleFactor - predBiomass), by = "speciesCode"]
   Candidates <- CandidateValues[, .(LogLikelihood = sum(dnorm(x = B * scaleFactor, mean = predBiomass,
                                                               sd = se, log = TRUE)),
                                     inflationFactor = mean(inflationFactor)), .(speciesCode)]
 
-  bestCandidate <- CandidateTraits[Candidates, on = c("species" = 'speciesCode')] %>%
+  bestCandidate <- CandidateTraits[Candidates, on = c("species" = "speciesCode")] %>%
     .[LogLikelihood == max(LogLikelihood)]
 
   # What to do witht he LogLikelihood? Report?
@@ -295,7 +293,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #if there are multiple rows due to undifferentiated curves, then mortality hasn't kicked in. Take the max mortalityshape
   bestTraits <- bestTraits[mortalityshape == max(mortalityshape)]
   bestTraits[, mortalityshape := asInteger(mortalityshape)]
-  traits[, c('mortalityshape', 'growthcurve', 'mANPPproportion', 'inflationFactor') :=  bestTraits]
+  traits[, c("mortalityshape", "growthcurve", "mANPPproportion", "inflationFactor") :=  bestTraits]
   return(traits)
 }
 
