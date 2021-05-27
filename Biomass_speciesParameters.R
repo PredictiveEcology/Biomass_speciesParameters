@@ -75,9 +75,15 @@ defineModule(sim, list(
                  desc = paste("results of factorial species trait simulation. This can be found by running",
                               "SpeciesFactorial.R but requires a specific commit of Boreal_Biomass"),
                  sourceURL = "https://drive.google.com/open?id=1h8StXE0vm8xyDycRomCkwIaL7wfh5Irj"),
-    expectsInput(objectName = "PSPmeasure", objectClass = "data.table", desc = "merged PSP and TSP individual measurements"),
-    expectsInput(objectName = "PSPplot", objectClass = "data.table", desc = "merged PSP and TSP plot data"),
-    expectsInput(objectName = "PSPgis", objectClass = "sf", desc = "Plot location sf object. Contains duplicates"),
+    expectsInput(objectName = "PSPmeasure", objectClass = "data.table",
+                 desc = paste("merged PSP and TSP individual measurements. Defaults to PSP data stripped of real plotIDs"),
+                 sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
+    expectsInput(objectName = "PSPplot", objectClass = "data.table",
+                 desc = paste("merged PSP and TSP plot data. Defaults to randomized PSP data stripped of real plotIDs"),
+                 sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
+    expectsInput(objectName = paste("PSPgis", objectClass = "sf", desc = "Plot location sf object. Contains duplicates.",
+                                    "Defaults to PSP data stripped of real plotIDs"),
+                 sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
     expectsInput(objectName = "species", "data.table",
                  desc = paste("a table that has species traits such as longevity, shade tolerance, etc.",
                               "Default is partially based on Dominic Cir and Yan's project"),
@@ -277,11 +283,32 @@ plotFun <- function(sim) {
     sim$sppEquiv <- sppEquivalencies_CA
   }
 
-  if (!suppliedElsewhere("PSPmeasure", sim) |
-      !suppliedElsewhere("PSPplot", sim) |
-      !suppliedElsewhere("PSPgis", sim)) {
-    stop("This module requires PSP objects. Try including the module PSP_Clean or contact ian.eddy@canada.ca")
+  if (!suppliedElsewhere("PSPmeasure", sim)) {
+    sim$PSPmeasure <- Cache(prepInputs,
+                            targetFile = "randomizedPSPmeasure.rds",
+                            archive = "randomized_LandR_speciesParameters_Inputs.zip",
+                            url =  extractURL('PSPmeasure', sim),
+                            destinationPath = dPath,
+                            fun = "readRDS")
   }
+  if (!suppliedElsewhere("PSPplot", sim)) {
+    sim$PSPplot <- Cache(prepInputs,
+                         targetFile = "randomizedPSPplot.rds",
+                         archive = "randomized_LandR_speciesParameters_Inputs.zip",
+                         url = extractURL('PSPplot', sim),
+                         destinationPath = dPath,
+                         fun = "readRDS")
+
+  }
+  if (!suppliedElsewhere("PSPgis", sim)) {
+    sim$PSPgis <- Cache(prepInputs,
+                        targetFile = "randomizedrandomizedPSPdata.rds",
+                        archive = "randomized_LandR_speciesParameters_Inputs.zip",
+                        url = extractURL('PSPgis', sim),
+                        destinationPath = dPath,
+                        fun = "readRDS")
+  }
+
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
