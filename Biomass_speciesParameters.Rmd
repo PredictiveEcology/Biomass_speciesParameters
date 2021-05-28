@@ -22,17 +22,16 @@ For help writing in R Markdown, see http://rmarkdown.rstudio.com/.
 
 ```{r module_usage}
 library(SpaDES)
-library(SpaDES.experiment)
 
 setPaths(modulePath = file.path("../"))
 getPaths() # shows where the 4 relevant paths are
 
 times <- list(start = 0, end = 10)
 
-modules <- list("Biomass_speciesParameters", 'PSP_Clean')
-objects <- list()
+modules <- list("Biomass_speciesParameters")
 inputs <- list()
 outputs <- list()
+objects <- list()
 
 parameters <- list(Biomass_speciesParameters = 
                      list(GAMMiterations = 2, 
@@ -91,8 +90,7 @@ parameters <- list(Biomass_speciesParameters =
                      ))
 
 
-mySim <- simInit(times = times, params = parameters, modules = modules,
-                 objects = objects)
+mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects)
 
 mySimOut <- spades(mySim)
 
