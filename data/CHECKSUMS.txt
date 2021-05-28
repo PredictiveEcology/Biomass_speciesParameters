@@ -1,3 +1,7 @@
 "file" "checksum" "filesize" "algorithm"
 "factorialSpeciesTable.Rdat" "00a3c56c459c4a70" "549393" "xxhash64"
+"randomized_LandR_speciesParameters_Inputs.zip" "91c463349e1dda11" "10659681" "xxhash64"
+"randomizedPSPgis.rds" "93e9ea6c11f00735" "107113" "xxhash64"
+"randomizedPSPmeasure.rds" "96a94d086160d887" "15863970" "xxhash64"
+"randomizedPSPplot.rds" "da71cfef680cd3e8" "206036" "xxhash64"
 "reducedFactorialCD.Rdat" "f6a26978dbf99f76" "140243495" "xxhash64"
