@@ -269,7 +269,7 @@ plotFun <- function(sim) {
     sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
                                           'Pice_gla', 'Pice_mar', 'Pinu_ban',
                                           'Pinu_con', 'Pseu_men', "Popu_tre"),
-                              longevity = c(300, 300, 150, 140, 450, 400, 250, 150, 325, 600, 200),
+                              longevity = c(300, 300, 150, 140, 300, 250, 200, 150, 300, 600, 200),
                               mortalityshape = 15, growthcurve = 0)
   }
 

@@ -276,12 +276,12 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #scale factor is the achieved maxB in the simulation / PSP maxB. We use this to scale simulation values to PSP
   #inflationFactor is the the LANDIS speciesTrait maxB that was used (always 5000) / simulation's achieved maxB
   #scale factor is NOT returned. inflation factor is returned to 'inflate' Biomass_borealDataPrep estimates
-  CandidateValues <- CandidateValues[scaleFactors, on = "speciesCode"]
+  CandidateValues <- CandidateValues[scaleFactors, on = c("speciesCode", "inflationFactor")]
 
   #Find best possible candidate species
-  CandidateValues[, se := sd(B * scaleFactor - predBiomass), by = "speciesCode"]
+  stdev <- sd(predData$predBiomass)
   Candidates <- CandidateValues[, .(LogLikelihood = sum(dnorm(x = B * scaleFactor, mean = predBiomass,
-                                                              sd = se, log = TRUE)),
+                                                              sd = stdev, log = TRUE)),
                                     inflationFactor = mean(inflationFactor)), .(speciesCode)]
 
   bestCandidate <- CandidateTraits[Candidates, on = c("species" = "speciesCode")] %>%
