@@ -58,12 +58,13 @@ defineModule(sim, list(
                                  "become vastly more influential. This parameter accepts both a single value and a list of vectors",
                                  "named by sppEquivCol. The PSP stand ages are found in sim$speciesGAMMs$<species>$originalData")),
     defineParameter("sppEquivCol", "character", 'default', NA, NA,
-                    paste("The column in sim$sppEquiv data.table to group species by. This parameter should share the same",
-                          "name as in Biomass_borealDataPrep. PSPs are aggregated by names in the PSP column and traits estimated",
+                    paste("The column in sim$sppEquiv data.table to group species by.",
+                          "This parameter should share the same name as in Biomass_borealDataPrep.",
+                          "PSPs are aggregated by names in the PSP column and traits estimated",
                           "for the corresponding names in the sppEquivCol")),
     defineParameter("useHeight", "logical", FALSE, NA, NA,
-                    desc = paste("Should height be used to calculate biomass (in addition to DBH).
-                    Advise against including height unless you are certain it is present in every PSP"))
+                    desc = paste("Should height be used to calculate biomass (in addition to DBH).",
+                                 "Advise against including height unless you are certain it is present in every PSP."))
   ),
   inputObjects = bindrows(
     expectsInput(objectName  = "factorialSpeciesTable", objectClass = "data.table",
@@ -105,10 +106,10 @@ defineModule(sim, list(
     createsOutput(objectName = "speciesEcoregion", "data.table",
                   desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
                                "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
-    createsOutput(objectName = 'speciesGAMMs', objectClass = 'list',
-                  desc = paste('a list of mixed-effect general additive models (gamm) for each tree species',
-                               'modeling biomass as a function of age')),
-    createsOutput("species", "data.table",
+    createsOutput(objectName = "speciesGAMMs", objectClass = "list",
+                  desc = paste("a list of mixed-effect general additive models (gamm) for each tree species",
+                               "modeling biomass as a function of age")),
+    createsOutput(objectName = "species", objectClass = "data.table",
                   desc = "a table that has species traits such as longevity..."),
   )
 ))
