@@ -1,4 +1,3 @@
-
 # Everything in this file gets sourced during simInit, and all functions and objects
 # are put into the simList. To use objects, use sim$xxx, and are thus globally available
 # to all modules. Functions can be used without sim$ as they are namespaced, like functions
@@ -85,7 +84,7 @@ defineModule(sim, list(
                               "Must contain fields MeasureID, MeasureYear, OrigPlotID1, and baseSA",
                               "the latter being stand age at year of first measurement"),
                  sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
-    expectsInput(objectName = "PSPgis", objectClass = "sf", 
+    expectsInput(objectName = "PSPgis", objectClass = "sf",
                  desc = paste("Plot location sf object. Defaults to PSP data stripped of real plotIDs/location.",
                               "Must include field OrigPlotID1 for joining to PSPplot object"),
                  sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
@@ -132,14 +131,11 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "Biomass_speciesParameters", "save")
     },
     plot = {
-
       #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "Biomass_speciesParameters", "plot")
 
       # ! ----- STOP EDITING ----- ! #
     },
     save = {
-
-
       # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "Biomass_speciesParameters", "save")
 
       # ! ----- STOP EDITING ----- ! #
@@ -156,7 +152,6 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
 
 ### template initialization
 Init <- function(sim) {
-
   if (is.na(P(sim)$sppEquivCol)) {
     stop("Please supply sppEquivCol in parameters of Biomass_speciesParameters")
   }
@@ -227,14 +222,11 @@ Save <- function(sim) {
 
 ### template for plot events
 plotFun <- function(sim) {
-
   # not sure we need to plot anything
   return(invisible(sim))
 }
 
-
 .inputObjects <- function(sim) {
-
   cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
@@ -257,20 +249,28 @@ plotFun <- function(sim) {
 
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
-    sim$speciesEcoregion <- data.table(ecoregionGroup = "x",
-                                       speciesCode = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
-                                                       'Pice_gla', 'Pice_mar', 'Pinu_ban',
-                                                       'Pinu_con', 'Pseu_men', "Popu_tre"),
-                                       establishprob = 0.5, maxB = 5000, maxANPP = 5000/30, year = 0)
+    sim$speciesEcoregion <- data.table(
+      ecoregionGroup = "x",
+      speciesCode = c("Abie_las", "Abie_bal", "Betu_pap", "Lari_lar", "Pice_eng",
+                      "Pice_gla", "Pice_mar", "Pinu_ban",
+                      "Pinu_con", "Pseu_men", "Popu_tre"),
+      establishprob = 0.5,
+      maxB = 5000,
+      maxANPP = 5000/30,
+      year = 0
+    )
   }
 
   if (!suppliedElsewhere("species", sim)) {
     warning("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
-    sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
-                                          'Pice_gla', 'Pice_mar', 'Pinu_ban',
-                                          'Pinu_con', 'Pseu_men', "Popu_tre"),
-                              longevity = c(300, 300, 150, 140, 300, 250, 200, 150, 300, 600, 200),
-                              mortalityshape = 15, growthcurve = 0)
+    sim$species <- data.table(
+      species = c("Abie_las", "Abie_bal", "Betu_pap", "Lari_lar", "Pice_eng",
+                  "Pice_gla", "Pice_mar", "Pinu_ban",
+                  "Pinu_con", "Pseu_men", "Popu_tre"),
+      longevity = c(300, 300, 150, 140, 450, 400, 250, 150, 325, 600, 200),
+      mortalityshape = 15,
+      growthcurve = 0
+    )
   }
 
   if (!suppliedElsewhere("sppEquiv", sim)) {
@@ -303,7 +303,6 @@ plotFun <- function(sim) {
                          url = extractURL('PSPplot', sim),
                          destinationPath = dPath,
                          fun = "readRDS")
-
   }
   if (!suppliedElsewhere("PSPgis", sim)) {
     sim$PSPgis <- Cache(prepInputs,
