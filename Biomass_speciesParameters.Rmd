@@ -70,17 +70,17 @@ parameters <- list(
          constrainGrowthCurve = c(0, 1),
          constrainMaxANPP = c(3.0, 3.5),
          quantileAgeSubset = list(
-           "Abie_bal" = 98, #N = 43 w/ 95 subset
-           "Abie_las" = 98, #N = 300 '' 
-           "Betu_pap" = 95, #N = 143 95
-           "Lari_lar" = 95, #N = 64 #don't use 99, 
+           "Abie_bal" = 98, 
+           "Abie_las" = 98, 
+           "Betu_pap" = 95,
+           "Lari_lar" = 95, 
            "Pice_eng" = 97,
-           "Pice_gla" = 98, #N = 1849 95
-           "Pice_mar" = 95, #N = 785 95
-           "Pinu_ban" = 98, #N = 645
-           "Pinu_con" = 99, # N = 3172,
-           "Popu_tre" = 98, # N = 1997, trying 99
-           "Pseu_men" = 99 #
+           "Pice_gla" = 98,
+           "Pice_mar" = 95, 
+           "Pinu_ban" = 98, 
+           "Pinu_con" = 99, 
+           "Popu_tre" = 98, 
+           "Pseu_men" = 99 
          )
     )
 )
