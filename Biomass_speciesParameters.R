@@ -77,7 +77,7 @@ defineModule(sim, list(
     expectsInput(objectName = "PSPmeasure", objectClass = "data.table",
                  desc = paste("merged PSP and TSP individual tree measurements. Must include the following columns:",
                               "MeasureID, OrigPlotID1, MeasureYear, TreeNumber, Species, DBH and newSpeciesName",
-                              "the latter corresponding to species names in LandR::sppEquivalencies_CA$PSP.",
+                              "the latter corresponding to species names in `LandR::sppEquivalencies_CA$PSP`.",
                               "Defaults to randomized PSP data stripped of real plotIDs"),
                  sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
     expectsInput(objectName = "PSPplot", objectClass = "data.table",
@@ -97,7 +97,7 @@ defineModule(sim, list(
                  desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
     expectsInput(objectName = "sppEquiv", objectClass = "data.table",
-                 desc = "table of species equivalencies. See LandR::sppEquivalencies_CA."),
+                 desc = "table of species equivalencies. See `LandR::sppEquivalencies_CA`."),
     expectsInput(objectName = "studyAreaANPP", objectClass = "SpatialPolygonsDataFrame",
                  desc = "study area used to crop PSP data before building growth curves")
   ),
