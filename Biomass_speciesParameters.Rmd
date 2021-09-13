@@ -28,78 +28,67 @@ directly using `Biomass_borealDataPrep.`
 # Usage
 
 ```{r module_usage}
-library(SpaDES.core)
+library(SpaDES)
+library(data.table)
 
 setPaths(modulePath = file.path("../"))
 getPaths() # shows where the 4 relevant paths are
 
 times <- list(start = 0, end = 10)
 
-modules <- list("Biomass_speciesParameters")
+modules <- list("Biomass_speciesParameters", "PSP_Clean")
+
+#the purpose of this table is experiment with modify longevity - longevity is not estimated by the module
+#but it is used in trait estimation. 
+inputSpecies <- data.table(species = c("Abie_bal", 'Abie_las', 'Betu_pap', 'Lari_lar',
+                                        'Pice_eng', 'Pice_gla', 'Pice_mar', 'Pinu_ban',
+                                       'Pinu_con', 'Pseu_men', "Popu_tre"),
+                           longevity = c(300, 300, 160, 160, 330, 250, 200, 150, 250, 300, 200),
+                           mortalityshape = 15, growthcurve = 0)
+objects <- list(species = inputSpecies)
+
 inputs <- list()
 outputs <- list()
-objects <- list()
 
-parameters <- list(Biomass_speciesParameters = 
-                     list(GAMMiterations = 2, 
-                          GAMMknots = list(
-                            "Abie_bal" = 3,
-                            "Abie_las" = 3,
-                            "Betu_pap" = 3,
-                            "Lari_lar" = 4,
-                            "Pice_eng" = 4,
-                            "Pice_gla" = 3,
-                            "Pice_mar" = 4,
-                            "Pinu_ban" = 3,
-                            "Pinu_con" = 4, 
-                            "Popu_tre" = 4,
-                            "Pseu_men" = 3),
-                          minimumPlotsPerGamm = 40,
-                          constrainMortalityShape = list(
-                            "Abie_bal" = c(15,25),
-                            "Abie_las" = c(15,25),
-                            "Betu_pap" = c(15,20),
-                            "Lari_lar" = c(20,25),
-                            "Pice_eng" = c(20,25),
-                            "Pice_gla" = c(20,25),
-                            "Pice_mar" = c(15,25),
-                            "Pinu_ban" = c(15,25),
-                            "Pinu_con" = c(15,25), 
-                            "Popu_tre" = c(20,25),
-                            "Pseu_men" = c(20,25)
-                          ),
-                          constrainGrowthCurve = list(
-                            "Abie_bal" = c(0, 1),
-                            "Abie_las" = c(0, 1),
-                            "Betu_pap" = c(0, 1),
-                            "Lari_lar" = c(0, 1),
-                            "Pice_eng" = c(0, 1),
-                            "Pice_gla" = c(0, 1),
-                            "Pice_mar" = c(0, 1),
-                            "Pinu_ban" = c(0, 1),
-                            "Pinu_con" = c(0, 1), 
-                            "Popu_tre" = c(0, 1),
-                            "Pseu_men" = c(0, 1)
-                          ),
-                          quantileAgeSubset = list(
-                            "Abie_bal" = 95, #N = 43 w/ 95 subset
-                            "Abie_las" = 95, #N = 250 '' 
-                            "Betu_pap" = 95, #N = 96
-                            "Lari_lar" = 95, #N = 45
-                            "Pice_eng" = 95, #N = 130
-                            "Pice_gla" = 95, #N = 1849
-                            "Pice_mar" = 95, #N = 785
-                            "Pinu_ban" = 95, #N = 603
-                            "Pinu_con" = 99, # N = 3172, 99 not an improvement. Maybe 97
-                            "Popu_tre" = 99, # N = 1997, trying 99
-                            "Pseu_men" = 99 # N = 2797, 99 is an improvement
-                          )
-                     ))
-
+parameters <- list(
+  Biomass_speciesParameters = 
+    list(GAMMiterations = 2, 
+         GAMMknots = list(
+           "Abie_bal" = 3,
+           "Abie_las" = 3,
+           "Betu_pap" = 3,
+           "Lari_lar" = 4,
+           "Pice_eng" = 4,
+           "Pice_gla" = 3,
+           "Pice_mar" = 4,
+           "Pinu_ban" = 3,
+           "Pinu_con" = 4, 
+           "Popu_tre" = 4,
+           "Pseu_men" = 3),
+         minimumPlotsPerGamm = 40,
+         constrainMortalityShape = c(8, 25), #it is possible to pass a named list here too
+         constrainGrowthCurve = c(0, 1),
+         constrainMaxANPP = c(3.0, 3.5),
+         quantileAgeSubset = list(
+           "Abie_bal" = 98, #N = 43 w/ 95 subset
+           "Abie_las" = 98, #N = 300 '' 
+           "Betu_pap" = 95, #N = 143 95
+           "Lari_lar" = 95, #N = 64 #don't use 99, 
+           "Pice_eng" = 97,
+           "Pice_gla" = 98, #N = 1849 95
+           "Pice_mar" = 95, #N = 785 95
+           "Pinu_ban" = 98, #N = 645
+           "Pinu_con" = 99, # N = 3172,
+           "Popu_tre" = 98, # N = 1997, trying 99
+           "Pseu_men" = 99 #
+         )
+    )
+)
 
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects)
 mySimOut <- spades(mySim)
 ```
+
 
 
 # Events
