@@ -3,99 +3,92 @@ title: "Biomass_speciesParameters"
 author: ""
 date: "17 September 2019"
 output: pdf_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Overview
 
-Provide an overview of what the module does / how to use the module.
+This module matches simulated growth curves of theoretical species with varying `maxANPP`, growth curve and mortality shape values (using LandR Biomass_core) against growth curves derived from Permanent Sample Plots (PSP data) across Western Canada to find the most likely combination of traits, and to adjust the `maxB` trait in respect to the observed maximum biomass on the landscape.
 
-Module documentation should be written so that others can use your module.
-This is a template for module documentation, and should be changed to reflect your module.
+As of 2020-04-08, the PSP data needed for this module is not freely available, and data sharing agreements must be obtained from the governments of SK, AB, and BC. 
 
-## R Markdown
+Each species grows as a single cohort with no understory (i.e., no dispersal, regeneration, or disturbance).
+The full factorial included `mortalityshape` 5 to 25, in increments of 1; `growthcurve` 0 to 1, in increments of 0.1, 
+`mANPPproportion` (the proportion of max ANPP to `maxB`) from .25 to 10 in increments of .25, and longevity from 150 to 700 in increments of 25. 
+The results were saved in a combination of tables so that the module can be run without needing to simulate the factorial.
 
-R Markdown syntax allows R code, outputs, and figures to be rendered in the documentation.
-
-For help writing in R Markdown, see http://rmarkdown.rstudio.com/.
+The module is intended to be used in combination with `Biomass_borealDataPrep.` 
+However, users may want to experiment with the traits as well as examine the output GAMMs used to select traits. 
+Therefore, it can be run as a stand-alone. The parameters are applied to all species (rather than each individually),
+thus users may want to run several times, varying parameters, select the traits they feel best capture the true growth curve
+(the PSPs are quite limited in their representation of stand dynamics for those stands older than 200 yrs), and modify the traits
+directly using `Biomass_borealDataPrep.` 
 
 # Usage
 
 ```{r module_usage}
 library(SpaDES)
+library(data.table)
 
 setPaths(modulePath = file.path("../"))
 getPaths() # shows where the 4 relevant paths are
 
 times <- list(start = 0, end = 10)
 
-modules <- list("Biomass_speciesParameters")
+modules <- list("Biomass_speciesParameters", "PSP_Clean")
+
+#the purpose of this table is experiment with modify longevity - longevity is not estimated by the module
+#but it is used in trait estimation. 
+inputSpecies <- data.table(species = c("Abie_bal", 'Abie_las', 'Betu_pap', 'Lari_lar',
+                                        'Pice_eng', 'Pice_gla', 'Pice_mar', 'Pinu_ban',
+                                       'Pinu_con', 'Pseu_men', "Popu_tre"),
+                           longevity = c(300, 300, 160, 160, 330, 250, 200, 150, 250, 300, 200),
+                           mortalityshape = 15, growthcurve = 0)
+objects <- list(species = inputSpecies)
+
 inputs <- list()
 outputs <- list()
-objects <- list()
 
-parameters <- list(Biomass_speciesParameters = 
-                     list(GAMMiterations = 2, 
-                          GAMMknots = list(
-                            "Abie_bal" = 3,
-                            "Abie_las" = 3,
-                            "Betu_pap" = 3,
-                            "Lari_lar" = 4,
-                            "Pice_eng" = 4,
-                            "Pice_gla" = 3,
-                            "Pice_mar" = 4,
-                            "Pinu_ban" = 3,
-                            "Pinu_con" = 4, 
-                            "Popu_tre" = 4,
-                            "Pseu_men" = 3),
-                          minimumPlotsPerGamm = 40,
-                          constrainMortalityShape = list(
-                            "Abie_bal" = c(15,25),
-                            "Abie_las" = c(15,25),
-                            "Betu_pap" = c(15,20),
-                            "Lari_lar" = c(20,25),
-                            "Pice_eng" = c(20,25),
-                            "Pice_gla" = c(20,25),
-                            "Pice_mar" = c(15,25),
-                            "Pinu_ban" = c(15,25),
-                            "Pinu_con" = c(15,25), 
-                            "Popu_tre" = c(20,25),
-                            "Pseu_men" = c(20,25)
-                          ),
-                          constrainGrowthCurve = list(
-                            "Abie_bal" = c(0, 1),
-                            "Abie_las" = c(0, 1),
-                            "Betu_pap" = c(0, 1),
-                            "Lari_lar" = c(0, 1),
-                            "Pice_eng" = c(0, 1),
-                            "Pice_gla" = c(0, 1),
-                            "Pice_mar" = c(0, 1),
-                            "Pinu_ban" = c(0, 1),
-                            "Pinu_con" = c(0, 1), 
-                            "Popu_tre" = c(0, 1),
-                            "Pseu_men" = c(0, 1)
-                          ),
-                          quantileAgeSubset = list(
-                            "Abie_bal" = 95, #N = 43 w/ 95 subset
-                            "Abie_las" = 95, #N = 250 '' 
-                            "Betu_pap" = 95, #N = 96
-                            "Lari_lar" = 95, #N = 45
-                            "Pice_eng" = 95, #N = 130
-                            "Pice_gla" = 95, #N = 1849
-                            "Pice_mar" = 95, #N = 785
-                            "Pinu_ban" = 95, #N = 603
-                            "Pinu_con" = 99, # N = 3172, 99 not an improvement. Maybe 97
-                            "Popu_tre" = 99, # N = 1997, trying 99
-                            "Pseu_men" = 99 # N = 2797, 99 is an improvement
-                          )
-                     ))
-
+parameters <- list(
+  Biomass_speciesParameters = 
+    list(GAMMiterations = 2, 
+         GAMMknots = list(
+           "Abie_bal" = 3,
+           "Abie_las" = 3,
+           "Betu_pap" = 3,
+           "Lari_lar" = 4,
+           "Pice_eng" = 4,
+           "Pice_gla" = 3,
+           "Pice_mar" = 4,
+           "Pinu_ban" = 3,
+           "Pinu_con" = 4, 
+           "Popu_tre" = 4,
+           "Pseu_men" = 3),
+         minimumPlotsPerGamm = 40,
+         constrainMortalityShape = c(8, 25), #it is possible to pass a named list here too
+         constrainGrowthCurve = c(0, 1),
+         constrainMaxANPP = c(3.0, 3.5),
+         quantileAgeSubset = list(
+           "Abie_bal" = 98, 
+           "Abie_las" = 98, 
+           "Betu_pap" = 95,
+           "Lari_lar" = 95, 
+           "Pice_eng" = 97,
+           "Pice_gla" = 98,
+           "Pice_mar" = 95, 
+           "Pinu_ban" = 98, 
+           "Pinu_con" = 99, 
+           "Popu_tre" = 98, 
+           "Pseu_men" = 99 
+         )
+    )
+)
 
 mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects)
-
 mySimOut <- spades(mySim)
-
-
 ```
+
 
 
 # Events
@@ -112,6 +105,8 @@ Write what is saved.
 
 # Data dependencies
 
+<!-- TODO: update Rmd to use metadata for params/inputs/outputs & symlink Rmd as README -->
+
 ## Input data
 
 How to obtain input data, and a description of the data required by the module.
@@ -124,4 +119,3 @@ Description of the module outputs.
 # Links to other modules
 
 Describe any anticipated linkages to other modules.
-

@@ -1,4 +1,3 @@
-
 # Everything in this file gets sourced during simInit, and all functions and objects
 # are put into the simList. To use objects, use sim$xxx, and are thus globally available
 # to all modules. Functions can be used without sim$ as they are namespaced, like functions
@@ -59,12 +58,13 @@ defineModule(sim, list(
                                  "become vastly more influential. This parameter accepts both a single value and a list of vectors",
                                  "named by sppEquivCol. The PSP stand ages are found in sim$speciesGAMMs$<species>$originalData")),
     defineParameter("sppEquivCol", "character", 'default', NA, NA,
-                    paste("The column in sim$sppEquiv data.table to group species by. This parameter should share the same",
-                          "name as in Biomass_borealDataPrep. PSPs are aggregated by names in the PSP column and traits estimated",
-                          "for the corresponding names in the sppEquivCol")),
+                    paste("The column in `sim$sppEquiv` data.table to group species by.",
+                          "This parameter should share the same name as in Biomass_borealDataPrep.",
+                          "PSPs are aggregated by names in the PSP column and traits estimated",
+                          "for the corresponding names in the `sppEquivCol`")),
     defineParameter("useHeight", "logical", FALSE, NA, NA,
-                    desc = paste("Should height be used to calculate biomass (in addition to DBH).
-                    Advise against including height unless you are certain it is present in every PSP"))
+                    desc = paste("Should height be used to calculate biomass (in addition to DBH).",
+                                 "Advise against including height unless you are certain it is present in every PSP."))
   ),
   inputObjects = bindrows(
     expectsInput(objectName  = "factorialSpeciesTable", objectClass = "data.table",
@@ -77,7 +77,7 @@ defineModule(sim, list(
     expectsInput(objectName = "PSPmeasure", objectClass = "data.table",
                  desc = paste("merged PSP and TSP individual tree measurements. Must include the following columns:",
                               "MeasureID, OrigPlotID1, MeasureYear, TreeNumber, Species, DBH and newSpeciesName",
-                              "the latter corresponding to species names in LandR::sppEquivalencies_CA$PSP.",
+                              "the latter corresponding to species names in `LandR::sppEquivalencies_CA$PSP`.",
                               "Defaults to randomized PSP data stripped of real plotIDs"),
                  sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
     expectsInput(objectName = "PSPplot", objectClass = "data.table",
@@ -85,7 +85,7 @@ defineModule(sim, list(
                               "Must contain fields MeasureID, MeasureYear, OrigPlotID1, and baseSA",
                               "the latter being stand age at year of first measurement"),
                  sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
-    expectsInput(objectName = "PSPgis", objectClass = "sf", 
+    expectsInput(objectName = "PSPgis", objectClass = "sf",
                  desc = paste("Plot location sf object. Defaults to PSP data stripped of real plotIDs/location.",
                               "Must include field OrigPlotID1 for joining to PSPplot object"),
                  sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
@@ -97,7 +97,7 @@ defineModule(sim, list(
                  desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
     expectsInput(objectName = "sppEquiv", objectClass = "data.table",
-                 desc = "table of species equivalencies. See LandR::sppEquivalencies_CA."),
+                 desc = "table of species equivalencies. See `LandR::sppEquivalencies_CA`."),
     expectsInput(objectName = "studyAreaANPP", objectClass = "SpatialPolygonsDataFrame",
                  desc = "study area used to crop PSP data before building growth curves")
   ),
@@ -106,10 +106,10 @@ defineModule(sim, list(
     createsOutput(objectName = "speciesEcoregion", "data.table",
                   desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
                                "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
-    createsOutput(objectName = 'speciesGAMMs', objectClass = 'list',
-                  desc = paste('a list of mixed-effect general additive models (gamm) for each tree species',
-                               'modeling biomass as a function of age')),
-    createsOutput("species", "data.table",
+    createsOutput(objectName = "speciesGAMMs", objectClass = "list",
+                  desc = paste("a list of mixed-effect general additive models (gamm) for each tree species",
+                               "modeling biomass as a function of age")),
+    createsOutput(objectName = "species", objectClass = "data.table",
                   desc = "a table that has species traits such as longevity..."),
   )
 ))
@@ -132,14 +132,11 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "Biomass_speciesParameters", "save")
     },
     plot = {
-
       #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "Biomass_speciesParameters", "plot")
 
       # ! ----- STOP EDITING ----- ! #
     },
     save = {
-
-
       # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "Biomass_speciesParameters", "save")
 
       # ! ----- STOP EDITING ----- ! #
@@ -156,7 +153,6 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
 
 ### template initialization
 Init <- function(sim) {
-
   if (is.na(P(sim)$sppEquivCol)) {
     stop("Please supply sppEquivCol in parameters of Biomass_speciesParameters")
   }
@@ -227,14 +223,11 @@ Save <- function(sim) {
 
 ### template for plot events
 plotFun <- function(sim) {
-
   # not sure we need to plot anything
   return(invisible(sim))
 }
 
-
 .inputObjects <- function(sim) {
-
   cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
@@ -257,20 +250,28 @@ plotFun <- function(sim) {
 
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
-    sim$speciesEcoregion <- data.table(ecoregionGroup = "x",
-                                       speciesCode = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
-                                                       'Pice_gla', 'Pice_mar', 'Pinu_ban',
-                                                       'Pinu_con', 'Pseu_men', "Popu_tre"),
-                                       establishprob = 0.5, maxB = 5000, maxANPP = 5000/30, year = 0)
+    sim$speciesEcoregion <- data.table(
+      ecoregionGroup = "x",
+      speciesCode = c("Abie_las", "Abie_bal", "Betu_pap", "Lari_lar", "Pice_eng",
+                      "Pice_gla", "Pice_mar", "Pinu_ban",
+                      "Pinu_con", "Pseu_men", "Popu_tre"),
+      establishprob = 0.5,
+      maxB = 5000,
+      maxANPP = 5000/30,
+      year = 0
+    )
   }
 
   if (!suppliedElsewhere("species", sim)) {
     warning("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
-    sim$species <- data.table(species = c("Abie_las", 'Abie_bal', 'Betu_pap', 'Lari_lar', 'Pice_eng',
-                                          'Pice_gla', 'Pice_mar', 'Pinu_ban',
-                                          'Pinu_con', 'Pseu_men', "Popu_tre"),
-                              longevity = c(300, 300, 150, 140, 450, 400, 250, 150, 325, 600, 200),
-                              mortalityshape = 15, growthcurve = 0)
+    sim$species <- data.table(
+      species = c("Abie_las", "Abie_bal", "Betu_pap", "Lari_lar", "Pice_eng",
+                  "Pice_gla", "Pice_mar", "Pinu_ban",
+                  "Pinu_con", "Pseu_men", "Popu_tre"),
+      longevity = c(300, 300, 150, 140, 450, 400, 250, 150, 325, 600, 200),
+      mortalityshape = 15,
+      growthcurve = 0
+    )
   }
 
   if (!suppliedElsewhere("sppEquiv", sim)) {
@@ -303,7 +304,6 @@ plotFun <- function(sim) {
                          url = extractURL('PSPplot', sim),
                          destinationPath = dPath,
                          fun = "readRDS")
-
   }
   if (!suppliedElsewhere("PSPgis", sim)) {
     sim$PSPgis <- Cache(prepInputs,
