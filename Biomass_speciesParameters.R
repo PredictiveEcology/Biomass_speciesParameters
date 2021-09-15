@@ -16,7 +16,7 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
   reqdPkgs = list("mgcv", "nlme", "fpCompare", "crayon",
-                  "PredictiveEcology/LandR@development",
+                  "PredictiveEcology/LandR@development (>= 1.0.5)",
                   "PredictiveEcology/pemisc@development",
                   "PredictiveEcology/SpaDES.core@development (>= 0.2.6)"),
   parameters = rbind(
