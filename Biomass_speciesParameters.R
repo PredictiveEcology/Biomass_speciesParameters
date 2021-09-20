@@ -57,7 +57,7 @@ defineModule(sim, list(
                                  "'BC', 'AB', 'SK', 'NFI', and 'dummy'. 'dummy' should be used for unauthorized users.")),
     defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA,
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
-    defineParameter("quantileAgeSubset", "numeric", 95, 1, 100,
+    defineParameter("quantileAgeSubset", "numeric", 98, 1, 100,
                     desc = paste("quantile by which to subset PSP data. As older stands are sparsely represented, the oldest measurements",
                                  "become vastly more influential. This parameter accepts both a single value and a list of vectors",
                                  "named by sppEquivCol. The PSP stand ages are found in sim$speciesGAMMs$<species>$originalData")),

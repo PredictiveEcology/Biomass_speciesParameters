@@ -43,7 +43,7 @@ modules <- list("Biomass_speciesParameters")
 inputSpecies <- data.table(species = c("Abie_bal", 'Abie_las', 'Betu_pap', 'Lari_lar',
                                         'Pice_eng', 'Pice_gla', 'Pice_mar', 'Pinu_ban',
                                        'Pinu_con', 'Pseu_men', "Popu_tre"),
-                           longevity = c(300, 300, 160, 160, 330, 250, 250, 175, 250, 300, 200),
+                           longevity = c(300, 300, 170, 170, 330, 250, 250, 175, 300, 600, 200),
                            mortalityshape = 15, growthcurve = 0)
 objects <- list(species = inputSpecies)
 
@@ -57,30 +57,30 @@ parameters <- list(
            "Abie_bal" = 3,
            "Abie_las" = 3,
            "Betu_pap" = 3,
-           "Lari_lar" = 4,
-           "Pice_eng" = 4,
+           "Lari_lar" = 3,
+           "Pice_eng" = 3,
            "Pice_gla" = 3,
-           "Pice_mar" = 4,
+           "Pice_mar" = 3,
            "Pinu_ban" = 3,
-           "Pinu_con" = 4, 
-           "Popu_tre" = 4,
+           "Pinu_con" = 3, 
+           "Popu_tre" = 3,
            "Pseu_men" = 3),
-         minimumPlotsPerGamm = 40,
-         constrainMortalityShape = c(8, 25), #it is possible to pass a named list here too
-         constrainGrowthCurve = c(0, 1),
-         constrainMaxANPP = c(3.0, 3.5),
+         minimumPlotsPerGamm = 40, 
+         constrainMortalityShape = c(8, 25), #also accepts a named list
+         constrainGrowthCurve = c(0, 1), #also accepts a named list
+         constrainMaxANPP = c(3.0, 4.0), #also accepts a named list
          quantileAgeSubset = list(
            "Abie_bal" = 98, 
            "Abie_las" = 98, 
-           "Betu_pap" = 95,
-           "Lari_lar" = 95, 
-           "Pice_eng" = 97,
-           "Pice_gla" = 98,
-           "Pice_mar" = 95, 
+           "Betu_pap" = 98, 
+           "Lari_lar" = 98, 
+           "Pice_eng" = 98, 
+           "Pice_gla" = 98, 
+           "Pice_mar" = 98, 
            "Pinu_ban" = 98, 
-           "Pinu_con" = 99, 
+           "Pinu_con" = 98, 
            "Popu_tre" = 98, 
-           "Pseu_men" = 99 
+           "Pseu_men" = 95 #lower is better - very susceptible to outlying stand age
          )
     )
 )
