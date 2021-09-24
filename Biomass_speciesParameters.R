@@ -21,7 +21,7 @@ defineModule(sim, list(
                   "ianmseddy/PSPclean"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description"),
-    defineParameter(".plotInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first plot event should occur"),
+    defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA, "This describes the simulation time at which the first plot event should occur"),
     defineParameter(".plotInterval", "numeric", NA, NA, NA, "This describes the simulation time interval between plot events"),
     defineParameter(".saveInitialTime", "numeric", NA, NA, NA, "This describes the simulation time at which the first save event should occur"),
     defineParameter(".saveInterval", "numeric", NA, NA, NA, "This describes the simulation time interval between save events"),
@@ -136,7 +136,15 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "Biomass_speciesParameters", "save")
     },
     plot = {
-      #sim <- scheduleEvent(sim, time(sim) + P(sim)$.plotInterval, "Biomass_speciesParameters", "plot")
+      lapply(names(sim$speciesGAMMs), FUN = function(spp, GAMMs = sim$speciesGAMMs){
+        if (!class(GAMMs[[spp]]) == "character"){
+        gam <- GAMMs[[spp]][["gam"]]
+        jpeg(filename = file.path(outputPath(sim), paste0(spp, "_gamm.jpg")))
+        plot(gam, xlab = "stand age", ylab = "biomass", main = spp)
+        dev.off()
+        }
+      })
+      
 
       # ! ----- STOP EDITING ----- ! #
     },
@@ -224,12 +232,6 @@ Save <- function(sim) {
   sim <- saveFiles(sim)
 
   # ! ----- STOP EDITING ----- ! #
-  return(invisible(sim))
-}
-
-### template for plot events
-plotFun <- function(sim) {
-  # not sure we need to plot anything
   return(invisible(sim))
 }
 
