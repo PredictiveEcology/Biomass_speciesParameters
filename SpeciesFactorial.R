@@ -1,15 +1,28 @@
 #This script is for running the species traits factorial design. 
 # it requires a version of Biomass_core that is gitIgnored. The versino had many changes to accomodate the 'no regeneration' scenario
 # Many of the other changes have been subsequently incorporated into Biomass_core, so it may work with a newer version
+rootDir <- file.path("~/Yield")
+if (isTRUE(identical(Sys.info()[["user"]], "elmci1"))) {
+  options(repos = c(CRAN = "https://cloud.r-project.org/"),
+          "Require.install" = FALSE)
+  rootDir <- "~/projects/def-elmci1-ab/elmci1/Yield"
+}
+options(reproducible.showSimilar = TRUE, reproducible.inputPaths = file.path(dirname(rootDir),"/Eliot/data"),
+        reproducible.useMemoise = TRUE, reproducible.cacheSaveFormat = "qs",
+        spades.moduleCodeChecks = FALSE, LandR.assertions = FALSE)
+if (!require("Require")) {install.packages("Require"); require("Require")}
+Require("PredictiveEcology/SpaDES.install")
+installSpaDES()
+doExperiment <- TRUE
 
-library(magrittr)
-library(LandR)
-library(data.table)
-library(raster)
-library(crayon)
+Require(c("PredictiveEcology/SpaDES.core@development", 
+          "PredictiveEcology/LandR@development (>= 1.0.6.9004)",
+          "data.table", "raster", "viridis"), upgrade = FALSE)
+
+# library(crayon)
 #set out the combinations for factorial
 growthcurves <- seq(0, 1, 0.1)
-MortCurves <- seq(5, 25, 1)
+mortalityshapes <- seq(5, 25, 1)
 longevity <- seq(150, 700, 25)
 mANPPproportion <- seq(0.25,10, 0.25)
 
@@ -18,7 +31,7 @@ shadetolerance <- c(1) #turns out shade tolerance is unimportant for this partic
 
 Attributes <- c('longevity', 'growthcurve', 'mortalityshape', "shadetolerance", 'mANPPproportion')
 
-species1 <- expand.grid(longevity, growthcurves, MortCurves, shadetolerance, mANPPproportion)
+species1 <- expand.grid(longevity, growthcurves, mortalityshapes, shadetolerance, mANPPproportion)
 names(species1) <- Attributes
 species1$species <- paste0("A", 1:nrow(species1))
 species1 <- data.table(species1)
@@ -72,14 +85,8 @@ sppColors <- viridis::viridis(n = nrow(SpeciesTable))
 names(sppColors) <-  SpeciesTable$species
 
 ####RUN IT#####
-library(SpaDES)
-library(raster)
-library(LandR)
-library(sp)
 
 rasterOptions(tmpdir = "temp")
-spadesModulesDirectory <-  c(file.path("../Land-R/modules/")) # where modules are
-modules <- list("LBMR")
 times <- list(start = 0, end = 700)
 #Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real,
 SpeciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
@@ -90,24 +97,35 @@ rasterToMatch <- pixelGroupMap
 
 
 parameters <- list(
-  LBMR = list(.plotInitialTime = NA,
+  Biomass_core = list(.plotInitialTime = NA,
               .saveInitialTime = NA,
               .saveInterval = NA,
-              seedingAlgorithm = "noDispersal",
+              .useParallel = 1,
+              seedingAlgorithm = "noSeeding",
+              calcSummaryBGM = NULL,
+              .plots = NULL,
               useCache = TRUE,
-              successionTimestep = 1,
+              successionTimestep = 10,
               initialBiomassSource = "cohortData",
               vegLeadingProportion = 0
   ))
 
 ## Paths are not workign with multiple module paths yet
-setPaths(cachePath =  file.path("temp/Cache"),
+setPaths(rasterPath = "temp",
+         cachePath =  file.path("temp/Cache"),
          modulePath = file.path("modules"),
          inputPath = file.path(getwd(), "inputs"),
          outputPath = file.path(getwd(),"outputs"))
-paths <- SpaDES.core::getPaths()
 
 options("spades.moduleCodeChecks" = FALSE)
+
+moduleNameAndBranch <- c("Biomass_core@development") #, "Biomass_speciesParameters@EliotTweaks")
+lapply(moduleNameAndBranch, function(modName) {
+  Cache(getModule, file.path("PredictiveEcology", modName), #modulePath = getPaths()$modulePath, 
+        overwrite = TRUE)
+})
+modules <- gsub("@.+", "", moduleNameAndBranch)
+
 
 #Tree species that are important to us
 speciesLayers <- "species"
@@ -140,7 +158,7 @@ opts <- options(
   "reproducible.useMemoise" = TRUE, # Brings cached stuff to memory during the second run
   "reproducible.useNewDigestAlgorithm" = TRUE,  # use the new less strict hashing algo
   "reproducible.useCache" = TRUE,
-  "reproducible.cachePath" = paths$cachePath,
+  # "reproducible.cachePath" = paths$cachePath,
   "reproducible.useCloud" = FALSE,
   "spades.moduleCodeChecks" = FALSE, # Turn off all module's code checking
   "spades.useRequire" = TRUE, # assuming all pkgs installed correctly
@@ -149,21 +167,23 @@ opts <- options(
 
 set.seed(161616)
 
-#EDIT ALGO 2 IN LBMR/HELPERS TO ALGO 1. #Also made succesionTimeStep 1 so calculateSumB wouldnt' return NA
+#EDIT ALGO 2 IN Biomass_core/HELPERS TO ALGO 1. #Also made succesionTimeStep 1 so calculateSumB wouldnt' return NA
 #Also had to completely remove lines in NoDiserpsal, to shut off all regeneration.
 #removed all LandR.CS references Nov 28th
 ####NOTE: This will fail at year 700, because every cohort is dead. Not sure why that fails yet...
 #files are still output so it isn't a problem
-mySim <- simInit(times = times, params = parameters, modules = modules, objects = objects,
-                 paths = paths, loadOrder = unlist(modules))
+mySim <- simInit(times = times, params = parameters, modules = modules, 
+                 objects = objects
+                 #paths = paths, loadOrder = unlist(modules)
+                 )
 
-mySimOut <- spades(mySim, debug = 2)
+mySimOut <- spades(mySim, debug = 1)
 
 #####Pull in the files#####
 
-cds <- list.files("outputs/", full.names = TRUE) %>%
-  lapply(., FUN = 'readRDS') %>%
-  rbindlist(.)
+cdFiles <- list.files("outputs/", full.names = TRUE) 
+cds <- lapply(cdFiles, FUN = 'readRDS') 
+cds <- rbindlist(cds)
 
 
 #This is dumb, the merge shouldn't be necessary on rerun
