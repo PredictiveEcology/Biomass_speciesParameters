@@ -21,31 +21,72 @@ Require(c("PredictiveEcology/SpaDES.core@development",
 
 # library(crayon)
 #set out the combinations for factorial
-growthcurves <- seq(0, 1, 0.1)
-mortalityshapes <- seq(5, 25, 1)
-longevity <- seq(150, 700, 25)
-mANPPproportion <- seq(0.25,10, 0.25)
+if (FALSE) {
+  growthcurves <- seq(0, 1, 0.1)
+  mortalityshapes <- seq(5, 25, 1)
+  longevity <- seq(150, 700, 25)
+  mANPPproportion <- seq(0.25,10, 0.25)
+}
+growthcurves <- seq(0.65, 0.85, 0.02)
+mortalityshapes <- seq(18, 25, 1)
+longevity <- seq(125, 300, 25)
+mANPPproportion <- seq(3.5, 6, 0.25)
 
 shadetolerance <- c(1) #turns out shade tolerance is unimportant for this particular scenario
 #as it only controls probability of establishment, not ANPP (previously factorial had understories)
 
-Attributes <- c('longevity', 'growthcurve', 'mortalityshape', "shadetolerance", 'mANPPproportion')
-
-species1 <- expand.grid(longevity, growthcurves, mortalityshapes, shadetolerance, mANPPproportion)
+Attributes <- c('longevity', 'growthcurve', 'mortalityshape', 'mANPPproportion')
+species1 <- expand.grid(longevity, growthcurves, mortalityshapes, mANPPproportion)
 names(species1) <- Attributes
 species1$species <- paste0("A", 1:nrow(species1))
 species1 <- data.table(species1)
-#age, B, totalB, speciesProportion - added later
 
-#Get number of pixel groups
 cohortData <- data.table('speciesCode' = species1$species)
 cohortData$pixelGroup <- 1:nrow(cohortData)
 
+if (FALSE) {
+  Attributes1 <- paste0(Attributes, "1")
+  Attributes2 <- paste0(Attributes, "2")
+  species2 <- expand.grid(growthcurves, growthcurves, 
+                          longevity, longevity, 
+                          mANPPproportion, mANPPproportion,
+                          mortalityshapes, mortalityshapes)
+  species2 <- as.data.table(species2)
+  colnames2sp <- sort(c(Attributes1, Attributes2))
+  setnames(species2, new = colnames2sp)
+  species2a <- species2[species2$longevity1 > species2$longevity2 &
+                          species2$growthcurve1 > species2$growthcurve2 &
+                          species2$mortalityshape1 > species2$mortalityshape2 &
+                          species2$mANPPproportion1 > species2$mANPPproportion2]
+  
+  set(species2a, NULL, "pixelGroup", seq(NROW(species2a)))
+  set(species2a, NULL, "species", paste0("A", species2a$pixelGroup))
+  
+  species2b <- melt(species2a, id.vars = c("species", "pixelGroup")) 
+  set(species2b, NULL, "Sp", gsub(".+(1$|2$)", "Sp\\1", species2b$variable))
+  set(species2b, NULL, "variable", gsub("1$|2$", "", species2b$variable))
+  species2b <- dcast(species2b, pixelGroup + species + Sp ~ variable )
+  set(species2b, NULL, "speciesCode", paste0(species2b$species, "_", species2b$Sp))
+  set(species2b, NULL, c("species", "Sp"), NULL)
+  cohortData2 <- copy(species2b[, c("speciesCode", "pixelGroup")])
+  set(cohortData2, NULL, "pixelGroup", cohortData2$pixelGroup + max(cohortData$pixelGroup))
+  cohortData <- rbindlist(list(cohortData, cohortData2), use.names = TRUE)
+  setnames(species2b, old = "speciesCode", new = "species")
+  colsToKeep <- c(Attributes, "species")
+  species2 <- species2b[, ..colsToKeep]
+  species1 <- rbindlist(list(species1, species2), use.names = TRUE)
+}
+
+#age, B, totalB, speciesProportion - added later
+
+#Get number of pixel groups
+
 #Now set the extra species column as null, set up the biomass and age
-cohortData$age <- 1
-species1$maxB <- 5000
-species1$maxANPP <- asInteger(species1$maxB * species1$mANPPproportion/100)
-cohortData$B <- species1$maxANPP
+set(cohortData, NULL, "age", 1)
+set(species1, NULL, "maxB", 5000)
+set(species1, NULL, "maxANPP", asInteger(species1$maxB * species1$mANPPproportion/100))
+set(cohortData, NULL, "B", species1$maxANPP)
+# cohortData$B <- species1$maxANPP
 
 cohortData$speciesProportion <- 100
 cohortData$sumB <- cohortData$B
@@ -165,6 +206,12 @@ opts <- options(
   "pemisc.useParallel" = FALSE
 )
 
+outputs <- data.frame(expand.grid(objectName = "cohortData",
+                                  saveTime = unique(seq(times$start, times$end, by = 10)),
+                                  eventPriority = 1, fun = "qs::qsave",
+                                  stringsAsFactors = FALSE))
+
+
 set.seed(161616)
 
 #EDIT ALGO 2 IN Biomass_core/HELPERS TO ALGO 1. #Also made succesionTimeStep 1 so calculateSumB wouldnt' return NA
@@ -173,7 +220,7 @@ set.seed(161616)
 ####NOTE: This will fail at year 700, because every cohort is dead. Not sure why that fails yet...
 #files are still output so it isn't a problem
 mySim <- simInit(times = times, params = parameters, modules = modules, 
-                 objects = objects
+                 objects = objects, outputs = outputs
                  #paths = paths, loadOrder = unlist(modules)
                  )
 
