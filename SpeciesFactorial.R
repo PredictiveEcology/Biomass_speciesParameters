@@ -44,7 +44,7 @@ species1 <- data.table(species1)
 cohortData <- data.table('speciesCode' = species1$species)
 cohortData$pixelGroup <- 1:nrow(cohortData)
 
-if (FALSE) {
+if (TRUE) {
   Attributes1 <- paste0(Attributes, "1")
   Attributes2 <- paste0(Attributes, "2")
   species2 <- expand.grid(growthcurves, growthcurves, 
@@ -88,24 +88,26 @@ set(species1, NULL, "maxANPP", asInteger(species1$maxB * species1$mANPPproportio
 set(cohortData, NULL, "B", species1$maxANPP)
 # cohortData$B <- species1$maxANPP
 
-cohortData$speciesProportion <- 100
-cohortData$sumB <- cohortData$B
+# cohortData$speciesProportion <- 100
+# cohortData$sumB <- cohortData$B
 
 
 #####Make LANDR Inputs####
-cohortData$ecoregionGroup <- 1
-cohortData <- setcolorder(cohortData, c('speciesCode', 'pixelGroup', 'ecoregionGroup', 'age', "B", 'sumB', 'speciesProportion'))
+set(cohortData, NULL, "ecoregionGroup", 1L)
+# cohortData$ecoregionGroup <- 1
+cohortData <- setcolorder(cohortData, c('speciesCode', 'pixelGroup', 'ecoregionGroup', 'age', "B"))#, 'sumB', 'speciesProportion'))
 
-speciesEcoregion <- copy(species1)
+speciesEcoregion <- copy(species1[, c("maxB", "maxANPP", "species")])
 speciesEcoregion[, c("ecoregionGroup", "establishprob", "maxB", "maxANPP", "year") := .(1, 0.5, species1$maxB, species1$maxANPP, 0)]
-speciesEcoregion[, c("mANPPproportion", "growthcurve", "mortalityshape", "longevity", "species") := NULL]
-speciesEcoregion[, "speciesCode" := species1$species]
+setnames(speciesEcoregion, old = "species", new = "speciesCode")
+# speciesEcoregion[, c("mANPPproportion", "growthcurve", "mortalityshape", "longevity", "species") := NULL]
+# speciesEcoregion[, "speciesCode" := species1$species]
 
 SpeciesTable <- copy(species1)
 SpeciesTable[, c("sexualmature", 'SeedEffDist', 'SeedMaxDist', 'VegProb', 'MinAgeVeg', 'MaxAgeVeg', 'PostFireRegen',
                  'Leaflongevity', 'WoodDecayRate', 'LeafLignin', 'HardSoft') :=
-               list(30, 0, 0, 0.5, 0, 0, 'none', 3, 0.07, 0.1, 'soft'), 'species']
-SpeciesTable[, shade := shadetolerance]
+               list(30, 0, 0, 0.5, 0, 0, 'none', 3, 0.07, 0.1, 'soft')]
+set(SpeciesTable, NULL, "shade", shadetolerance)
 
 
 pixelGroupMap <- raster(res = c(1,1))
@@ -130,7 +132,7 @@ names(sppColors) <-  SpeciesTable$species
 rasterOptions(tmpdir = "temp")
 times <- list(start = 0, end = 700)
 #Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real,
-SpeciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
+# SpeciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
 
 studyArea <- as(extent(pixelGroupMap), 'SpatialPolygons')
 crs(studyArea) <- crs(pixelGroupMap)
@@ -219,6 +221,7 @@ set.seed(161616)
 #removed all LandR.CS references Nov 28th
 ####NOTE: This will fail at year 700, because every cohort is dead. Not sure why that fails yet...
 #files are still output so it isn't a problem
+
 mySim <- simInit(times = times, params = parameters, modules = modules, 
                  objects = objects, outputs = outputs
                  #paths = paths, loadOrder = unlist(modules)
