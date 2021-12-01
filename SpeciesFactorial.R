@@ -18,112 +18,16 @@ Require(c("PredictiveEcology/SpaDES.core@development",
           "PredictiveEcology/LandR@development (>= 1.0.6.9005)",
           "data.table", "raster", "viridis"), upgrade = FALSE)
 
-# library(crayon)
-#set out the combinations for factorial
-if (FALSE) {
-  growthcurves <- seq(0, 1, 0.1)
-  mortalityshapes <- seq(5, 25, 1)
-  longevity <- seq(150, 700, 25)
-  mANPPproportion <- seq(0.25,10, 0.25)
-}
-growthcurves <- seq(0.65, 0.85, 0.02)
-mortalityshapes <- seq(18, 25, 1)
-longevity <- seq(125, 300, 25)
-mANPPproportion <- seq(3.5, 6, 0.25)
+source("~/Biomass_speciesParameters/R/factorialGenerators.R")
+species1And2 <- Cache(factorialSpeciesTable, cohortsPerPixel = 1:2,
+                                     growthcurve = seq(0.65, 0.85, 0.02),
+                                     mortalityshape = seq(18, 25, 1),
+                                     longevity = seq(125, 300, 25),
+                                     mANPPproportion = seq(3.5, 6, 0.25))
+speciesEcoregion <- factorialSpeciesEcoregion(species1And2)
+cohortData <- factorialCohortData(species1And2, speciesEcoregion)
+speciesTable <- factorialSpeciesTableFillOut(species1And2)
 
-shadetolerance <- c(1) #turns out shade tolerance is unimportant for this particular scenario
-#as it only controls probability of establishment, not ANPP (previously factorial had understories)
-
-Attributes <- c('longevity', 'growthcurve', 'mortalityshape', 'mANPPproportion')
-species1 <- expand.grid(longevity, growthcurves, mortalityshapes, mANPPproportion)
-names(species1) <- Attributes
-species1$species <- paste0("A", 1:nrow(species1))
-species1 <- data.table(species1)
-
-cohortData <- data.table('speciesCode' = species1$species)
-cohortData$pixelGroup <- 1:nrow(cohortData)
-
-species1 <- speciesTable2CohortGenerate()
-# speciesTable2CohortGenerate <- function(Attributes = list(growthcurve = seq(0.65, 0.85, 0.02),
-#                                                           mortalityshape = seq(18, 25, 1),
-#                                                           longevity = seq(125, 300, 25),
-#                                                           mANPPproportion = seq(3.5, 6, 0.25)) ) {
-#   Atts <- names(Attributes)
-#   Attributes1 <- paste0(Atts, "1")
-#   Attributes2 <- paste0(Atts, "2")
-#   species2 <- expand.grid(growthcurves, growthcurves, 
-#                           longevity, longevity, 
-#                           mANPPproportion, mANPPproportion,
-#                           mortalityshapes, mortalityshapes)
-#   species2 <- as.data.table(species2)
-#   colnames2sp <- sort(c(Attributes1, Attributes2))
-#   setnames(species2, new = colnames2sp)
-#   species2a <- species2[species2$longevity1 > species2$longevity2 &
-#                           species2$growthcurve1 > species2$growthcurve2 &
-#                           species2$mortalityshape1 > species2$mortalityshape2 &
-#                           species2$mANPPproportion1 > species2$mANPPproportion2]
-#   
-#   set(species2a, NULL, "pixelGroup", seq(NROW(species2a)))
-#   set(species2a, NULL, "species", paste0("A", species2a$pixelGroup))
-#   
-#   species2b <- melt(species2a, id.vars = c("species", "pixelGroup")) 
-#   set(species2b, NULL, "Sp", gsub(".+(1$|2$)", "Sp\\1", species2b$variable))
-#   set(species2b, NULL, "variable", gsub("1$|2$", "", species2b$variable))
-#   species2b <- dcast(species2b, pixelGroup + species + Sp ~ variable )
-#   set(species2b, NULL, "speciesCode", paste0(species2b$species, "_", species2b$Sp))
-#   set(species2b, NULL, c("species", "Sp"), NULL)
-#   cohortData2 <- copy(species2b[, c("speciesCode", "pixelGroup")])
-#   set(cohortData2, NULL, "pixelGroup", cohortData2$pixelGroup + max(cohortData$pixelGroup))
-#   cohortData <- rbindlist(list(cohortData, cohortData2), use.names = TRUE)
-#   setnames(species2b, old = "speciesCode", new = "species")
-#   colsToKeep <- c(Atts, "species")
-#   species2 <- species2b[, ..colsToKeep]
-#   species1 <- rbindlist(list(species1, species2), use.names = TRUE)
-# }
-
-
-#age, B, totalB, speciesProportion - added later
-
-#Get number of pixel groups
-
-#Now set the extra species column as null, set up the biomass and age
-set(species1, NULL, "mortalityshape", asInteger(species1$mortalityshape))
-set(species1, NULL, "longevity", asInteger(species1$longevity))
-set(cohortData, NULL, "age", 1)
-set(species1, NULL, "maxB", 5000)
-set(species1, NULL, "maxANPP", asInteger(species1$maxB * species1$mANPPproportion/100))
-set(cohortData, NULL, "B", species1$maxANPP)
-# cohortData$B <- species1$maxANPP
-
-# cohortData$speciesProportion <- 100
-# cohortData$sumB <- cohortData$B
-
-
-#####Make LANDR Inputs####
-set(cohortData, NULL, "ecoregionGroup", factor(1))
-# cohortData$ecoregionGroup <- 1
-cohortData <- setcolorder(cohortData, c('speciesCode', 'pixelGroup', 'ecoregionGroup', 'age', "B"))#, 'sumB', 'speciesProportion'))
-
-speciesEcoregion <- copy(species1[, c("maxB", "maxANPP", "species")])
-speciesEcoregion[, c("ecoregionGroup", "establishprob", "maxB", "maxANPP", "year") := .(1, 0.5, species1$maxB, species1$maxANPP, 0)]
-setnames(speciesEcoregion, old = "species", new = "speciesCode")
-
-# Change classes
-set(speciesEcoregion, NULL, c("maxB", "maxANPP", "speciesCode"), 
-    list(
-      asInteger(speciesEcoregion$maxB), 
-      as.numeric(speciesEcoregion$maxANPP),
-      as.factor(speciesEcoregion$speciesCode)
-      ))
-# speciesEcoregion[, c("mANPPproportion", "growthcurve", "mortalityshape", "longevity", "species") := NULL]
-# speciesEcoregion[, "speciesCode" := species1$species]
-
-SpeciesTable <- copy(species1[, c("species", "longevity", "growthcurve", "mortalityshape")])
-SpeciesTable[, c("sexualmature", 'seeddistance_eff', 'seeddistance_max', 'resproutprob', 
-                 'resproutage_min', 'resproutage_max', 'postfireregen',
-                 'leaflongevity', 'wooddecayrate', 'leafLignin', 'hardsoft', "Area", "firetolerance") :=
-               list(30L, 0L, 0L, 0.5, 0L, 0L, factor('none'), 3L, 0.07, 0.1, factor('soft'), factor("BP"), 3L)]
-set(SpeciesTable, NULL, "shadetolerance", asInteger(shadetolerance))
 
 
 pixelGroupMap <- raster(res = c(1,1))
@@ -140,15 +44,15 @@ ecoregionMap <- pixelGroupMap
 levels(ecoregionMap) <- data.frame(ID = 1:max(cohortData$pixelGroup, na.rm = TRUE), ecoregion = 1, ecoregionGroup = 1, stringsAsFactors = TRUE)
 
 #Make sppColors
-sppColors <- viridis::viridis(n = nrow(SpeciesTable))
-names(sppColors) <-  SpeciesTable$species
+sppColors <- viridis::viridis(n = nrow(speciesTable))
+names(sppColors) <-  speciesTable$species
 
 ####RUN IT#####
 
 rasterOptions(tmpdir = "temp")
 times <- list(start = 0, end = 700)
 #Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real,
-# SpeciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
+# speciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
 
 studyArea <- as(extent(pixelGroupMap), 'SpatialPolygons')
 crs(studyArea) <- crs(pixelGroupMap)
@@ -193,7 +97,7 @@ objects <- list(
   "studyArea" = studyArea,
   "rasterToMatch" = rasterToMatch,
   cohortData = cohortData,
-  species = SpeciesTable,
+  species = speciesTable,
   speciesEcoregion = speciesEcoregion,
   pixelGroupMap = pixelGroupMap,
   speciesLayers = speciesLayers,
