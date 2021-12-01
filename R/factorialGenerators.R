@@ -14,11 +14,11 @@ factorialSpeciesTable <- function(growthcurve = seq(0.65, 0.85, 0.02),
     mANPPproportion <- seq(0.25,10, 0.25)
   }
   
-  
   forms <- formals()
   formNames <- setdiff(names(forms), c("...", "cohortsPerPixel"))
   params <- append(forms[formNames], list(...))
-  Attributes <- lapply(params, eval)
+  defaultAttributes <- lapply(params, eval)
+  Attributes <- modifyList2(defaultAttributes, append(mget(formNames), list(...)))
   
   Atts <- names(Attributes)
   
@@ -104,7 +104,7 @@ factorialSpeciesEcoregion <- function(speciesTable) {
   
   set(speciesEcoregion, NULL, "maxB", 5000L)
   set(speciesEcoregion, NULL, "maxANPP", speciesEcoregion$maxB * speciesEcoregion$mANPPproportion/100)
-  speciesEcoregion[, c("ecoregionGroup", "establishprob", "year") := .(1, 0.5, 0)]
+  speciesEcoregion[, c("ecoregionGroup", "establishprob", "year") := .(factor(1), 0.5, 0)]
   setnames(speciesEcoregion, old = "species", new = "speciesCode")
   
   # Change classes

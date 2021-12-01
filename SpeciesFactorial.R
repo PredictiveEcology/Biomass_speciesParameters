@@ -15,13 +15,13 @@ installSpaDES()
 doExperiment <- TRUE
 
 Require(c("PredictiveEcology/SpaDES.core@development", 
-          "PredictiveEcology/LandR@minRelativeB (>= 1.0.6.9006)",
+          "PredictiveEcology/LandR@minRelativeB (>= 1.0.6.9007)",
           "data.table", "raster", "viridis"), upgrade = FALSE)
 
 source("~/Biomass_speciesParameters/R/factorialGenerators.R")
-species1And2 <- Cache(factorialSpeciesTable, cohortsPerPixel = 1:2,
+species1And2 <- factorialSpeciesTable(cohortsPerPixel = 1:2,
                       growthcurve = seq(0.65, 0.85, 0.02),
-                      mortalityshape = seq(18, 25, 1),
+                      mortalityshape = seq(20, 25, 1),
                       longevity = seq(125, 300, 25),
                       mANPPproportion = seq(3.5, 6, 0.25))
 speciesEcoregion <- factorialSpeciesEcoregion(species1And2)
@@ -38,7 +38,7 @@ levels(ecoregionMap) <- data.frame(ID = 1:max(cohortData$pixelGroup, na.rm = TRU
                                    ecoregion = 1, ecoregionGroup = 1, stringsAsFactors = TRUE)
 
 # Simple Tables
-minRelativeB <- data.table("ecoregionGroup" = 1L, minRelativeBDefaults())
+minRelativeB <- data.table("ecoregionGroup" = factor(1), minRelativeBDefaults())
 ecoregion <- data.table("ecoregionGroup" = as.factor(1), 'active' = 'yes')
 
 #Make sppColors
