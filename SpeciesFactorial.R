@@ -15,7 +15,7 @@ installSpaDES()
 doExperiment <- TRUE
 
 Require(c("PredictiveEcology/SpaDES.core@development", 
-          "PredictiveEcology/LandR@development (>= 1.0.6.9004)",
+          "PredictiveEcology/LandR@development (>= 1.0.6.9005)",
           "data.table", "raster", "viridis"), upgrade = FALSE)
 
 # library(crayon)
@@ -43,38 +43,44 @@ species1 <- data.table(species1)
 cohortData <- data.table('speciesCode' = species1$species)
 cohortData$pixelGroup <- 1:nrow(cohortData)
 
-if (TRUE) {
-  Attributes1 <- paste0(Attributes, "1")
-  Attributes2 <- paste0(Attributes, "2")
-  species2 <- expand.grid(growthcurves, growthcurves, 
-                          longevity, longevity, 
-                          mANPPproportion, mANPPproportion,
-                          mortalityshapes, mortalityshapes)
-  species2 <- as.data.table(species2)
-  colnames2sp <- sort(c(Attributes1, Attributes2))
-  setnames(species2, new = colnames2sp)
-  species2a <- species2[species2$longevity1 > species2$longevity2 &
-                          species2$growthcurve1 > species2$growthcurve2 &
-                          species2$mortalityshape1 > species2$mortalityshape2 &
-                          species2$mANPPproportion1 > species2$mANPPproportion2]
-  
-  set(species2a, NULL, "pixelGroup", seq(NROW(species2a)))
-  set(species2a, NULL, "species", paste0("A", species2a$pixelGroup))
-  
-  species2b <- melt(species2a, id.vars = c("species", "pixelGroup")) 
-  set(species2b, NULL, "Sp", gsub(".+(1$|2$)", "Sp\\1", species2b$variable))
-  set(species2b, NULL, "variable", gsub("1$|2$", "", species2b$variable))
-  species2b <- dcast(species2b, pixelGroup + species + Sp ~ variable )
-  set(species2b, NULL, "speciesCode", paste0(species2b$species, "_", species2b$Sp))
-  set(species2b, NULL, c("species", "Sp"), NULL)
-  cohortData2 <- copy(species2b[, c("speciesCode", "pixelGroup")])
-  set(cohortData2, NULL, "pixelGroup", cohortData2$pixelGroup + max(cohortData$pixelGroup))
-  cohortData <- rbindlist(list(cohortData, cohortData2), use.names = TRUE)
-  setnames(species2b, old = "speciesCode", new = "species")
-  colsToKeep <- c(Attributes, "species")
-  species2 <- species2b[, ..colsToKeep]
-  species1 <- rbindlist(list(species1, species2), use.names = TRUE)
-}
+species1 <- speciesTable2CohortGenerate()
+# speciesTable2CohortGenerate <- function(Attributes = list(growthcurve = seq(0.65, 0.85, 0.02),
+#                                                           mortalityshape = seq(18, 25, 1),
+#                                                           longevity = seq(125, 300, 25),
+#                                                           mANPPproportion = seq(3.5, 6, 0.25)) ) {
+#   Atts <- names(Attributes)
+#   Attributes1 <- paste0(Atts, "1")
+#   Attributes2 <- paste0(Atts, "2")
+#   species2 <- expand.grid(growthcurves, growthcurves, 
+#                           longevity, longevity, 
+#                           mANPPproportion, mANPPproportion,
+#                           mortalityshapes, mortalityshapes)
+#   species2 <- as.data.table(species2)
+#   colnames2sp <- sort(c(Attributes1, Attributes2))
+#   setnames(species2, new = colnames2sp)
+#   species2a <- species2[species2$longevity1 > species2$longevity2 &
+#                           species2$growthcurve1 > species2$growthcurve2 &
+#                           species2$mortalityshape1 > species2$mortalityshape2 &
+#                           species2$mANPPproportion1 > species2$mANPPproportion2]
+#   
+#   set(species2a, NULL, "pixelGroup", seq(NROW(species2a)))
+#   set(species2a, NULL, "species", paste0("A", species2a$pixelGroup))
+#   
+#   species2b <- melt(species2a, id.vars = c("species", "pixelGroup")) 
+#   set(species2b, NULL, "Sp", gsub(".+(1$|2$)", "Sp\\1", species2b$variable))
+#   set(species2b, NULL, "variable", gsub("1$|2$", "", species2b$variable))
+#   species2b <- dcast(species2b, pixelGroup + species + Sp ~ variable )
+#   set(species2b, NULL, "speciesCode", paste0(species2b$species, "_", species2b$Sp))
+#   set(species2b, NULL, c("species", "Sp"), NULL)
+#   cohortData2 <- copy(species2b[, c("speciesCode", "pixelGroup")])
+#   set(cohortData2, NULL, "pixelGroup", cohortData2$pixelGroup + max(cohortData$pixelGroup))
+#   cohortData <- rbindlist(list(cohortData, cohortData2), use.names = TRUE)
+#   setnames(species2b, old = "speciesCode", new = "species")
+#   colsToKeep <- c(Atts, "species")
+#   species2 <- species2b[, ..colsToKeep]
+#   species1 <- rbindlist(list(species1, species2), use.names = TRUE)
+# }
+
 
 #age, B, totalB, speciesProportion - added later
 
@@ -94,13 +100,21 @@ set(cohortData, NULL, "B", species1$maxANPP)
 
 
 #####Make LANDR Inputs####
-set(cohortData, NULL, "ecoregionGroup", 1L)
+set(cohortData, NULL, "ecoregionGroup", factor(1))
 # cohortData$ecoregionGroup <- 1
 cohortData <- setcolorder(cohortData, c('speciesCode', 'pixelGroup', 'ecoregionGroup', 'age', "B"))#, 'sumB', 'speciesProportion'))
 
 speciesEcoregion <- copy(species1[, c("maxB", "maxANPP", "species")])
 speciesEcoregion[, c("ecoregionGroup", "establishprob", "maxB", "maxANPP", "year") := .(1, 0.5, species1$maxB, species1$maxANPP, 0)]
 setnames(speciesEcoregion, old = "species", new = "speciesCode")
+
+# Change classes
+set(speciesEcoregion, NULL, c("maxB", "maxANPP", "speciesCode"), 
+    list(
+      asInteger(speciesEcoregion$maxB), 
+      as.numeric(speciesEcoregion$maxANPP),
+      as.factor(speciesEcoregion$speciesCode)
+      ))
 # speciesEcoregion[, c("mANPPproportion", "growthcurve", "mortalityshape", "longevity", "species") := NULL]
 # speciesEcoregion[, "speciesCode" := species1$species]
 
@@ -119,7 +133,7 @@ vals <- c(1:max(cohortData$pixelGroup), rep(NA, times = ncell(pixelGroupMap) - m
 pixelGroupMap[] <- vals
 
 minRelativeB <- data.table("ecoregionGroup" = 1, X1 = 0.2, X2 = 0.4, X3 = 0.5, X4 = 0.7, X5 = 0.9)
-ecoregion <- data.table("ecoregionGroup" = 1, 'active' = 'yes')
+ecoregion <- data.table("ecoregionGroup" = as.factor(1), 'active' = 'yes')
 
 ##Make ecoregion Map
 ecoregionMap <- pixelGroupMap
