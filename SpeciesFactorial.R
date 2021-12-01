@@ -15,49 +15,38 @@ installSpaDES()
 doExperiment <- TRUE
 
 Require(c("PredictiveEcology/SpaDES.core@development", 
-          "PredictiveEcology/LandR@development (>= 1.0.6.9005)",
+          "PredictiveEcology/LandR@minRelativeB (>= 1.0.6.9006)",
           "data.table", "raster", "viridis"), upgrade = FALSE)
 
 source("~/Biomass_speciesParameters/R/factorialGenerators.R")
 species1And2 <- Cache(factorialSpeciesTable, cohortsPerPixel = 1:2,
-                                     growthcurve = seq(0.65, 0.85, 0.02),
-                                     mortalityshape = seq(18, 25, 1),
-                                     longevity = seq(125, 300, 25),
-                                     mANPPproportion = seq(3.5, 6, 0.25))
+                      growthcurve = seq(0.65, 0.85, 0.02),
+                      mortalityshape = seq(18, 25, 1),
+                      longevity = seq(125, 300, 25),
+                      mANPPproportion = seq(3.5, 6, 0.25))
 speciesEcoregion <- factorialSpeciesEcoregion(species1And2)
 cohortData <- factorialCohortData(species1And2, speciesEcoregion)
 speciesTable <- factorialSpeciesTableFillOut(species1And2)
 
-
-
-pixelGroupMap <- raster(res = c(1,1))
-nrow(pixelGroupMap) <- round(sqrt(max(cohortData$pixelGroup)), 0)
-ncol(pixelGroupMap) <- round(sqrt(max(cohortData$pixelGroup)), 0) + 1
-vals <- c(1:max(cohortData$pixelGroup), rep(NA, times = ncell(pixelGroupMap) - max(cohortData$pixelGroup)))
-pixelGroupMap[] <- vals
-
-minRelativeB <- data.table("ecoregionGroup" = 1, X1 = 0.2, X2 = 0.4, X3 = 0.5, X4 = 0.7, X5 = 0.9)
-ecoregion <- data.table("ecoregionGroup" = as.factor(1), 'active' = 'yes')
-
-##Make ecoregion Map
+# Maps
+pixelGroupMap <- factorialPixelGroupMap(cohortData)
+studyArea <- as(extent(pixelGroupMap), 'SpatialPolygons')
+crs(studyArea) <- crs(pixelGroupMap)
+rasterToMatch <- pixelGroupMap
 ecoregionMap <- pixelGroupMap
-levels(ecoregionMap) <- data.frame(ID = 1:max(cohortData$pixelGroup, na.rm = TRUE), ecoregion = 1, ecoregionGroup = 1, stringsAsFactors = TRUE)
+levels(ecoregionMap) <- data.frame(ID = 1:max(cohortData$pixelGroup, na.rm = TRUE), 
+                                   ecoregion = 1, ecoregionGroup = 1, stringsAsFactors = TRUE)
+
+# Simple Tables
+minRelativeB <- data.table("ecoregionGroup" = 1L, minRelativeBDefaults())
+ecoregion <- data.table("ecoregionGroup" = as.factor(1), 'active' = 'yes')
 
 #Make sppColors
 sppColors <- viridis::viridis(n = nrow(speciesTable))
 names(sppColors) <-  speciesTable$species
 
 ####RUN IT#####
-
-rasterOptions(tmpdir = "temp")
 times <- list(start = 0, end = 700)
-#Do this so one cohort is alive at time == 700. This cohort is unlikely to ever match with anything real,
-# speciesTable[longevity == 700 & growthcurve == 0 & mortalityshape == 25 & maxANPP == 250, longevity := 701]
-
-studyArea <- as(extent(pixelGroupMap), 'SpatialPolygons')
-crs(studyArea) <- crs(pixelGroupMap)
-rasterToMatch <- pixelGroupMap
-
 
 parameters <- list(
   Biomass_core = list(.plotInitialTime = NA,
@@ -81,6 +70,7 @@ setPaths(rasterPath = "temp",
          outputPath = file.path(getwd(),"outputs"))
 
 
+# Get modules
 moduleNameAndBranch <- c("Biomass_core@development") #, "Biomass_speciesParameters@EliotTweaks")
 lapply(moduleNameAndBranch, function(modName) {
   Cache(getModule, file.path("PredictiveEcology", modName), #modulePath = getPaths()$modulePath, 
@@ -113,14 +103,11 @@ opts <- options(
   "future.globals.maxSize" = 1000*1024^2,
   "LandR.assertions" = TRUE,
   "LandR.verbose" = 1,
-  "reproducible.futurePlan" = FALSE,
   "reproducible.overwrite" = TRUE,
   "reproducible.useMemoise" = TRUE, # Brings cached stuff to memory during the second run
-  "reproducible.useNewDigestAlgorithm" = TRUE,  # use the new less strict hashing algo
   "reproducible.useCache" = TRUE,
   "spades.moduleCodeChecks" = FALSE, # Turn off all module's code checking
-  "spades.useRequire" = TRUE, # assuming all pkgs installed correctly
-  "pemisc.useParallel" = FALSE
+  "spades.useRequire" = TRUE
 )
 
 outputs <- data.frame(expand.grid(objectName = "cohortData",

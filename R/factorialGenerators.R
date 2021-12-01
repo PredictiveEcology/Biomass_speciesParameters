@@ -123,3 +123,12 @@ factorialSpeciesTableFillOut <- function(speciesTable) {
                  list(30L, 0L, 0L, 0.5, 0L, 0L, factor('none'), 3L, 0.07, 0.1, factor('soft'), factor("BP"), 3L, 1L)]
   speciesTableInner[]
 }
+
+factorialPixelGroupMap <- function(cohortData) {
+  pixelGroupMap <- raster(res = c(1,1))
+  nrow(pixelGroupMap) <- round(sqrt(max(cohortData$pixelGroup)), 0)
+  ncol(pixelGroupMap) <- round(sqrt(max(cohortData$pixelGroup)), 0) + 1
+  vals <- c(1:max(cohortData$pixelGroup), rep(NA, times = ncell(pixelGroupMap) - max(cohortData$pixelGroup)))
+  pixelGroupMap[] <- vals
+  pixelGroupMap
+}
