@@ -39,7 +39,7 @@ factorialSpeciesTable <- function(growthcurve = seq(0.65, 0.85, 0.02),
     
     # Take top right of matrix
     Map(A1 = Attributes1, A2 = Attributes2, function(A1, A2) {
-      species2 <<- species2[species2[[A1]] > species2[[A2]]]
+      species2 <<- species2[species2[[A1]] >= species2[[A2]]]
     })
   }
   
@@ -115,7 +115,7 @@ factorialSpeciesEcoregion <- function(speciesTable) {
 
 
 factorialSpeciesTableFillOut <- function(speciesTable) {
-  speciesTableInner <- copy(speciesTable[, c("species", "longevity", "growthcurve", "mortalityshape")])
+  speciesTableInner <- copy(speciesTable[, c("species", "longevity", "growthcurve", "mortalityshape", "mANPPproportion")])
   speciesTableInner[, c("sexualmature", 'seeddistance_eff', 'seeddistance_max', 'resproutprob',
                    'resproutage_min', 'resproutage_max', 'postfireregen',
                    'leaflongevity', 'wooddecayrate', 'leafLignin', 'hardsoft', "Area", "firetolerance",

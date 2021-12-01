@@ -8,7 +8,8 @@ if (isTRUE(identical(Sys.info()[["user"]], "elmci1"))) {
   rootDir <- "~/projects/def-elmci1-ab/elmci1/Yield"
 }
 options(reproducible.showSimilar = TRUE, reproducible.inputPaths = file.path(dirname(rootDir),"/Eliot/data"),
-        reproducible.useMemoise = TRUE, reproducible.cacheSaveFormat = "qs")
+        reproducible.useMemoise = TRUE, reproducible.cacheSaveFormat = "qs",
+        reproducible.showSimilarDepth = 5)
 if (!require("Require")) {install.packages("Require"); require("Require")}
 Require("PredictiveEcology/SpaDES.install")
 installSpaDES()
@@ -19,14 +20,21 @@ Require(c("PredictiveEcology/SpaDES.core@development",
           "data.table", "raster", "viridis"), upgrade = FALSE)
 
 source("~/Biomass_speciesParameters/R/factorialGenerators.R")
-species1And2 <- factorialSpeciesTable(cohortsPerPixel = 1:2,
-                      growthcurve = seq(0.65, 0.85, 0.02),
-                      mortalityshape = seq(20, 25, 1),
-                      longevity = seq(125, 300, 25),
-                      mANPPproportion = seq(3.5, 6, 0.25))
-speciesEcoregion <- factorialSpeciesEcoregion(species1And2)
-cohortData <- factorialCohortData(species1And2, speciesEcoregion)
-speciesTable <- factorialSpeciesTableFillOut(species1And2)
+argsForFactorial <- list(cohortsPerPixel = 1:2,
+             growthcurve = seq(0.65, 0.85, 0.02),
+             mortalityshape = seq(20, 25, 1),
+             longevity = seq(125, 300, 25),
+             mANPPproportion = seq(3.5, 6, 0.25))
+
+# Next sequence is all dependent on argsForFactorial, so do digest once
+dig <- fastdigest::fastdigest(args)
+species1And2 <- Cache(do.call, factorialSpeciesTable, argsForFactorial, 
+                      .cacheExtra = dig, omitArgs = c("args"))
+speciesEcoregion <- Cache(factorialSpeciesEcoregion, species1And2, .cacheExtra = dig, omitArgs = c("speciesTable"))
+cohortData <- Cache(factorialCohortData, species1And2, speciesEcoregion, .cacheExtra = dig, 
+                    omitArgs = c("speciesTable", "speciesEcoregion"))
+speciesTable <- Cache(factorialSpeciesTableFillOut, species1And2, .cacheExtra = dig,
+                      omitArgs = "speciesTable")
 
 # Maps
 pixelGroupMap <- factorialPixelGroupMap(cohortData)
@@ -46,7 +54,7 @@ sppColors <- viridis::viridis(n = nrow(speciesTable))
 names(sppColors) <-  speciesTable$species
 
 ####RUN IT#####
-times <- list(start = 0, end = 700)
+times <- list(start = 0, end = 300)
 
 parameters <- list(
   Biomass_core = list(.plotInitialTime = NA,
@@ -56,6 +64,7 @@ parameters <- list(
               seedingAlgorithm = "noSeeding",
               calcSummaryBGM = NULL,
               .plots = NULL,
+              .maxMemory = 1e9,
               useCache = TRUE,
               successionTimestep = 10,
               initialBiomassSource = "cohortData",
@@ -101,7 +110,7 @@ objects <- list(
 
 opts <- options(
   "future.globals.maxSize" = 1000*1024^2,
-  "LandR.assertions" = TRUE,
+  "LandR.assertions" = FALSE,
   "LandR.verbose" = 1,
   "reproducible.overwrite" = TRUE,
   "reproducible.useMemoise" = TRUE, # Brings cached stuff to memory during the second run
@@ -124,16 +133,25 @@ set.seed(161616)
 ####NOTE: This will fail at year 700, because every cohort is dead. Not sure why that fails yet...
 #files are still output so it isn't a problem
 
-mySimOut <- simInitAndSpades(times = times, params = parameters, modules = modules, 
-                 objects = objects, outputs = outputs, debug = 1)
+#profvis::profvis(
+
+mySimOut <- Cache(simInitAndSpades, times = times, params = parameters, modules = modules, 
+                  objects = objects, outputs = outputs, debug = 1, .cacheExtra = dig, 
+                  omitArgs = c("objects"))
+# )
 
 # mySimOut <- spades(mySim, debug = 1)
 
 #####Pull in the files#####
 
-cdFiles <- list.files("outputs/", full.names = TRUE) 
-cds <- lapply(cdFiles, FUN = 'readRDS') 
-cds <- rbindlist(cds)
+cdFiles <- as.data.table(outputs(mySimOut))[saved == TRUE]
+fEs <- .fileExtensions()
+cds <- by(cdFiles, cdFiles[, "saveTime"], function(x) {
+  fE <- reproducible:::fileExt(x$file)
+  wh <- fEs[fEs$exts %in% fE,]
+  getFromNamespace(wh$fun, ns = asNamespace(wh$package))(x$file)
+})  
+cds <- rbindlist(cds, use.names = TRUE)
 
 
 #This is dumb, the merge shouldn't be necessary on rerun
@@ -141,7 +159,42 @@ cds <- rbindlist(cds)
 # cds <- cds[temp, on = c("speciesCode" = 'species')]
 # saveRDS(cds, file = "factorialCohortData.Rdat")
 reducedFactorial <- cds[, .(speciesCode, age, B)]
-factorialSpeciesTable <- species1[,.(species, longevity, growthcurve, mortalityshape, mANPPproportion)]
+# set(cds, NULL, c("ecoregionGroup", "mortalitly", "aANPPAct"), NULL)
+factorialSpeciesTable <- speciesTable[,.(species, longevity, growthcurve, mortalityshape, mANPPproportion)]
 
-saveRDS(reducedFactorial, file = "data/reducedFactorialCD.Rdat")
-saveRDS(factorialSpeciesTable, file = "data/factorialSpeciesTable.Rdat")
+Cache(saveRDS, reducedFactorial, file = "data/reducedFactorialCD.rds", quick = "file")
+Cache(saveRDS, factorialSpeciesTable, file = "data/factorialSpeciesTable.rds", quick = "file")
+
+
+uniq <- unique(cds$pixelGroup)
+cds[, Sp := gsub(".+_", "", speciesCode)]; 
+cds[, maxB := max(B), by = "pixelGroup"]
+setkeyv(cds, c("pixelGroup", "Sp", "age"))
+cds[, diffB := diff(B), by = c("age", "pixelGroup")]
+cds[is.na(diffB), diffB := 0]
+cds[, maxDiffB := max(diffB, na.rm = TRUE), by = c("pixelGroup")]
+setorderv(cds, "maxDiffB")
+
+# maxDiffBs <- head(unique(cds$maxDiffB), 40)
+
+sam <- Cache(sample, uniq, 64)
+ff <- cds[pixelGroup %in% sam]; 
+# ff <- cds[maxDiffB %in% maxDiffBs]; 
+ff <- factorialSpeciesTable[ff, on = c("species" = "speciesCode")]
+
+# ff <- ff[pixelGroup %in% sample(unique(ff$pixelGroup), 49)]; 
+ff[, Title := paste0(maxDiffB, "_", pixelGroup)]
+ff[, 
+   params := paste0(unique(Sp),"(l=",unique(longevity),";g=",unique(growthcurve), ";m=",unique(mortalityshape),";p=", unique(mANPPproportion ),")"), 
+   by = c("Sp", "pixelGroup")]
+ff[, Title := paste0(unique(params), collapse = "\n"), by = "pixelGroup"]
+title <- paste0("Factorial Experiment: ", length(sam), "random")
+gg1 <- ggplot(ff, aes(x = age, y = B, colour = Sp)) + 
+  geom_line() + 
+  facet_wrap(~ Title, nrow = ceiling(sqrt(length(sam))), scales = "fixed") +
+  ggtitle(title) +
+  theme(strip.text.x = element_text(size = 5)) #+
+
+
+filename <- paste0("factorial2Sp_", Sys.time())
+ggsave(paste0(filename, ".pdf"), gg1, width = 12, height = 7)
