@@ -8,8 +8,7 @@ if (isTRUE(identical(Sys.info()[["user"]], "elmci1"))) {
   rootDir <- "~/projects/def-elmci1-ab/elmci1/Yield"
 }
 options(reproducible.showSimilar = TRUE, reproducible.inputPaths = file.path(dirname(rootDir),"/Eliot/data"),
-        reproducible.useMemoise = TRUE, reproducible.cacheSaveFormat = "qs",
-        spades.moduleCodeChecks = FALSE, LandR.assertions = FALSE)
+        reproducible.useMemoise = TRUE, reproducible.cacheSaveFormat = "qs")
 if (!require("Require")) {install.packages("Require"); require("Require")}
 Require("PredictiveEcology/SpaDES.install")
 installSpaDES()
@@ -82,6 +81,8 @@ if (TRUE) {
 #Get number of pixel groups
 
 #Now set the extra species column as null, set up the biomass and age
+set(species1, NULL, "mortalityshape", asInteger(species1$mortalityshape))
+set(species1, NULL, "longevity", asInteger(species1$longevity))
 set(cohortData, NULL, "age", 1)
 set(species1, NULL, "maxB", 5000)
 set(species1, NULL, "maxANPP", asInteger(species1$maxB * species1$mANPPproportion/100))
@@ -103,11 +104,12 @@ setnames(speciesEcoregion, old = "species", new = "speciesCode")
 # speciesEcoregion[, c("mANPPproportion", "growthcurve", "mortalityshape", "longevity", "species") := NULL]
 # speciesEcoregion[, "speciesCode" := species1$species]
 
-SpeciesTable <- copy(species1)
-SpeciesTable[, c("sexualmature", 'SeedEffDist', 'SeedMaxDist', 'VegProb', 'MinAgeVeg', 'MaxAgeVeg', 'PostFireRegen',
-                 'Leaflongevity', 'WoodDecayRate', 'LeafLignin', 'HardSoft') :=
-               list(30, 0, 0, 0.5, 0, 0, 'none', 3, 0.07, 0.1, 'soft')]
-set(SpeciesTable, NULL, "shade", shadetolerance)
+SpeciesTable <- copy(species1[, c("species", "longevity", "growthcurve", "mortalityshape")])
+SpeciesTable[, c("sexualmature", 'seeddistance_eff', 'seeddistance_max', 'resproutprob', 
+                 'resproutage_min', 'resproutage_max', 'postfireregen',
+                 'leaflongevity', 'wooddecayrate', 'leafLignin', 'hardsoft', "Area", "firetolerance") :=
+               list(30L, 0L, 0L, 0.5, 0L, 0L, factor('none'), 3L, 0.07, 0.1, factor('soft'), factor("BP"), 3L)]
+set(SpeciesTable, NULL, "shadetolerance", asInteger(shadetolerance))
 
 
 pixelGroupMap <- raster(res = c(1,1))
@@ -160,7 +162,6 @@ setPaths(rasterPath = "temp",
          inputPath = file.path(getwd(), "inputs"),
          outputPath = file.path(getwd(),"outputs"))
 
-options("spades.moduleCodeChecks" = FALSE)
 
 moduleNameAndBranch <- c("Biomass_core@development") #, "Biomass_speciesParameters@EliotTweaks")
 lapply(moduleNameAndBranch, function(modName) {
@@ -192,17 +193,13 @@ objects <- list(
 
 opts <- options(
   "future.globals.maxSize" = 1000*1024^2,
-  "LandR.assertions" = FALSE,
+  "LandR.assertions" = TRUE,
   "LandR.verbose" = 1,
   "reproducible.futurePlan" = FALSE,
-  "reproducible.inputPaths" = NULL,
-  "reproducible.quick" = FALSE,
   "reproducible.overwrite" = TRUE,
   "reproducible.useMemoise" = TRUE, # Brings cached stuff to memory during the second run
   "reproducible.useNewDigestAlgorithm" = TRUE,  # use the new less strict hashing algo
   "reproducible.useCache" = TRUE,
-  # "reproducible.cachePath" = paths$cachePath,
-  "reproducible.useCloud" = FALSE,
   "spades.moduleCodeChecks" = FALSE, # Turn off all module's code checking
   "spades.useRequire" = TRUE, # assuming all pkgs installed correctly
   "pemisc.useParallel" = FALSE
@@ -222,12 +219,10 @@ set.seed(161616)
 ####NOTE: This will fail at year 700, because every cohort is dead. Not sure why that fails yet...
 #files are still output so it isn't a problem
 
-mySim <- simInit(times = times, params = parameters, modules = modules, 
-                 objects = objects, outputs = outputs
-                 #paths = paths, loadOrder = unlist(modules)
-                 )
+mySimOut <- simInitAndSpades(times = times, params = parameters, modules = modules, 
+                 objects = objects, outputs = outputs, debug = 1)
 
-mySimOut <- spades(mySim, debug = 1)
+# mySimOut <- spades(mySim, debug = 1)
 
 #####Pull in the files#####
 
