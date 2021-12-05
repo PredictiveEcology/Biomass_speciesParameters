@@ -14,12 +14,14 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
-  reqdPkgs = list("mgcv", "nlme", "fpCompare", "crayon",
+  reqdPkgs = list("mgcv", "nlme", "fpCompare", "crayon", "data.table",
                   "PredictiveEcology/LandR@development (>= 1.0.5)",
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
-                  "ianmseddy/PSPclean"),
+                  "ianmseddy/PSPclean", "robustbase", "gridExtra", "ggplot2", "purrr"),
   parameters = rbind(
+    defineParameter(".plots", "character", "screen", NA, NA,
+                    "Used by Plots function, which can be optionally used here"),
     defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA,
                     "This describes the simulation time at which the first plot event should occur"),
     defineParameter(".plotInterval", "numeric", NA, NA, NA,
@@ -28,11 +30,13 @@ defineModule(sim, list(
                     "This describes the simulation time at which the first save event should occur"),
     defineParameter(".saveInterval", "numeric", NA, NA, NA,
                     "This describes the simulation time interval between save events"),
-    defineParameter(".useCache", "logical", FALSE, NA, NA,
+    defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                                  "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
-    defineParameter("allSpInOne", "logical", TRUE, NA, NA,
-                    desc =  paste("Should all species have identical species level traits")),
+    defineParameter("allSpInOne", "character", "pairwise", NA, NA,
+                    desc =  paste("Either 'all', 'pairwise' or 'single', indicating whether to pool ",
+                                  " all species into one fit, do pairwise species (for multiple cohort situations), ",
+                                  " or do one species at a time. If 'all', all species will have identical species-level traits")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
     defineParameter("constrainGrowthCurve", "numeric", c(0, 1), 0, 1,
@@ -82,15 +86,13 @@ defineModule(sim, list(
                                  "DBH is used by itself when height is missing."))
   ),
   inputObjects = bindrows(
-    expectsInput(objectName  = "factorialSpeciesTable", objectClass = "data.table",
+    expectsInput(objectName  = "speciesTableFactorial", objectClass = "data.table",
                  desc = paste("table with species traits for matching to factorialCohortData"),
                  sourceURL = "https://drive.google.com/file/d/15NqL58NvSfI0ppBzKCvUPgs5ylRmQV8A"),
-    # sourceURL = "https://drive.google.com/open?id=1q0ou0CBzD9GqGSparpHqf318IWK6ycty"),
-    expectsInput(objectName = "reducedFactorialCohortData", objectClass = "data.table",
+    expectsInput(objectName = "cohortDataFactorial", objectClass = "data.table",
                  desc = paste("results of factorial species trait simulation. This can be found by running",
                               "SpeciesFactorial.R but requires a specific commit of Boreal_Biomass"),
                  sourceURL = "https://drive.google.com/file/d/10t6RbR-1gSi7m42kG1-7iHO7m6ZZsEjA"),
-    #sourceURL = "https://drive.google.com/open?id=1h8StXE0vm8xyDycRomCkwIaL7wfh5Irj"),
     expectsInput(objectName = "PSPmeasure_sppParams", objectClass = "data.table",
                  desc = paste("merged PSP and TSP individual tree measurements. Must include the following columns:",
                               "MeasureID, OrigPlotID1, MeasureYear, TreeNumber, Species, DBH and newSpeciesName",
@@ -119,7 +121,6 @@ defineModule(sim, list(
                  desc = "study area used to crop PSP data before building growth curves")
   ),
   outputObjects = bindrows(
-    #createsOutput("objectName", "objectClass", "output object description", ...),
     createsOutput(objectName = "speciesEcoregion", "data.table",
                   desc = paste("table defining the maxANPP, maxB and SEP, which can change with both ecoregion and simulation time.",
                                "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
@@ -145,21 +146,18 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
       sim <- Init(sim)
       
       # schedule future event(s)
-      sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "Biomass_speciesParameters", "plot")
+      # sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "Biomass_speciesParameters", "plot")
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "Biomass_speciesParameters", "save")
     },
     plot = {
-      lapply(names(sim$speciesGAMMs), FUN = function(spp, GAMMs = sim$speciesGAMMs){
-        if (!class(GAMMs[[spp]]) == "character"){
-          gam <- GAMMs[[spp]][["gam"]]
-          jpeg(filename = file.path(outputPath(sim), paste0(spp, "_gamm.jpg")))
-          plot(gam, xlab = "stand age", ylab = "biomass", main = spp)
-          dev.off()
-        }
-      })
-      
-      
-      # ! ----- STOP EDITING ----- ! #
+      # lapply(names(sim$speciesGAMMs), FUN = function(spp, GAMMs = sim$speciesGAMMs){
+      #   if (!class(GAMMs[[spp]]) == "character"){
+      #     gam <- GAMMs[[spp]][["gam"]]
+      #     jpeg(filename = file.path(outputPath(sim), paste0(spp, "_gamm.jpg")))
+      #     plot(gam, xlab = "stand age", ylab = "biomass", main = spp)
+      #     dev.off()
+      #   }
+      # })
     },
     save = {
       # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "Biomass_speciesParameters", "save")
@@ -221,19 +219,23 @@ Init <- function(sim) {
     message("The following species did not have sufficient data for model estimation: ")
     print(names(noData))
   }
-  
+  browser()
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                               speciesTable = sim$species,
-                                              factorialTraits = sim$factorialSpeciesTable,
-                                              factorialBiomass = sim$reducedFactorialCohortData,
+                                              factorialTraits = setDT(sim$speciesTableFactorial), # setDT to deal with reload from Cache (no effect otherwise)
+                                              factorialBiomass = setDT(sim$cohortDataFactorial), # setDT to deal with reload from Cache (no effect otherwise)
                                               sppEquiv = sim$sppEquiv,
                                               sppEquivCol = P(sim)$sppEquivCol,
                                               mortConstraints = P(sim)$constrainMortalityShape,
                                               growthConstraints = P(sim)$constrainGrowthCurve,
                                               mANPPconstraints = P(sim)$constrainMaxANPP)
-
-  sim$species <- modifiedSpeciesTables
-
+  
+  gg <- modifiedSpeciesTables$gg
+  Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
+        filename = paste("Pairwise species fits ", Sys.time()))
+  
+  sim$species <- modifiedSpeciesTables$best
+  
   modifiedSpeciesEcoregion <- modifySpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
                                                           speciesTable = sim$species)
   sim$speciesEcoregion <- modifiedSpeciesEcoregion
@@ -256,18 +258,18 @@ Save <- function(sim) {
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
   
-  if (!suppliedElsewhere("reducedFactorialCohortData", sim)) {
-    sim$reducedFactorialCohortData <- prepInputs(targetFile = "reducedFactorialCD.Rdat",
-                                                 destinationPath = dPath,
-                                                 fun = "readRDS", overwrite = TRUE,
-                                                 url = extractURL('reducedFactorialCohortData', sim),
-                                                 useCache = TRUE, userTags = c(cacheTags, "reducedFactorial"))
+  if (!suppliedElsewhere("cohortDataFactorial", sim)) {
+    sim$cohortDataFactorial <- prepInputs(targetFile = "reducedFactorialCD.Rdat",
+                                          destinationPath = dPath,
+                                          fun = "readRDS", overwrite = TRUE,
+                                          url = extractURL('cohortDataFactorial', sim),
+                                          useCache = TRUE, userTags = c(cacheTags, "reducedFactorial"))
   }
   
-  if (!suppliedElsewhere("factorialSpeciesTable", sim)) {
-    sim$factorialSpeciesTable <- prepInputs(targetFile = "factorialSpeciesTable.Rdat",
+  if (!suppliedElsewhere("speciesTableFactorial", sim)) {
+    sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial.Rdat",
                                             destinationPath = dPath,
-                                            url = extractURL('factorialSpeciesTable', sim),
+                                            url = extractURL('speciesTableFactorial', sim),
                                             fun = "readRDS", overwrite = TRUE,
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
