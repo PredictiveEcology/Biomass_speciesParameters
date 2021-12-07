@@ -30,7 +30,7 @@ defineModule(sim, list(
                     "This describes the simulation time at which the first save event should occur"),
     defineParameter(".saveInterval", "numeric", NA, NA, NA,
                     "This describes the simulation time interval between save events"),
-    defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
+    defineParameter(".useCache", "character", c(".inputObjects"), NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                                  "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
     defineParameter("allSpInOne", "character", "pairwise", NA, NA,
@@ -219,7 +219,6 @@ Init <- function(sim) {
     message("The following species did not have sufficient data for model estimation: ")
     print(names(noData))
   }
-  browser()
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                               speciesTable = sim$species,
                                               factorialTraits = setDT(sim$speciesTableFactorial), # setDT to deal with reload from Cache (no effect otherwise)
@@ -229,10 +228,9 @@ Init <- function(sim) {
                                               mortConstraints = P(sim)$constrainMortalityShape,
                                               growthConstraints = P(sim)$constrainGrowthCurve,
                                               mANPPconstraints = P(sim)$constrainMaxANPP)
-  
   gg <- modifiedSpeciesTables$gg
   Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
-        filename = paste("Pairwise species fits ", Sys.time()))
+        filename = paste("Pairwise species fits ", sim$._startClockTime))
   
   sim$species <- modifiedSpeciesTables$best
   

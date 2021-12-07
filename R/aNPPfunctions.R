@@ -139,7 +139,6 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   } else {
     message("building growth curves from PSP data for these species: ")
     print(gcSpecies)
-    browser()
     outputGCs <- lapply(gcSpecies, FUN = makeGAMMdata, psp = spsp, speciesEquiv = sppEquiv,
                         sppCol = speciesCol, NoOfIters = NoOfIterations,
                         K = knots, minSize = minimumSampleSize, q = quantileAgeSubset)
@@ -163,27 +162,84 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
                                sppEquivCol, mortConstraints, growthConstraints, mANPPconstraints) {
   
-  #Join these two tables to make the full speciesTraits table
-  factorialBiomass[, species := speciesCode]
-  setkey(factorialTraits, species)
-  setkey(factorialBiomass, species)
+  #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
+  #setkey(factorialTraits, species)
+  #setkey(factorialBiomass, species)
   
   #for each species (ie Gamm), find best fit
   species <- names(gamms)
   names(species) <- species
-  outputTraits <- lapply(species, FUN = editSpeciesTraits, gamm = gamms,
-                         traits = speciesTable, fT = factorialTraits, fB = factorialBiomass,
-                         speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
-                         growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints)
+  outputTraits <- list()
+  
+  setnames(factorialTraits, old="species", new = "speciesCode")
+  # Make column with Sp which is Sp1 and Sp2 in both datasets
+  set(factorialBiomass, NULL, "Sp", gsub(".+_(Sp.)", "\\1", factorialBiomass$species, perl = TRUE))
+  set(setDT(factorialTraits), NULL, "Sp", gsub(".+_(Sp.)", "\\1", factorialTraits$species, perl = TRUE))
+  
+  factorialTraitsThatVary <- sapply(factorialTraits, function(x) length(unique(x)) > 1)
+  factorialTraitsThatVary <- names(factorialTraitsThatVary)[factorialTraitsThatVary]
+  factorialTraitsVarying <- factorialTraits[, ..factorialTraitsThatVary]
+  
+  digFB <- fastdigest::fastdigest(factorialBiomass)
+  digFT <- fastdigest::fastdigest(factorialTraitsVarying)
+  dig <- fastdigest::fastdigest(list(digFT, digFB, gamms, speciesTable))
+  
+  
+  factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
+  maxBInSims <- 5000
+  factorialBiomass[, inflationFactor := maxBInSims/max(B), .(pixelGroup)] 
+  # candFB[, inflationFactor := maxBInSims/max(B), .(speciesCode)] 
+  
+  # Take only 2-cohort pixels -- they will start with Sp
+  factorialTraits <- factorialTraits[startsWith(factorialTraits$Sp, "Sp")]
+  setnames(factorialBiomass, "age", "standAge")
+  
+  message("Estimate species parameters; minimizing diff between statistical fit and Biomass_core experiment")
+  for (name in species) {
+    # use for loop to allow for Cache on each species
+    outputTraits[[name]] <- Cache(editSpeciesTraits, name = name, gamm = gamms[[name]],
+                                  traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
+                                  speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
+                                  growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
+                                  maxBInSims = maxBInSims, userTags = name,
+                                  .cacheExtra = dig, omitArgs = c("fT", "fB", "gamm"))  
+  }
+  # outputTraits <- lapply(species, FUN = editSpeciesTraits, gamm = gamms,
+  #                        traits = speciesTable, fT = factorialTraits, fB = factorialBiomass,
+  #                        speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
+  #                        growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints)
+  
   outputTraitsT <- purrr::transpose(outputTraits)
   gammsT <- purrr::transpose(gamms)
   gammsList <- rbindlist(gammsT$originalData, idcol = "Pair")
-  llAll <- rbindlist(outputTraitsT$fullData, idcol = "Pair")
-  ll2 <- llAll[, list(BscaledNonLinear = mean(BscaledNonLinear),
-                      predNonLinear = mean(predNonLinear)#,
-                      #Pair = Pair[1]
-                      #mortalityshape = mean(mortalityshape),
-                      #mANPPproportion = mean(mANPPproportion)
+  fullDataAll <- rbindlist(outputTraitsT$fullData, idcol = "Pair")
+  newTraits <- rbindlist(outputTraitsT$bestTraits, idcol = "Pair")
+  llAll <- rbindlist(outputTraitsT$ll, idcol = "Pair")
+  
+  # limit best traits to only those that are nearest to longevity provided in SpeciesTable
+  # Take next higher longevity (the -Inf in the rolling joing, on the "last" join column i.e., longevity)
+  # set(setDT(speciesTable), NULL, "longevityOrig", speciesTable$longevity)
+  set(setDT(newTraits), NULL, "longevityOrigFac", newTraits$longevity)
+  
+  bt2 <- newTraits[speciesTable[, c("species", "longevity")],
+                   #                 bt2 <- newTraits[speciesTable[, c("species", "longevity", "longevityOrig")],
+                   on = c("species", "longevity"), roll = -Inf]
+  bt2[, longevity := longevityOrigFac]
+  bt2 <- unique(bt2[, c("species", "longevity")], by = c("species"))
+  bt1 <- newTraits[speciesTable[, c("species", "longevity")],
+                   #bt1 <- newTraits[speciesTable[, c("species", "longevity", "longevityOrig")],
+                   on = c("species", "longevity"), roll = Inf]
+  bt1[, longevity := longevityOrigFac]
+  bt1 <- unique(bt1[, c("species", "longevity")], by = c("species"))
+  speciesTableNew <- na.omit(rbindlist(list(bt1, bt2))  )
+  newTraits <- newTraits[speciesTableNew, on = c("species", "longevity")]
+  
+  # Take next lower longevity (the Inf in the rolling joing, on the "last" join column i.e., longevity)
+  ll2 <- fullDataAll[, list(BscaledNonLinear = mean(BscaledNonLinear),
+                            predNonLinear = mean(predNonLinear)#,
+                            #Pair = Pair[1]
+                            #mortalityshape = mean(mortalityshape),
+                            #mANPPproportion = mean(mANPPproportion)
   ),
   c("species", "standAge", "Pair")]
   gg <- ggplot(ll2, aes(standAge, BscaledNonLinear, colour = species)) + 
@@ -197,18 +253,18 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     theme_bw()
   
   #Collapse new traits and replace old traits
-  newTraits <- rbindlist(outputTraitsT$bestTraits, fill = TRUE, idcol = "Pair")
-  newTraits <- na.omit(newTraits)
+  # newTraits <- rbindlist(outputTraitsT$bestTraits, fill = TRUE, idcol = "Pair")
+  # newTraits <- na.omit(newTraits)
   newTraits[, AICWeights := exp( -0.5 * llNonLinDelta)]
   newTraits[, AICWeightsStd := AICWeights/sum(AICWeights), by = "species"]
   
   # Showing species-level averages -- this is not assigned to object
-  best <- newTraits[, .(growthcurve = round(sum(AICWeightsStd * growthcurve), 2),
-                        longevity = round(sum(AICWeightsStd * longevity), 0),
-                        mortalityshape = round(sum(AICWeightsStd * mortalityshape), 0),
-                        mANPPproportion = round(sum(AICWeightsStd * mANPPproportion), 3),
-                        inflationFactor = round(sum(AICWeightsStd * inflationFactor), 3)),
-                    by = "species"]
+  bestWeighted <- newTraits[, .(growthcurve = round(sum(AICWeightsStd * growthcurve), 2),
+                                longevity = round(sum(AICWeightsStd * longevity), 0),
+                                mortalityshape = round(sum(AICWeightsStd * mortalityshape), 0),
+                                mANPPproportion = round(sum(AICWeightsStd * mANPPproportion), 3),
+                                inflationFactor = round(sum(AICWeightsStd * inflationFactor), 3)),
+                            by = "species"]
   # numSp <- length(unique(newTraits$species))
   # best <- newTraits[, .(growthcurve = round(sum(AICWeightsStd * growthcurve)/numSp, 2)
   #                       #, mortalityshape = round(sum(AICWeightsStd * mortalityshape)/numSp, 0)
@@ -235,7 +291,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   # } else {
   #   message("no GAMMs converged :( Consider revising your parameters")
   # }
-  return(list(best = best, gg = gg))
+  return(list(best = bestWeighted, gg = gg))
 }
 
 modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
@@ -452,9 +508,9 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
-                              mortConstraints, growthConstraints, mANPPconstraints) {
+                              mortConstraints, growthConstraints, mANPPconstraints, maxBInSims) {
   
-  Gamm <- gamm[[name]]
+  # Gamm <- gamm[[name]]
   nameOrig <- name
   if (grepl("__", name)) {
     name <- strsplit(name, "__")[[1]]
@@ -462,68 +518,51 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   }
   message("Estimating fit for ", nameOrig)
   
-  
-  #Subset traits to PSP species, return unchanged if no Gamm present
+  #Subset traits to PSP species, return unchanged if no gamm present
   traits <- traits[species %in% name]
   
-  if (class(Gamm) == "try-error" | class(Gamm) == "character") {
+  if (class(gamm) == "try-error" | class(gamm) == "character") {
     message(paste("not estimating growth/mortality traits for", name))
     return(traits)
   }
   
-  predData <- data.table(standAge = min(Gamm$originalData$standAge):max(Gamm$originalData$standAge))
-  
-  # output <- lapply(name, function(sp) {
-  #   out <- try(predict(Gamm$speciesGamm[[sp]], predData, se.fit = TRUE))
-  #   if (is(out, "try-error")) browser()
-  #   
-  # })
+  # predData <- data.table(standAge = min(gamm$originalData$standAge):max(gamm$originalData$standAge))
   # 
-  # nlsoutput <- lapply(name, function(sp) {
-  #   tryCatch(predict(Gamm$NonLinearModel[[sp]], predData, se.fit = TRUE), error = function(x) 0)
-  # })
-  # 
-  # if (!is(output, "list")) {
-  #   o <- output
-  #   output <- list()
-  #   output$fit <- o
-  #   rm(o)
-  # }
-  set(fB, NULL, "Sp", gsub(".+_(Sp.)", "\\1", fB$species))
-  set(setDT(fT), NULL, "Sp", gsub(".+_(Sp.)", "\\1", fT$species))
+  # set(fB, NULL, "Sp", gsub(".+_(Sp.)", "\\1", fB$species))
+  # set(setDT(fT), NULL, "Sp", gsub(".+_(Sp.)", "\\1", fT$species))
   
   # Just 2-species combinations
-  candFB <- fB[startsWith(fB$Sp, "Sp")]
-  maxBInSims <- 5000
-  candFB[, inflationFactor := maxBInSims/max(B), .(pixelGroup)] 
-  # candFB[, inflationFactor := maxBInSims/max(B), .(speciesCode)] 
-  candFT <- fT[startsWith(fT$Sp, "Sp")]
-  maxBiomass <- Gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
+  # candFB <- fB[startsWith(fB$Sp, "Sp")]
+  # maxBInSims <- 5000
+  # candFB[, inflationFactor := maxBInSims/max(B), .(pixelGroup)] 
+  # # candFB[, inflationFactor := maxBInSims/max(B), .(speciesCode)] 
+  # candFT <- fT[startsWith(fT$Sp, "Sp")]
+  # setnames(candFT, old="species", new = "speciesCode")
+  maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
   set(maxBiomass, NULL, "Sp", paste0("Sp", 1:2))
-  SpNames <- maxBiomass$Sp[match(names(Gamm$NonLinearModel), maxBiomass$speciesTemp)]
+  SpNames <- maxBiomass$Sp[match(names(gamm$NonLinearModel), maxBiomass$speciesTemp)]
   SpMapping <- data.table(Sp = SpNames, species = name)
-  names(Gamm$NonLinearModel) <- SpNames
-  names(Gamm$speciesGamm) <- SpNames
-  setnames(candFB, "age", "standAge")
+  names(gamm$NonLinearModel) <- SpNames
+  names(gamm$speciesGamm) <- SpNames
   constraints <- list(growthcurve = growthConstraints,
                       mortalityshape = mortConstraints,
                       #longevityConstraints,
                       mANPPproportion = mANPPconstraints)
-  standAge <- unique(candFB$standAge)
+  standAge <- unique(fB$standAge)
   standAge <- standAge[standAge < 150]
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
   
   # Predict from statistical fits to data
   predGrid[, `:=`(
-    predNonLinear = predict(Gamm$NonLinearModel[[unlist(.BY)]], .SD),
-    predGamm = as.vector(predict(Gamm$speciesGamm[[unlist(.BY)]], .SD, , se.fit = FALSE))
+    predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
+    predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]], .SD, , se.fit = FALSE))
   ), "Sp", .SDcols = "standAge"]
   # misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
-  dt <- as.data.table(expand.grid(speciesCode = unique(candFB$speciesCode), standAge = unique(predGrid$standAge)))
+  dt <- as.data.table(expand.grid(speciesCode = unique(fB$speciesCode), standAge = unique(predGrid$standAge)))
   set(dt, NULL, "Sp", gsub(".+_", "", dt$speciesCode))
   dt <- dt[predGrid, on = c("standAge", "Sp")] 
-  candFB <- candFB[dt, on = c("standAge", "speciesCode", "Sp")] # misses points past longevity
+  candFB <- fB[dt, on = c("standAge", "speciesCode", "Sp")] # misses points past longevity
   whNA <- which(is.na(candFB$B))
   set(candFB, whNA, "B", 0L)
   candFB[, `:=`(
@@ -543,42 +582,46 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
                                       sd = stdevGamm, log = TRUE)),
                    llNonLinear = sum(dnorm(x = BscaledNonLinear, mean = predNonLinear,
                                            sd = stdevNonLinear, log = TRUE))), .(pixelGroup)]
-  
   # Sort them so that best is on top
   setorderv(ll, "llNonLinear", order = -1L)
-  ll[, c("llNonLinDelta", "llGammDelta") := list(#abs(llDirect - max(llDirect)), 
+  ll[, c("llNonLinDelta", "llGammDelta") := list(
     abs(llNonLinear - max(llNonLinear)),
     abs(llGamm - max(llGamm)))]
+  set(ll, NULL, c("llGamm", "llNonLinear"), NULL)
+  
   deltaDiff <- 2 # because we 
   ll <- ll[#llDirectDelta < deltaDiff | 
     llGammDelta < deltaDiff |
       llNonLinDelta < deltaDiff]
-  ll <- candFB[ll, on = "pixelGroup"]
-  candFTShort <- candFT[unique(ll[, c("species", "pixelGroup")], by = c("species")), on = "species"]
+  candFB <- candFB[ll, on = "pixelGroup"]
+  varsToInteger <- c("BscaledGamm", "BscaledNonLinear", "predNonLinear", "predGamm")
+  set(candFB, NULL, varsToInteger, lapply(varsToInteger, function(v) asInteger(candFB[[v]])))
   
-  bestGrowthData <- ll[pixelGroup == ll$pixelGroup[1]][, -"species"]
-  bestGrowthData <- bestGrowthData[SpMapping, on = "Sp"]
-  gg <- ggplot(bestGrowthData, aes(standAge, BscaledNonLinear, colour = species)) + 
-    geom_line() + 
-    geom_line(aes(standAge, predNonLinear, col = species), lty = "dashed") + 
-    geom_point(data = Gamm$originalData, aes(standAge, biomass, colour = speciesTemp)) +
-    ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
-    theme_bw()
+  # candFTShort <- fT[unique(ll[, c("speciesCode", "pixelGroup")], by = c("speciesCode")), on = "speciesCode"]
+  
+  # bestGrowthData <- ll[pixelGroup == ll$pixelGroup[1]]
+  # bestGrowthData <- bestGrowthData[SpMapping, on = "Sp"]
+  # gg <- ggplot(bestGrowthData, aes(standAge, BscaledNonLinear, colour = species)) + 
+  #   geom_line() + 
+  #   geom_line(aes(standAge, predNonLinear, col = species), lty = "dashed") + 
+  #   geom_point(data = gamm$originalData, aes(standAge, biomass, colour = speciesTemp)) +
+  #   ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
+  #   theme_bw()
   
   # bestPGs <- head(unique(ll$pixelGroup), 6)
   # rr <- ll[pixelGroup %in% bestPGs & standAge == 1][, "speciesCode"]
-  rr <- ll[standAge == 1][, c("speciesCode", "llNonLinDelta", "inflationFactor")]
+  rr <- candFB[standAge == 1][, c("speciesCode", "llNonLinDelta", "inflationFactor")]
   
   # Take the average of the best
-  best <- fT[rr, on = c("species"="speciesCode")]
+  best <- fT[rr, on = c("speciesCode"="speciesCode")]
   bestTraits <- SpMapping[best, on = "Sp"]
-  ll <- SpMapping[ll[, -"species"], on = "Sp"]
+  candFB <- SpMapping[candFB, on = "Sp"]
   
   # bestTraits <- lapply(name, function(sp) {
   #   predData <- data.table("age" = predData$standAge, "predBiomass" = output[[sp]]$fit, 
   #              "predSE" = output[[sp]]$se.fit, "predBiomassNonLin" = nlsoutput[[sp]])
   #   closestLongevity <- abs(fT$longevity - traits$longevity) == min(abs(fT$longevity - traits$longevity)) |
-  #     (fT$longevity > max(Gamm$simData$standAge) & (fT$longevity < traits$longevity))
+  #     (fT$longevity > max(gamm$simData$standAge) & (fT$longevity < traits$longevity))
   #   #subset traits by closest longevity
   #   CandidateTraits <- fT[closestLongevity]
   #   
@@ -666,7 +709,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #                                                          sd = stdev, log = TRUE))), .(speciesCode)]
   #   CandidatesAll <- CandidateTraits[Candidates, on = c("species" = "speciesCode")] 
   #   
-  #   CandidateValuesDirectData <- Gamm$simData[CandidateValues, on = c("standAge"="age"), allow.cartesian = TRUE, nomatch = 0]
+  #   CandidateValuesDirectData <- gamm$simData[CandidateValues, on = c("standAge"="age"), allow.cartesian = TRUE, nomatch = 0]
   #   CandidateDirectData <- CandidateValuesDirectData[, .(llDirect = sum(dnorm(x = biomass, mean = B * scaleFactor * inflationFactor,
   #                                                                             sd = stdev, log = TRUE))
   #   ), .(speciesCode)]
@@ -704,9 +747,9 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #     col <- factor(names(gamm))[ma]
   #     if (FALSE) { # This is about plotting (Eliot Nov 18, 2021) -- couldn't fit into the module in a modular way 
   #       if (ma == 1)
-  #         plot(Gamm$simData$standAge, Gamm$simData$biomass, pch = 19, cex = 0.5, col = ma, xlim = c(0, 200), ylim = c(0, 40000))
+  #         plot(gamm$simData$standAge, gamm$simData$biomass, pch = 19, cex = 0.5, col = ma, xlim = c(0, 200), ylim = c(0, 40000))
   #       else 
-  #         points(Gamm$simData$standAge, Gamm$simData$biomass, pch = 19, cex = 0.5, col = ma)
+  #         points(gamm$simData$standAge, gamm$simData$biomass, pch = 19, cex = 0.5, col = ma)
   #       
   #       # THese are the LandR equivalents
   #       if (!isTRUE(nlsoutput == 0))
@@ -716,7 +759,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #       lines(ccvGamm$age, ccvGamm$B * scaleFactor * ccvGamm$inflationFactor, lty = "dotted", lwd = 4, col = col )
   #       lines(ccvNonLin$age, ccvNonLin$B * scaleFactor * ccvNonLin$inflationFactor, lty = "dashed", lwd = 2, col = col )
   #       
-  #       # These are the Gamm or NonLin
+  #       # These are the gamm or NonLin
   #       lines(ccvGamm$age, ccvGamm$predBiomass, col = col, lty = "dotted", lwd = 1)
   #       lines(ccvNonLin$age, ccvNonLin$predBiomassNonLin, col = col, lty = "dashed", lwd = 1)
   #       
@@ -751,8 +794,9 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   # } 
   # 
   # traits[, colnames(bestTraits) :=  bestTraits] 
-  return(list(bestTraits = bestTraits, fullData = ll))
+  return(list(bestTraits = bestTraits, fullData = candFB, ll = ll))
 }
+
 
 makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                          PSPplot, useHeight, biomassModel, speciesCol,
@@ -777,29 +821,29 @@ gammFormula <- quote(biomass ~ s(standAge, k = K, pc = 0))
 randomFormula <- quote(~1)
 
 
-updateInflationFactor <- function(traits, factorialTraits, factorialBiomass) {
-  longs <- traits$longevity
-  names(longs) <- traits$species
-  closestLongevity <- sapply(longs, function(long) {
-    unique(factorialTraits$longevity[abs(factorialTraits$longevity - long) == 
-                                       min(abs(factorialTraits$longevity - long))])
-  })
-  newTraitsClosestLongevity <- copy(traits)
-  newTraitsClosestLongevity[, longevity := closestLongevity]
-  
-  maxBInSims <- 5000
-  fT <- copy(factorialTraits)
-  fB <- copy(factorialBiomass)
-  setnames(fT, old = "species", new = "speciesDummy")
-  setnames(fB, old = "speciesCode", new = "speciesDummy")
-  set(fB, NULL, "species", NULL)
-  factorialSp <- fT[newTraitsClosestLongevity, on = c("growthcurve", "mortalityshape", "mANPPproportion", "longevity")]
-  factorialSp <- fB[speciesDummy %in% factorialSp$speciesDummy, 
-                    list(inflationFactor = maxBInSims/max(B)), by = "speciesDummy"][
-                      factorialSp[, -"inflationFactor"], on = "speciesDummy"
-                    ]
-  
-  # Update traits with new inflationFactor
-  traits <- factorialSp[, c("species", "inflationFactor")][traits[, -"inflationFactor"], on = "species"]
-  traits[]
-}
+# updateInflationFactor <- function(traits, factorialTraits, factorialBiomass) {
+#   longs <- traits$longevity
+#   names(longs) <- traits$species
+#   closestLongevity <- sapply(longs, function(long) {
+#     unique(factorialTraits$longevity[abs(factorialTraits$longevity - long) == 
+#                                        min(abs(factorialTraits$longevity - long))])
+#   })
+#   newTraitsClosestLongevity <- copy(traits)
+#   newTraitsClosestLongevity[, longevity := closestLongevity]
+#   
+#   maxBInSims <- 5000
+#   fT <- copy(factorialTraits)
+#   fB <- copy(factorialBiomass)
+#   setnames(fT, old = "species", new = "speciesDummy")
+#   setnames(fB, old = "speciesCode", new = "speciesDummy")
+#   set(fB, NULL, "species", NULL)
+#   factorialSp <- fT[newTraitsClosestLongevity, on = c("growthcurve", "mortalityshape", "mANPPproportion", "longevity")]
+#   factorialSp <- fB[speciesDummy %in% factorialSp$speciesDummy, 
+#                     list(inflationFactor = maxBInSims/max(B)), by = "speciesDummy"][
+#                       factorialSp[, -"inflationFactor"], on = "speciesDummy"
+#                     ]
+#   
+#   # Update traits with new inflationFactor
+#   traits <- factorialSp[, c("species", "inflationFactor")][traits[, -"inflationFactor"], on = "species"]
+#   traits[]
+# }
