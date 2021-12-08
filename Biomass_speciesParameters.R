@@ -8,7 +8,7 @@ defineModule(sim, list(
   keywords = NA, # c("insert key words here"),
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@example.com", role = c("aut", "cre"))),
   childModules = character(0),
-  version = list(Biomass_speciesParameters = "0.0.3"),
+  version = list(Biomass_speciesParameters = "0.0.4"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
