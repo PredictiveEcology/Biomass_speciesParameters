@@ -115,7 +115,11 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   spsp  <- spsp[, "plotBiomass" := sum(areaAdjustedB), .(MeasureID)]
   spsp[, "spPlotBiomass" := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
   spsp[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
-  spsp[, speciesTemp := equivalentName(value = newSpeciesName, df = sppEquiv, column = speciesCol, searchColumn = "PSP")]
+  spsp[, speciesTemp := equivalentName(value = newSpeciesName, df = sppEquiv, 
+                                       column = speciesCol, searchColumn = "PSP")]
+  whNA <- is.na(spsp$speciesTemp)
+  message("Removing ", paste(unique(spsp$newSpeciesName[whNA]), collapse = ", "))
+  spsp <- spsp[!whNA]
   if (identical(gcSpecies, "pairwise")) {
     spsp <- spsp[newSpeciesName %in% sppEquiv[["PSP"]]]
     freq <- spsp[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
@@ -365,7 +369,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   Fakeweights <- rep(1, times = nrow(simulatedData))
   simData$Weights <- c(Realweights, Fakeweights)
   
-  species <- unique(simData$speciesTemp)
+  species <- na.omit(unique(simData$speciesTemp))
   
   localEnv <- environment()
   
