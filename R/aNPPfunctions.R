@@ -164,7 +164,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 }
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
-                               sppEquivCol, mortConstraints, growthConstraints, mANPPconstraints) {
+                               sppEquivCol, maxBForFactorial, mortConstraints, growthConstraints, 
+                               mANPPconstraints) {
   
   #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
   #setkey(factorialTraits, species)
@@ -190,9 +191,9 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   
   
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
-  maxBInSims <- 5000
-  factorialBiomass[, inflationFactor := maxBInSims/max(B), .(pixelGroup)] 
-  # candFB[, inflationFactor := maxBInSims/max(B), .(speciesCode)] 
+  maxBInFactorial <- maxBForFactorial
+  factorialBiomass[, inflationFactor := maxBInFactorial/max(B), .(pixelGroup)] 
+  # candFB[, inflationFactor := maxBInFactorial/max(B), .(speciesCode)] 
   
   # Take only 2-cohort pixels -- they will start with Sp
   factorialTraits <- factorialTraits[startsWith(factorialTraits$Sp, "Sp")]
@@ -205,7 +206,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                   traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
                                   speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
                                   growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
-                                  maxBInSims = maxBInSims, userTags = name,
+                                  maxBInFactorial = maxBInFactorial, userTags = name,
                                   .cacheExtra = dig, omitArgs = c("fT", "fB", "gamm"))  
   }
   # outputTraits <- lapply(species, FUN = editSpeciesTraits, gamm = gamms,
@@ -512,7 +513,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
-                              mortConstraints, growthConstraints, mANPPconstraints, maxBInSims) {
+                              mortConstraints, growthConstraints, mANPPconstraints, maxBInFactorial) {
   
   # Gamm <- gamm[[name]]
   nameOrig <- name
@@ -537,9 +538,9 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   
   # Just 2-species combinations
   # candFB <- fB[startsWith(fB$Sp, "Sp")]
-  # maxBInSims <- 5000
-  # candFB[, inflationFactor := maxBInSims/max(B), .(pixelGroup)] 
-  # # candFB[, inflationFactor := maxBInSims/max(B), .(speciesCode)] 
+  # maxBInFactorial <- 5000
+  # candFB[, inflationFactor := maxBInFactorial/max(B), .(pixelGroup)] 
+  # # candFB[, inflationFactor := maxBInFactorial/max(B), .(speciesCode)] 
   # candFT <- fT[startsWith(fT$Sp, "Sp")]
   # setnames(candFT, old="species", new = "speciesCode")
   maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
@@ -573,8 +574,8 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
     pixelGroup = pixelGroup[1],
     inflationFactor = inflationFactor[1]), by = "speciesCode"]
   
-  scaleFactorGamm <- max(predGrid$predGamm)/maxBInSims
-  scaleFactorNonLinear <- max(predGrid$predNonLinear)/maxBInSims
+  scaleFactorGamm <- max(predGrid$predGamm)/maxBInFactorial
+  scaleFactorNonLinear <- max(predGrid$predNonLinear)/maxBInFactorial
   stdevGamm <- sd(predGrid$predGamm)
   stdevNonLinear <- sd(predGrid$predNonLinear)
   
@@ -673,16 +674,16 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #   
   #   #This has to happen before age is subset, or it will underestimate
   #   #  5000 is hard coded because that was the maxB used in the simulations
-  #   maxBInSims <- 5000
-  #   CandidateValues[, inflationFactor := maxBInSims/max(B), .(speciesCode)] 
+  #   maxBInFactorial <- 5000
+  #   CandidateValues[, inflationFactor := maxBInFactorial/max(B), .(speciesCode)] 
   #   #subset the simulation values by age for which curve is represented
   #   CandidateValues <- CandidateValues[age >= min(predData$age) & age <= max(predData$age),]
   #   
   #   setkey(predData, age)
   #   setkey(CandidateValues, age)
   #   CandidateValues <- na.exclude(CandidateValues[predData])
-  #   scaleFactor <- max(CandidateValues$predBiomass)/maxBInSims
-  #   scaleFactorNonLin <- max(CandidateValues$predBiomassNonLin)/maxBInSims
+  #   scaleFactor <- max(CandidateValues$predBiomass)/maxBInFactorial
+  #   scaleFactorNonLin <- max(CandidateValues$predBiomassNonLin)/maxBInFactorial
   #   
   #   #scale factor is the achieved maxB in the simulation / PSP maxB. We use this to scale simulation values to PSP
   #   #inflationFactor is the the LANDIS speciesTrait maxB that was used (always 5000) / simulation's achieved maxB
@@ -697,12 +698,12 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #     inflFact <- sort(unique(c1$inflationFactor))
   #     c1 <- c1[inflationFactor == inflFact[1]]
   #     par(mfrow = c(2,1))
-  #     plot(c1$age, c1$predBiomassNonLin / (max(c1$predBiomassNonLin)/maxBInSims) / c1$inflationFactor, col = "green", pch = 19, cex = .3)
+  #     plot(c1$age, c1$predBiomassNonLin / (max(c1$predBiomassNonLin)/maxBInFactorial) / c1$inflationFactor, col = "green", pch = 19, cex = .3)
   #     points(c1$age, c1$B, col = "blue", pch = 19, cex = .3)
-  #     plot(c1$age, c1$predBiomass / (max(c1$predBiomass)/maxBInSims) / c1$inflationFactor, col = "green", pch = 19, cex = .3)
+  #     plot(c1$age, c1$predBiomass / (max(c1$predBiomass)/maxBInFactorial) / c1$inflationFactor, col = "green", pch = 19, cex = .3)
   #     points(c1$age, c1$B, col = "blue", pch = 19, cex = .3)
   #   }
-  #   # c1$predBiomassNonLin / (max(c1$predBiomassNonLin)/maxBInSims) / c1$inflationFactor
+  #   # c1$predBiomassNonLin / (max(c1$predBiomassNonLin)/maxBInFactorial) / c1$inflationFactor
   #   #CandidateValues[, `:=`(#LogLikelihood = sum(dnorm(x = B * scaleFactor, mean = predBiomass,
   #   #                                  #                          sd = stdev, log = TRUE)),
   #   #                                  inflationFactor = mean(inflationFactor)), .(speciesCode)]
@@ -835,7 +836,7 @@ randomFormula <- quote(~1)
 #   newTraitsClosestLongevity <- copy(traits)
 #   newTraitsClosestLongevity[, longevity := closestLongevity]
 #   
-#   maxBInSims <- 5000
+#   maxBInFactorial <- 5000
 #   fT <- copy(factorialTraits)
 #   fB <- copy(factorialBiomass)
 #   setnames(fT, old = "species", new = "speciesDummy")
@@ -843,7 +844,7 @@ randomFormula <- quote(~1)
 #   set(fB, NULL, "species", NULL)
 #   factorialSp <- fT[newTraitsClosestLongevity, on = c("growthcurve", "mortalityshape", "mANPPproportion", "longevity")]
 #   factorialSp <- fB[speciesDummy %in% factorialSp$speciesDummy, 
-#                     list(inflationFactor = maxBInSims/max(B)), by = "speciesDummy"][
+#                     list(inflationFactor = maxBInFactorial/max(B)), by = "speciesDummy"][
 #                       factorialSp[, -"inflationFactor"], on = "speciesDummy"
 #                     ]
 #   

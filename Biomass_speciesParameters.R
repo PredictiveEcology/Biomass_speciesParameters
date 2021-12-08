@@ -8,7 +8,7 @@ defineModule(sim, list(
   keywords = NA, # c("insert key words here"),
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@example.com", role = c("aut", "cre"))),
   childModules = character(0),
-  version = list(Biomass_speciesParameters = "0.0.4"),
+  version = list(Biomass_speciesParameters = "0.0.5"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
@@ -59,6 +59,9 @@ defineModule(sim, list(
     defineParameter("GAMMknots", "numeric", 3, NA, NA,
                     desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
                                  "list of vectors, with names equal to `sppEquivCol`, so that GAMMS are customizable")),
+    defineParameter("maxBInFactorial", "integer", 5000L, NA, NA,
+                    "The arbitrary maximum biomass for the factorial simulations. This ",
+                    "is a per-species maximum within a pixel"),
     defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA,
                     desc = paste("minimum number of PSP plots before building GAMM.")),
     defineParameter("minDBH", "integer", 0L, 0L, NA,
@@ -219,12 +222,15 @@ Init <- function(sim) {
     message("The following species did not have sufficient data for model estimation: ")
     print(names(noData))
   }
+  paramCheckOtherMods(sim, "maxBInFactorial")
+  
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                               speciesTable = sim$species,
                                               factorialTraits = setDT(sim$speciesTableFactorial), # setDT to deal with reload from Cache (no effect otherwise)
                                               factorialBiomass = setDT(sim$cohortDataFactorial), # setDT to deal with reload from Cache (no effect otherwise)
                                               sppEquiv = sim$sppEquiv,
                                               sppEquivCol = P(sim)$sppEquivCol,
+                                              maxBInFactorial = P(sim)$maxBInFactorial,
                                               mortConstraints = P(sim)$constrainMortalityShape,
                                               growthConstraints = P(sim)$constrainGrowthCurve,
                                               mANPPconstraints = P(sim)$constrainMaxANPP)
@@ -280,8 +286,8 @@ Save <- function(sim) {
                       "Pice_gla", "Pice_mar", "Pinu_ban",
                       "Pinu_con", "Pseu_men", "Popu_tre"),
       establishprob = 0.5,
-      maxB = 5000,
-      maxANPP = 5000/30,
+      maxB = P(sim)$maxBInFactorial,
+      maxANPP = P(sim)$maxBInFactorial/30,
       year = 0
     )
   }
