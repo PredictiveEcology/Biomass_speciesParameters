@@ -164,7 +164,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 }
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
-                               sppEquivCol, maxBForFactorial, mortConstraints, growthConstraints, 
+                               sppEquivCol, maxBInFactorial, mortConstraints, growthConstraints, 
                                mANPPconstraints) {
   
   #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
@@ -191,7 +191,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   
   
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
-  maxBInFactorial <- maxBForFactorial
+  maxBInFactorial <- maxBInFactorial
   factorialBiomass[, inflationFactor := maxBInFactorial/max(B), .(pixelGroup)] 
   # candFB[, inflationFactor := maxBInFactorial/max(B), .(speciesCode)] 
   
@@ -294,8 +294,11 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   # if (!is.null(newTraits$mANPPproportion)) {
   #   newTraits[is.na(mANPPproportion), c("mANPPproportion", "inflationFactor") := .(3.33, 1)] #default mANPP
   # } else {
-  #   message("no GAMMs converged :( Consider revising your parameters")
   # }
+  # Update speciesTable with bestWeighted
+  bestWeighted <- speciesTable[match(bestWeighted$species, species), 
+                               c(names(bestWeighted)) := bestWeighted]
+  
   return(list(best = bestWeighted, gg = gg))
 }
 
