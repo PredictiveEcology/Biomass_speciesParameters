@@ -9,7 +9,7 @@ defineModule(sim, list(
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@@nrcan-rncan.gc.ca", role = c("aut", "cre")),
               person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut"))),
   childModules = character(0),
-  version = list(Biomass_speciesParameters = "0.0.9"),
+  version = list(Biomass_speciesParameters = "0.0.10"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
@@ -34,9 +34,11 @@ defineModule(sim, list(
     defineParameter(".useCache", "character", c(".inputObjects"), NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                                  "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
-    defineParameter("allSpInOne", "character", "pairwise", NA, NA,
-                    desc =  paste("Either 'all', 'pairwise' or 'single', indicating whether to pool ",
-                                  " all species into one fit, do pairwise species (for multiple cohort situations), ",
+    defineParameter("speciesFittingApproach", "character", "pairwise", NA, NA,
+                    desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
+                                  "all species into one fit, do pairwise species (for multiple cohort situations), do",
+                                  "pairwise species, but using a focal species approach where all other species are ",
+                                  "pooled into 'other'",
                                   " or do one species at a time. If 'all', all species will have identical species-level traits")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
@@ -184,8 +186,9 @@ Init <- function(sim) {
     stop("Please supply 'sppEquivCol' in parameters of Biomass_speciesParameters.")
   }
   
-  P(sim)$sppEquivCol <- paramCheckOtherMods(sim, paramToCheck = "sppEquivCol",
-                                            ifSetButDifferent = "error")
+  paramCheckOtherMods(sim, "maxBInFactorial")
+  paramCheckOtherMods(sim, paramToCheck = "sppEquivCol",
+                      ifSetButDifferent = "error")
   
   #prepare PSPdata
   speciesGAMMs <- Cache(makePSPgamms,
@@ -203,7 +206,7 @@ Init <- function(sim) {
                         minimumSampleSize = P(sim)$minimumPlotsPerGamm,
                         quantileAgeSubset = P(sim)$quantileAgeSubset,
                         minDBH = P(sim)$minDBH,
-                        allSpInOne = P(sim)$allSpInOne,
+                        speciesFittingApproach = P(sim)$speciesFittingApproach,
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs
   
@@ -223,11 +226,10 @@ Init <- function(sim) {
     message("The following species did not have sufficient data for model estimation: ")
     print(names(noData))
   }
-  paramCheckOtherMods(sim, "maxBInFactorial")
-  
   speciesWithNewlyEstimated <- unique(unlist(strsplit(names(sim$speciesGAMMs), "__")))
-  speciesWithoutNewlyEstimated <- setdiff(sim$species$species, speciesWithNewlyEstimated)
-  message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "), "have insufficient data to estimate species parameters; using original user supplied"))
+  speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
+  if (length(speciesWithoutNewlyEstimated))
+    message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "), "have insufficient data to estimate species parameters; using original user supplied"))
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                               speciesTable = sim$species,
                                               factorialTraits = setDT(sim$speciesTableFactorial), # setDT to deal with reload from Cache (no effect otherwise)
