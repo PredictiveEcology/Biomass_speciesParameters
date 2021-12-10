@@ -6,9 +6,10 @@ defineModule(sim, list(
   name = "Biomass_speciesParameters",
   description = "For estimating LANDIS-II species traits from PSP-derived growth curves",
   keywords = NA, # c("insert key words here"),
-  authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@example.com", role = c("aut", "cre"))),
+  authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@@nrcan-rncan.gc.ca", role = c("aut", "cre")),
+              person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut"))),
   childModules = character(0),
-  version = list(Biomass_speciesParameters = "0.0.5"),
+  version = list(Biomass_speciesParameters = "0.0.7"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
@@ -81,7 +82,7 @@ defineModule(sim, list(
                     paste("The column in `sim$sppEquiv` data.table to group species by.",
                           "This parameter should share the same name as in Biomass_borealDataPrep.",
                           "If set to 'default' (the default), this module will look in the other modules in",
-                          "the simList to use the same as elsewhere.", 
+                          "the simList to use the same as elsewhere.",
                           "PSPs are aggregated by names in the PSP column and traits estimated",
                           "for the corresponding names in the `sppEquivCol`")),
     defineParameter("useHeight", "logical", TRUE, NA, NA,
@@ -144,10 +145,10 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
     init = {
       ### check for more detailed object dependencies:
       ### (use `checkObject` or similar)
-      
+
       # do stuff for this event
       sim <- Init(sim)
-      
+
       # schedule future event(s)
       # sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "Biomass_speciesParameters", "plot")
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "Biomass_speciesParameters", "save")
@@ -164,10 +165,10 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
     },
     save = {
       # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "Biomass_speciesParameters", "save")
-      
+
       # ! ----- STOP EDITING ----- ! #
     },
-    
+
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                   "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
   )
@@ -182,10 +183,10 @@ Init <- function(sim) {
   if (is.na(P(sim)$sppEquivCol)) {
     stop("Please supply 'sppEquivCol' in parameters of Biomass_speciesParameters.")
   }
-  
-  P(sim)$sppEquivCol <- paramCheckOtherMods(sim, paramToCheck = "sppEquivCol", 
-                                            ifSetButDifferent = "error") 
-  
+
+  P(sim)$sppEquivCol <- paramCheckOtherMods(sim, paramToCheck = "sppEquivCol",
+                                            ifSetButDifferent = "error")
+
   #prepare PSPdata
   speciesGAMMs <- Cache(makePSPgamms,
                         studyAreaANPP = sim$studyAreaANPP,
@@ -205,25 +206,25 @@ Init <- function(sim) {
                         allSpInOne = P(sim)$allSpInOne,
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs
-  
+
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
   badModels <- classes[classes == 'try-error']
-  
+
   if (!length(badModels) == 0) {
     message("convergence failures for these PSP growth curve models: ")
     print(names(badModels))
   }
-  
+
   noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
     x == "insufficient data"
   }, FUN.VALUE = logical(1))
-  
+
   if (any(noData)) {
     message("The following species did not have sufficient data for model estimation: ")
     print(names(noData))
   }
   paramCheckOtherMods(sim, "maxBInFactorial")
-  
+
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                               speciesTable = sim$species,
                                               factorialTraits = setDT(sim$speciesTableFactorial), # setDT to deal with reload from Cache (no effect otherwise)
@@ -237,13 +238,13 @@ Init <- function(sim) {
   gg <- modifiedSpeciesTables$gg
   Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
         filename = paste("Pairwise species fits ", sim$._startClockTime))
-  
+
   sim$species <- modifiedSpeciesTables$best
-  
+
   modifiedSpeciesEcoregion <- modifySpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
                                                           speciesTable = sim$species)
   sim$speciesEcoregion <- modifiedSpeciesEcoregion
-  
+
   return(sim)
 }
 
@@ -252,7 +253,7 @@ Save <- function(sim) {
   # ! ----- EDIT BELOW ----- ! #
   # do stuff for this event
   sim <- saveFiles(sim)
-  
+
   # ! ----- STOP EDITING ----- ! #
   return(invisible(sim))
 }
@@ -261,7 +262,7 @@ Save <- function(sim) {
   cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
-  
+
   if (!suppliedElsewhere("cohortDataFactorial", sim)) {
     sim$cohortDataFactorial <- prepInputs(targetFile = "reducedFactorialCD.Rdat",
                                           destinationPath = dPath,
@@ -269,7 +270,7 @@ Save <- function(sim) {
                                           url = extractURL('cohortDataFactorial', sim),
                                           useCache = TRUE, userTags = c(cacheTags, "reducedFactorial"))
   }
-  
+
   if (!suppliedElsewhere("speciesTableFactorial", sim)) {
     sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial.Rdat",
                                             destinationPath = dPath,
@@ -277,7 +278,7 @@ Save <- function(sim) {
                                             fun = "readRDS", overwrite = TRUE,
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
-  
+
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
     sim$speciesEcoregion <- data.table(
@@ -291,7 +292,7 @@ Save <- function(sim) {
       year = 0
     )
   }
-  
+
   if (!suppliedElsewhere("species", sim)) {
     warning("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
     sim$species <- data.table(
@@ -303,7 +304,7 @@ Save <- function(sim) {
       growthcurve = 0
     )
   }
-  
+
   if (!suppliedElsewhere("sppEquiv", sim)) {
     #pass a default sppEquivalencies_CA for common species in western Canada
     sppEquivalencies_CA <-  LandR::sppEquivalencies_CA
@@ -318,12 +319,12 @@ Save <- function(sim) {
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS", LandR := "Abie_las"]
     sim$sppEquiv <- sppEquivalencies_CA
   }
-  
+
   if (!suppliedElsewhere("PSPmeasure_sppParams", sim) |
       !suppliedElsewhere("PSPplot_sppParams", sim) |
       !suppliedElsewhere("PSPgis_sppParams", sim)) {
     message("one or more PSP objects not suppplied. Generating PSP data...")
-    
+
     if ("dummy" %in% P(sim)$PSPdataTypes) {
       message("generating randomized PSP data")
       sim$PSPmeasure_sppParams <- Cache(prepInputs,
@@ -332,14 +333,14 @@ Save <- function(sim) {
                                         url =  extractURL('PSPmeasure_sppParams', sim),
                                         destinationPath = dPath,
                                         fun = "readRDS")
-      
+
       sim$PSPplot_sppParams <- Cache(prepInputs,
                                      targetFile = "randomizedPSPplot_sppParams.rds",
                                      archive = "randomized_LandR_speciesParameters_Inputs.zip",
                                      url = extractURL('PSPplot_sppParams', sim),
                                      destinationPath = dPath,
                                      fun = "readRDS")
-      
+
       sim$PSPgis_sppParams <- Cache(prepInputs,
                                     targetFile = "randomizedPSPgis_sppParams.rds",
                                     archive = "randomized_LandR_speciesParameters_Inputs.zip",
@@ -348,14 +349,14 @@ Save <- function(sim) {
                                     destinationPath = dPath,
                                     fun = "readRDS")
     } else {
-      
+
       if (!any(c("BC", "AB", "SK", "NFI", "all") %in% P(sim)$PSPdataTypes)) {
         stop("Please review P(sim)$dataTypes - incorrect value specified")
       }
-      
+
       PSPmeasure_sppParams <- list()
       PSPplot_sppParams <- list()
-      
+
       if ("BC" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
         PSPbc <- Cache(prepInputsBCPSP, dPath = dPath, userTags = c(cacheTags, "BCPSP"))
         PSPbc <- PSPclean::dataPurification_BCPSP(treeDataRaw = PSPbc$treeDataRaw,
@@ -375,7 +376,7 @@ Save <- function(sim) {
         PSPmeasure_sppParams[["AB"]] <- PSPab$treeData
         PSPplot_sppParams[["AB"]] <- PSPab$plotHeaderData
       }
-      
+
       if ("SK" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
         PSPsk <- Cache(prepInputsSaskatchwanPSP, dPath = dPath, userTags = c(cacheTags, "SKPSP"))
         PSPsk <- PSPclean::dataPurification_SKPSP(SADataRaw = PSPsk$SADataRaw,
@@ -384,16 +385,16 @@ Save <- function(sim) {
                                                   treeDataRaw = PSPsk$treeDataRaw)
         PSPmeasure_sppParams[["SK"]] <- PSPsk$treeData
         PSPplot_sppParams[["SK"]] <- PSPsk$plotHeaderData
-        
+
         TSPsk <- Cache(prepInputsSaskatchwanTSP, dPath = dPath, userTags = c(cacheTags, "SKTSP"))
         TSPsk <- PSPclean::dataPurification_SKTSP_Mistik(compiledPlotData = TSPsk$compiledPlotData,
                                                          compiledTreeData = TSPsk$compiledTreeData)
         PSPmeasure_sppParams[["SKtsp"]] <- TSPsk$treeData
         PSPplot_sppParams[["SKtsp"]] <- TSPsk$plotHeaderData
       }
-      
+
       if ("NFI" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        
+
         PSPnfi <- Cache(prepInputsNFIPSP, dPath = dPath, userTags = c(cacheTags, "NFIPSP"))
         PSPnfi <- PSPclean::dataPurification_NFIPSP(lgptreeRaw = PSPnfi$pspTreeMeasure,
                                                     lgpHeaderRaw = PSPnfi$pspHeader,
@@ -403,7 +404,7 @@ Save <- function(sim) {
         PSPmeasure_sppParams[["NFI"]] <- PSPnfi$treeData
         PSPplot_sppParams[["NFI"]] <- PSPnfi$plotHeaderData
       }
-      
+
       PSPmeasure_sppParams <- rbindlist(PSPmeasure_sppParams, fill = TRUE)
       PSPplot_sppParams <- rbindlist(PSPplot_sppParams, fill = TRUE)
       PSPgis_sppParams <- geoCleanPSP(Locations = PSPplot_sppParams)
@@ -415,7 +416,7 @@ Save <- function(sim) {
       sim$PSPgis_sppParams <- PSPgis_sppParams
     }
   }
-  
+
   return(invisible(sim))
 }
 ### add additional events as needed by copy/pasting from above
