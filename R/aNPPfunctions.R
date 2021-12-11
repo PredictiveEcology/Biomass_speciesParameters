@@ -198,10 +198,12 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   factorialTraitsThatVary <- names(factorialTraitsThatVary)[factorialTraitsThatVary]
   factorialTraitsVarying <- factorialTraits[, ..factorialTraitsThatVary]
   
-  digFB <- fastdigest::fastdigest(factorialBiomass)
-  digFT <- fastdigest::fastdigest(factorialTraitsVarying)
-  dig <- fastdigest::fastdigest(list(digFT, digFB, gamms, speciesTable))
-  
+  gammsT <- purrr::transpose(gamms)
+  message("starting digest")
+  # digFB <- CacheDigest(list(factorialBiomass))
+  # digFT <- CacheDigest(list(factorialTraitsVarying))
+  dig <- CacheDigest(list(factorialBiomass, factorialTraitsVarying, 
+                          gammsT$speciesGamm, gammsT$NonLinearModel, speciesTable))
   
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
   maxBInFactorial <- maxBInFactorial
@@ -219,16 +221,16 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                   traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
                                   speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
                                   growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
-                                  maxBInFactorial = maxBInFactorial, userTags = name,
-                                  .cacheExtra = dig, omitArgs = c("fT", "fB", "gamm"))  
+                                  maxBInFactorial = maxBInFactorial, userTags = name, #debugCache = "quick",
+                                  .cacheExtra = dig$outputHash, omitArgs = c("fT", "fB", "gamm", "traits"))  
   }
+  browser()
   # outputTraits <- lapply(species, FUN = editSpeciesTraits, gamm = gamms,
   #                        traits = speciesTable, fT = factorialTraits, fB = factorialBiomass,
   #                        speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
   #                        growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints)
   
   outputTraitsT <- purrr::transpose(outputTraits)
-  gammsT <- purrr::transpose(gamms)
   gammsList <- rbindlist(gammsT$originalData, idcol = "Pair")
   fullDataAll <- rbindlist(outputTraitsT$fullData, idcol = "Pair")
   newTraits <- rbindlist(outputTraitsT$bestTraits, idcol = "Pair")
@@ -389,7 +391,8 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   
   species <- na.omit(unique(simData$speciesTemp))
   
-  localEnv <- environment()
+  # localEnv <- environment()
+  localEnv <- new.env(parent = emptyenv())
   
   # Spread out the 0s so they are in the first 10 years.
   simData2 <- copy(simData)
@@ -459,8 +462,8 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
       for (ii in 1:700) {
         # Chapman Richards
         # https://www.srs.fs.usda.gov/pubs/gtr/gtr_srs092/gtr_srs092-068-coble.pdf
-        nlsoutInner[[model]] <- try(
-          robustbase::nlrob(as.formula(paste(eqnChar)),
+        nlsoutInner[[model]] <- try({
+          robustbase::nlrob(as.formula(eqnChar, env = .GlobalEnv),
                             data = datForFit, #maxit = 200,
                             weights = Weights,
                             maxit = 200,
@@ -469,8 +472,10 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
                                          p = runif(1, plim[["min"]], plim[["max"]])
                             ),
                             trace = FALSE)
-          , silent = TRUE
+        }, silent = TRUE
         )
+        #})
+        
         if (!is(nlsoutInner[[model]], "try-error")) {
           break
         }
@@ -482,13 +487,15 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   nlsout <- lapply(nlsouts, function(nlsIn) {
     nlsIn[[which.min(sapply(nlsIn, function(x) if (is(x, "try-error")) 1e12 else AIC(x)))]]
   })
-  # nlsout <- nlsouts[[sp]][[which.min(sapply(nlsouts[[sp]], function(x) if (is(x, "try-error")) 1e12 else AIC(x)))]]
   
   #  if (is(nlsout, "try-error")) {
   message(crayon::yellow(paste(collapse = "", rep(" ", nchar(speciesForFitsMessage))), ": fitting gamm"))
+  envOnGlobal <- new.env(parent = .GlobalEnv)
+  envOnGlobal$K <- K
   speciesGamm <- lapply(speciesForFits, function(sp)  {
     datForFit <- dataForFit(simData2, sp)
-    suppressWarnings(try(expr = mgcv::gamm(data = datForFit, formula = eval(gammFormula, enclos = localEnv),
+    suppressWarnings(try(expr = mgcv::gamm(data = datForFit, 
+                                           formula = as.formula(gammFormula, env = envOnGlobal),
                                            random = list(MeasureYear = eval(randomFormula, envir = baseenv()),
                                                          OrigPlotID1 = eval(randomFormula, envir = baseenv())),
                                            weights = nlme::varFunc(~Weights), verbosePQL = FALSE,
@@ -864,3 +871,4 @@ randomFormula <- quote(~1)
 dataForFit <- function(simDat2, sp) {
   simDat2[is.na(simDat2$speciesTemp) | simDat2$speciesTemp %in% sp]
 }
+

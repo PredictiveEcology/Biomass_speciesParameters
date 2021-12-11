@@ -9,13 +9,13 @@ defineModule(sim, list(
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@@nrcan-rncan.gc.ca", role = c("aut", "cre")),
               person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut"))),
   childModules = character(0),
-  version = list(Biomass_speciesParameters = "0.0.11"),
+  version = list(Biomass_speciesParameters = "0.0.12"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
-  reqdPkgs = list("mgcv", "nlme", "fpCompare", "crayon", "data.table", "sf",
+  reqdPkgs = list("mgcv", "nlme", "fpCompare", "crayon", "data.table", "sf", "magrittr",
                   "PredictiveEcology/LandR@development (>= 1.0.5)",
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
@@ -243,7 +243,6 @@ Init <- function(sim) {
   gg <- modifiedSpeciesTables$gg
   Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
         filename = paste("Pairwise species fits ", gsub(":", "_", sim$._startClockTime)))
-  
   sim$species <- modifiedSpeciesTables$best
   
   modifiedSpeciesEcoregion <- modifySpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
