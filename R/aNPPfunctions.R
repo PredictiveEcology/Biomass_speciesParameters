@@ -72,7 +72,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
     PSPmeasure$biomass <- tempOut$biomass
   }
   message(yellow("No PSP biomass estimate possible for these species: "))
-  print(unique(tempOut$missedSpecies))
+  message(crayon::yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
   
   
   #clean up - added a catch for incorrect plotSize affecting stem density
@@ -109,8 +109,6 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   } 
   gcSpecies <- setNames(nm = gcSpecies)
   
-  
-  #summed psp - need year and origPlotID as random effects
   spsp <- copy(PSPdata)
   spsp[, "areaAdjustedB" := biomass/PlotSize]
   spsp  <- spsp[, "plotBiomass" := sum(areaAdjustedB), .(MeasureID)]
@@ -119,7 +117,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   spsp[, speciesTemp := equivalentName(value = newSpeciesName, df = sppEquiv, 
                                        column = speciesCol, searchColumn = "PSP")]
   whNA <- is.na(spsp$speciesTemp)
-  message("Removing ", paste(unique(spsp$newSpeciesName[whNA]), collapse = ", "))
+  message(crayon::yellow("Removing ", paste(unique(spsp$newSpeciesName[whNA]), collapse = ", ")))
+  message(crayon::yellow("   ... because they are not the sppEquiv"))
   spsp <- spsp[!whNA]
   spsp <- spsp[newSpeciesName %in% sppEquiv[["PSP"]]]
   freq <- spsp[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
@@ -157,20 +156,13 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   
   
   speciesForCurves <- names(spspList) %>% setNames(nm = .)
-  message("building growth curves from PSP data for these species: ")
-  message(paste(speciesForCurves, collapse = ", "))
+  message(crayon::yellow("-----------------------------------------------"))
+  message(crayon::yellow("building growth curves from PSP data: "))
   outputGCs <- Map(species = speciesForCurves, makeGAMMdata, psp = spspList, 
                    MoreArgs = list(speciesEquiv = sppEquiv,
                                    sppCol = speciesCol, NoOfIters = NoOfIterations,
                                    K = knots, minSize = minimumSampleSize, q = quantileAgeSubset))
-  # } else {
-  #   message("building growth curves from PSP data for these species: ")
-  #   print(gcSpecies)
-  #   browser()
-  #   outputGCs <- lapply(gcSpecies, FUN = makeGAMMdata, psp = spsp, speciesEquiv = sppEquiv,
-  #                       sppCol = speciesCol, NoOfIters = NoOfIterations,
-  #                       K = knots, minSize = minimumSampleSize, q = quantileAgeSubset)
-  # }
+  
   if (isTRUE("all" == speciesFittingApproach)) {
     outputGCs <- lapply(gcSpecies2, function(x) {
       matchingSpecies <- equivalentName(x, sppEquiv, column = "PSP")
@@ -454,6 +446,8 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   }
   species <- as.character(species) %>% setNames(nm = .)
   speciesForFits <- setdiff(species, "Other") %>% setNames(nm = .)
+  speciesForFitsMessage <- paste(speciesForFits, collapse = ", ")
+  message(crayon::yellow(speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gomopertz)"))
   nlsouts <- lapply(speciesForFits, function(sp) {
     datForFit <- dataForFit(simData2, sp)
     nlsoutInner <- list()
@@ -475,7 +469,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
                                          p = runif(1, plim[["min"]], plim[["max"]])
                             ),
                             trace = FALSE)
-          #  , silent = TRUE
+          , silent = TRUE
         )
         if (!is(nlsoutInner[[model]], "try-error")) {
           break
@@ -485,24 +479,13 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
     nlsoutInner
   })
   
-  
-  if (FALSE) {
-    for (sp in as.character(species)) {
-      plot(simData2$standAge, simData2$biomass, pch = 19, cex = 0.5)
-      points(simData2$standAge, fitted(nlsouts[[sp]]$CR), pch = 19, col = "green", cex = 0.5)
-      points(simData2$standAge, fitted(nlsouts[[sp]]$Gompertz), pch = 19, col = "blue", cex = 0.5)
-      points(simData2$standAge, fitted(nlsouts[[sp]]$Logistic), pch = 19, col = "red", cex = 0.5)
-      legend(col = c("green", "blue", "red"),
-             legend = paste(names(nlsouts[[sp]]), "AIC: ", sapply(nlsouts[[sp]], function(x) round(AIC(x), 1 ))),
-             "topleft", pch = 19)
-    }
-  }
   nlsout <- lapply(nlsouts, function(nlsIn) {
     nlsIn[[which.min(sapply(nlsIn, function(x) if (is(x, "try-error")) 1e12 else AIC(x)))]]
   })
   # nlsout <- nlsouts[[sp]][[which.min(sapply(nlsouts[[sp]], function(x) if (is(x, "try-error")) 1e12 else AIC(x)))]]
   
   #  if (is(nlsout, "try-error")) {
+  message(crayon::yellow(paste(collapse = "", rep(" ", nchar(speciesForFitsMessage))), ": fitting gamm"))
   speciesGamm <- lapply(speciesForFits, function(sp)  {
     datForFit <- dataForFit(simData2, sp)
     suppressWarnings(try(expr = mgcv::gamm(data = datForFit, formula = eval(gammFormula, enclos = localEnv),
