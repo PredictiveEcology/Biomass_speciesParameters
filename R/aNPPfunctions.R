@@ -178,7 +178,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
                                sppEquivCol, maxBInFactorial, mortConstraints, growthConstraints, 
-                               mANPPconstraints) {
+                               mANPPconstraints, standAgesForFitting) {
   
   #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
   #setkey(factorialTraits, species)
@@ -204,7 +204,6 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   # digFT <- CacheDigest(list(factorialTraitsVarying))
   dig <- CacheDigest(list(factorialBiomass, factorialTraitsVarying, 
                           gammsT$speciesGamm, gammsT$NonLinearModel, speciesTable))
-  
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
   maxBInFactorial <- maxBInFactorial
   factorialBiomass[, inflationFactor := maxBInFactorial/max(B), .(pixelGroup)] 
@@ -221,10 +220,10 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                   traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
                                   speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
                                   growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
+                                  standAgesForFitting = standAgesForFitting,
                                   maxBInFactorial = maxBInFactorial, userTags = name, #debugCache = "quick",
                                   .cacheExtra = dig$outputHash, omitArgs = c("fT", "fB", "gamm", "traits"))  
   }
-  browser()
   # outputTraits <- lapply(species, FUN = editSpeciesTraits, gamm = gamms,
   #                        traits = speciesTable, fT = factorialTraits, fB = factorialBiomass,
   #                        speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
@@ -310,6 +309,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   # } else {
   # }
   # Update speciesTable with bestWeighted
+  speciesTable <- copy(speciesTable) # This is needed to allow the Cache on editSpeciesTraits to work because of pass-by-reference
   bestWeighted <- speciesTable[match(bestWeighted$species, species), 
                                c(names(bestWeighted)) := bestWeighted]
   
@@ -529,6 +529,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
+                              standAgesForFitting = c(0, 150),
                               mortConstraints, growthConstraints, mANPPconstraints, maxBInFactorial) {
   
   # Gamm <- gamm[[name]]
@@ -571,7 +572,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
                       #longevityConstraints,
                       mANPPproportion = mANPPconstraints)
   standAge <- unique(fB$standAge)
-  standAge <- standAge[standAge < 150]
+  standAge <- standAge[standAge <= max(standAgesForFitting) & standAge >= min(standAgesForFitting)]
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
   
   # Predict from statistical fits to data
