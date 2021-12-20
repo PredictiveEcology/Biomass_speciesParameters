@@ -23,7 +23,7 @@ simulateYoungStands <- function(cohortData, N) {
   
   #add unique random effects
   potentialYears <- 1:2050
-  years <- sample(potentialYears[!potentialYears %in% cohortData$MeasureYear], size = N, replace = FALSE)
+  years <- sample(potentialYears[!potentialYears %in% cohortData$MeasureYear], size = N, replace = TRUE)
   randomPlotIDs <- paste0('random', 1:N)
   
   simulatedData <- data.table(MeasureYear = years, OrigPlotID1 = randomPlotIDs,

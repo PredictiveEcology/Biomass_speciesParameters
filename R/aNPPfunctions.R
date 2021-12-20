@@ -40,14 +40,40 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   #decide what to do about above line and stem/density. PES approach is to just fix the data...
 
   #Calculate biomass
-  tempOut <- biomassCalculation(species = PSPmeasure$newSpeciesName,
-                                DBH = PSPmeasure$DBH,
-                                height = PSPmeasure$Height,
-                                includeHeight = useHeight,
-                                equationSource = biomassModel)
+  #Height must be calculated separately if there are NA heights - 
+  if (useHeight) {
+    PSPmeasureNoHeight <- PSPmeasure[is.na(Height)]
+    PSPmeasureHeight <- PSPmeasure[!is.na(Height)]
+    tempOut <- biomassCalculation(species = PSPmeasureHeight$newSpeciesName,
+                                  DBH = PSPmeasureHeight$DBH,
+                                  height = PSPmeasureHeight$Height,
+                                  includeHeight = TRUE,
+                                  equationSource = biomassModel)
+    #check if height is missing, join if so -- function fails if data.table is empty
+    if (nrow(PSPmeasureNoHeight) > 0) {
+      tempOutNoHeight <- biomassCalculation(species =PSPmeasureNoHeight$newSpeciesName,
+                                            DBH = PSPmeasureNoHeight$DBH,
+                                            height = PSPmeasureNoHeight$Height,
+                                            includeHeight = FALSE,
+                                            equationSource = biomassModel)
+      tempOut$biomass <- c(tempOut$biomass, tempOutNoHeight$biomass)
+      tempOut$missedSpecies <- c(tempOut$missedSpecies, tempOutNoHeight$missedSpecies)
+      PSPmeasure <- rbind(PSPmeasureHeight, PSPmeasureNoHeight)
+    }
+    PSPmeasure[, biomass := tempOut$biomass]
+    setkey(PSPmeasure, MeasureID, OrigPlotID1, TreeNumber)
+    #do stuff
+  } else {
+    tempOut <- biomassCalculation(species = PSPmeasure$newSpeciesName,
+                                  DBH = PSPmeasure$DBH,
+                                  height = PSPmeasure$Height,
+                                  includeHeight = useHeight,
+                                  equationSource = biomassModel)
+    PSPmeasure$biomass <- tempOut$biomass
+  }
   message(yellow("No PSP biomass estimate possible for these species: "))
-  print(tempOut$missedSpecies)
-  PSPmeasure$biomass <- tempOut$biomass
+  print(unique(tempOut$missedSpecies))
+
 
   #clean up - added a catch for incorrect plotSize affecting stem density
   densities <- PSPmeasure[, .(.N, PlotSize = mean(PlotSize)), MeasureID]
@@ -276,12 +302,12 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #scale factor is the achieved maxB in the simulation / PSP maxB. We use this to scale simulation values to PSP
   #inflationFactor is the the LANDIS speciesTrait maxB that was used (always 5000) / simulation's achieved maxB
   #scale factor is NOT returned. inflation factor is returned to 'inflate' Biomass_borealDataPrep estimates
-  CandidateValues <- CandidateValues[scaleFactors, on = "speciesCode"]
+  CandidateValues <- CandidateValues[scaleFactors, on = c("speciesCode", "inflationFactor")]
 
   #Find best possible candidate species
-  CandidateValues[, se := sd(B * scaleFactor - predBiomass), by = "speciesCode"]
+  stdev <- sd(predData$predBiomass)
   Candidates <- CandidateValues[, .(LogLikelihood = sum(dnorm(x = B * scaleFactor, mean = predBiomass,
-                                                              sd = se, log = TRUE)),
+                                                              sd = stdev, log = TRUE)),
                                     inflationFactor = mean(inflationFactor)), .(speciesCode)]
 
   bestCandidate <- CandidateTraits[Candidates, on = c("species" = "speciesCode")] %>%
