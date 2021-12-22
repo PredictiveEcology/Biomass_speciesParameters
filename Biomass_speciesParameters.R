@@ -240,6 +240,7 @@ Init <- function(sim) {
                                               factorialTraits = setDT(sim$speciesTableFactorial), # setDT to deal with reload from Cache (no effect otherwise)
                                               factorialBiomass = setDT(sim$cohortDataFactorial), # setDT to deal with reload from Cache (no effect otherwise)
                                               sppEquiv = sim$sppEquiv,
+                                              approach = P(sim)$speciesFittingApproach,
                                               sppEquivCol = P(sim)$sppEquivCol,
                                               maxBInFactorial = P(sim)$maxBInFactorial,
                                               standAgesForFitting = P(sim)$standAgesForFitting,

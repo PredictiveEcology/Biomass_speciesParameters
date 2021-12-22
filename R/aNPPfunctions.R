@@ -178,7 +178,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
                                sppEquivCol, maxBInFactorial, mortConstraints, growthConstraints,
-                               mANPPconstraints, standAgesForFitting) {
+                               mANPPconstraints, standAgesForFitting, approach) {
 
   #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
   #setkey(factorialTraits, species)
@@ -222,6 +222,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                   speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
                                   growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
                                   standAgesForFitting = standAgesForFitting,
+                                  approach = approach,
                                   maxBInFactorial = maxBInFactorial, userTags = name, #debugCache = "quick",
                                   .cacheExtra = dig$outputHash, omitArgs = c("fT", "fB", "gamm", "traits"))
   }
@@ -526,11 +527,12 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
                         NonLinearModel = nlsout)
   }
 
+
   return(speciesGamm)
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
-                              standAgesForFitting = c(0, 150),
+                              standAgesForFitting = c(0, 150), approach,
                               mortConstraints, growthConstraints, mANPPconstraints, maxBInFactorial) {
 
   # Gamm <- gamm[[name]]
@@ -541,14 +543,26 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   }
   message("Estimating fit for ", nameOrig)
 
+ 
   #Subset traits to PSP species, return unchanged if no gamm present
   traits <- traits[species %in% name]
-
-  if (class(gamm) == "try-error" | class(gamm) == "character") {
-    message(paste("not estimating growth/mortality traits for", name))
-    return(traits)
+   #with two species - the gamm might converge for one only 
+  if (approach %in% c("single", "all")) {
+    #TODO: review if this is still correct when running non-linear models
+    if (class(gamm) == "try-error") { 
+      message("not estimating traits for ", name)
+      return(traits)
+    }
+  } else {
+    if (nameOrig == "Pinu_con__Abie_bal") {browser()}
+    classesNonLinear <- unlist(lapply(gamm$NonLinearModel, class))
+    classesGAMM <- unlist(lapply(gamm$speciesGamm, class))
+    if (any("try-error" %in% c(classesNonLinear, classesGAMM))) {
+      message("not estimating traits for ", name)
+      return(traits)
+    } 
   }
-
+  
   # predData <- data.table(standAge = min(gamm$originalData$standAge):max(gamm$originalData$standAge))
   #
   # set(fB, NULL, "Sp", gsub(".+_(Sp.)", "\\1", fB$species))
