@@ -547,14 +547,13 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   #Subset traits to PSP species, return unchanged if no gamm present
   traits <- traits[species %in% name]
    #with two species - the gamm might converge for one only 
-  if (approach %in% c("single", "all")) {
     #TODO: review if this is still correct when running non-linear models
-    if (class(gamm) == "try-error") { 
+    if (class(gamm) == "try-error" | class(gamm) == "character") { 
       message("not estimating traits for ", name)
       return(traits)
     }
   } else {
-    if (nameOrig == "Pinu_con__Abie_bal") {browser()}
+    #catch when not all models converged
     classesNonLinear <- unlist(lapply(gamm$NonLinearModel, class))
     classesGAMM <- unlist(lapply(gamm$speciesGamm, class))
     if (any("try-error" %in% c(classesNonLinear, classesGAMM))) {
