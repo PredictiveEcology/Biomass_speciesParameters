@@ -200,7 +200,7 @@ Init <- function(sim) {
   #take the pixelGroups with only 1 species at start of factorial
   tempMaxB <- tempMaxB[N == 1,]
   tempMaxB <- sim$cohortDataFactorial[pixelGroup %in% tempMaxB$pixelGroup, 
-                                      .(inflationFactor = max(B)/P(sim)$maxBInFactorial),
+                                      .(inflationFactor = P(sim)$maxBInFactorial/max(B)),
                                       , .(pixelGroup, speciesCode)]
   tempMaxB <- sim$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
   #pair-wise species will be matched with traits, as the species code won't match
@@ -222,7 +222,6 @@ Init <- function(sim) {
                         minimumSampleSize = P(sim)$minimumPlotsPerGamm,
                         quantileAgeSubset = P(sim)$quantileAgeSubset,
                         minDBH = P(sim)$minDBH,
-                        useCache = 'overwrite',
                         speciesFittingApproach = P(sim)$speciesFittingApproach,
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs

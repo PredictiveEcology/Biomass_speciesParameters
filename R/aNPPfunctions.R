@@ -325,11 +325,13 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
 }
 
 modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
+
   message("modifying speciesEcoregion table based on traits derived from PSP Gamms")
   #modify things by species
   newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
-  newSpeciesEcoregion[, maxB := maxB * inflationFactor]
-  newSpeciesEcoregion[, maxANPP := maxB * mANPPproportion/100]
+  newSpeciesEcoregion[!is.na(inflationFactor), maxB := round(maxB * inflationFactor)]
+  
+  newSpeciesEcoregion[!is.na(mANPPproportion), maxANPP := maxB * mANPPproportion/100]
   cols <- names(speciesEcoregion)
   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
   newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
@@ -548,8 +550,8 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     names(name) <- name
   }
   message("Estimating fit for ", nameOrig)
-
- 
+  
+  
   #Subset traits to PSP species, return unchanged if no gamm present
   traits <- traits[species %in% name]
   #with two species - the gamm might converge for one only 
