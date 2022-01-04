@@ -195,6 +195,17 @@ Init <- function(sim) {
   paramCheckOtherMods(sim, paramToCheck = "sppEquivCol",
                       ifSetButDifferent = "error")
   
+  #find the max biomass achieved by each species when growing with no competition
+  tempMaxB <- sim$cohortDataFactorial[age == 1, .N, .(pixelGroup)]
+  #take the pixelGroups with only 1 species at start of factorial
+  tempMaxB <- tempMaxB[N == 1,]
+  tempMaxB <- sim$cohortDataFactorial[pixelGroup %in% tempMaxB$pixelGroup, 
+                                      .(inflationFactor = max(B)/P(sim)$maxBInFactorial),
+                                      , .(pixelGroup, speciesCode)]
+  tempMaxB <- sim$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
+  #pair-wise species will be matched with traits, as the species code won't match
+  tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
+
   #prepare PSPdata
   speciesGAMMs <- Cache(makePSPgamms,
                         studyAreaANPP = sim$studyAreaANPP,
@@ -211,17 +222,12 @@ Init <- function(sim) {
                         minimumSampleSize = P(sim)$minimumPlotsPerGamm,
                         quantileAgeSubset = P(sim)$quantileAgeSubset,
                         minDBH = P(sim)$minDBH,
+                        useCache = 'overwrite',
                         speciesFittingApproach = P(sim)$speciesFittingApproach,
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs
   
   classes <- lapply(sim$speciesGAMMs, FUN = 'class')
-  badModels <- classes[classes == 'try-error']
-  
-  if (!length(badModels) == 0) {
-    message("convergence failures for these PSP growth curve models: ")
-    print(names(badModels))
-  }
   
   noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
     x == "insufficient data"
@@ -234,7 +240,9 @@ Init <- function(sim) {
   speciesWithNewlyEstimated <- unique(unlist(strsplit(names(sim$speciesGAMMs), "__")))
   speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
   if (length(speciesWithoutNewlyEstimated))
-    message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "), "have insufficient data to estimate species parameters; using original user supplied"))
+    message(crayon::yellow(paste(speciesWithoutNewlyEstimated, 
+                                 collapse = ", "),
+                           "have insufficient data to estimate species parameters; using original user supplied"))
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                               speciesTable = sim$species,
                                               factorialTraits = setDT(sim$speciesTableFactorial), # setDT to deal with reload from Cache (no effect otherwise)
@@ -243,6 +251,7 @@ Init <- function(sim) {
                                               approach = P(sim)$speciesFittingApproach,
                                               sppEquivCol = P(sim)$sppEquivCol,
                                               maxBInFactorial = P(sim)$maxBInFactorial,
+                                              inflationFactorKey = tempMaxB,
                                               standAgesForFitting = P(sim)$standAgesForFitting,
                                               mortConstraints = P(sim)$constrainMortalityShape,
                                               growthConstraints = P(sim)$constrainGrowthCurve,

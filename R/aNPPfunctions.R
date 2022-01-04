@@ -177,8 +177,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 }
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
-                               sppEquivCol, maxBInFactorial, mortConstraints, growthConstraints,
-                               mANPPconstraints, standAgesForFitting, approach) {
+                               sppEquivCol, inflationFactorKey, mortConstraints, growthConstraints,
+                               mANPPconstraints, standAgesForFitting, approach, maxBInFactorial) {
 
   #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
   #setkey(factorialTraits, species)
@@ -206,15 +206,20 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   dig <- CacheDigest(list(factorialBiomass, factorialTraitsVarying,
                           gammsT$speciesGamm, gammsT$NonLinearModel, speciesTable))
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
-  maxBInFactorial <- maxBInFactorial
-  factorialBiomass[, inflationFactor := maxBInFactorial/max(B), .(pixelGroup)]
-  # candFB[, inflationFactor := maxBInFactorial/max(B), .(speciesCode)]
+  
+  #join with inflationFactorKey - it's possible this data.table::copy is unnecessary
+  set(inflationFactorKey, NULL, "species", NULL)
+  tempTraits <- copy(factorialTraitsVarying)
+  tempTraits <- inflationFactorKey[tempTraits, on = c("growthcurve", "mortalityshape", "longevity", "mANPPproportion")]
+  tempTraits <- tempTraits[, .(speciesCode, inflationFactor)]
+  factorialBiomass <- tempTraits[factorialBiomass, on = "speciesCode"]
 
   # Take only 2-cohort pixels -- they will start with Sp
   factorialTraits <- factorialTraits[startsWith(factorialTraits$Sp, "Sp")]
   setnames(factorialBiomass, "age", "standAge")
 
   message("Estimate species parameters; minimizing diff between statistical fit and Biomass_core experiment")
+
   for (name in species) {
     # use for loop to allow for Cache on each species
     outputTraits[[name]] <- Cache(editSpeciesTraits, name = name, gamm = gamms[[name]],
@@ -223,7 +228,8 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                   growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
                                   standAgesForFitting = standAgesForFitting,
                                   approach = approach,
-                                  maxBInFactorial = maxBInFactorial, userTags = name, #debugCache = "quick",
+                                  maxBInFactorial = maxBInFactorial,
+                                  userTags = name, #debugCache = "quick",
                                   .cacheExtra = dig$outputHash, omitArgs = c("fT", "fB", "gamm", "traits"))
   }
   # outputTraits <- lapply(species, FUN = editSpeciesTraits, gamm = gamms,
@@ -531,9 +537,9 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   return(speciesGamm)
 }
 
-editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
-                              standAgesForFitting = c(0, 150), approach,
-                              mortConstraints, growthConstraints, mANPPconstraints, maxBInFactorial) {
+editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
+                              standAgesForFitting = c(0, 150), approach, inflationFactorKey,
+                              mortConstraints, growthConstraints, mANPPconstraints) {
 
   # Gamm <- gamm[[name]]
   nameOrig <- name
@@ -546,20 +552,24 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
  
   #Subset traits to PSP species, return unchanged if no gamm present
   traits <- traits[species %in% name]
-   #with two species - the gamm might converge for one only 
-    #TODO: review if this is still correct when running non-linear models
-    if (class(gamm) == "try-error" | class(gamm) == "character") { 
-      message("not estimating traits for ", name)
-      return(traits)
-    }
+  #with two species - the gamm might converge for one only 
+  #this structure is to catch try-errors in both pairwise and single
+  if (class(gamm) == "try-error" | class(gamm) == "character") { 
+    message("not estimating traits for ", name)
+    return(traits)
   } else {
     #catch when not all models converged
     classesNonLinear <- unlist(lapply(gamm$NonLinearModel, class))
     classesGAMM <- unlist(lapply(gamm$speciesGamm, class))
+    #decided to allow non-converged gamms, if non-linear converged
     if (any("try-error" %in% c(classesNonLinear, classesGAMM))) {
       message("not estimating traits for ", name)
       return(traits)
-    } 
+    }
+    
+    # if (any("try-error" %in% classesGAMM)){
+    #   browser()
+    # }
   }
   
   # predData <- data.table(standAge = min(gamm$originalData$standAge):max(gamm$originalData$standAge))
@@ -567,13 +577,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol,
   # set(fB, NULL, "Sp", gsub(".+_(Sp.)", "\\1", fB$species))
   # set(setDT(fT), NULL, "Sp", gsub(".+_(Sp.)", "\\1", fT$species))
 
-  # Just 2-species combinations
-  # candFB <- fB[startsWith(fB$Sp, "Sp")]
-  # maxBInFactorial <- 5000
-  # candFB[, inflationFactor := maxBInFactorial/max(B), .(pixelGroup)]
-  # # candFB[, inflationFactor := maxBInFactorial/max(B), .(speciesCode)]
-  # candFT <- fT[startsWith(fT$Sp, "Sp")]
-  # setnames(candFT, old="species", new = "speciesCode")
+  
   maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
   set(maxBiomass, NULL, "Sp", paste0("Sp", 1:2))
