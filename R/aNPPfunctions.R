@@ -326,8 +326,27 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
 
 modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
-  message("modifying speciesEcoregion table based on traits derived from PSP Gamms")
+  if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
+    missing <- speciesTable[is.na(inflationFactor)]$species
+    message("averaging traits for these species: ", missing)
+    #
+    averageOfEstimated <- speciesTable[!is.na(inflationFactor),
+                                       .(growthcurve = mean(growthcurve),
+                                         mortalityshape = as.integer(mean(mortalityshape)),
+                                         mANPPproportion = mean(mANPPproportion))]
+    #I don't think inflationFactor should be averaged if longevity isn't.. 
+    speciesTable[is.na(inflationFactor), `:=`(
+      growthcurve = averageOfEstimated$growthcurve,
+      mortalityshape = averageOfEstimated$mortalityshape,
+      mANPPproportion = averageOfEstimated$mANPPproportion
+    )]
+    
+  }
+  
+  
+  message("modifying speciesEcoregion table based on newly estimated traits")
   #modify things by species
+  
   newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
   newSpeciesEcoregion[!is.na(inflationFactor), maxB := round(maxB * inflationFactor)]
   
@@ -574,12 +593,6 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     # }
   }
   
-  # predData <- data.table(standAge = min(gamm$originalData$standAge):max(gamm$originalData$standAge))
-  #
-  # set(fB, NULL, "Sp", gsub(".+_(Sp.)", "\\1", fB$species))
-  # set(setDT(fT), NULL, "Sp", gsub(".+_(Sp.)", "\\1", fT$species))
-
-  
   maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
   set(maxBiomass, NULL, "Sp", paste0("Sp", 1:2))
@@ -639,19 +652,6 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   varsToInteger <- c("BscaledGamm", "BscaledNonLinear", "predNonLinear", "predGamm")
   set(candFB, NULL, varsToInteger, lapply(varsToInteger, function(v) asInteger(candFB[[v]])))
 
-  # candFTShort <- fT[unique(ll[, c("speciesCode", "pixelGroup")], by = c("speciesCode")), on = "speciesCode"]
-
-  # bestGrowthData <- ll[pixelGroup == ll$pixelGroup[1]]
-  # bestGrowthData <- bestGrowthData[SpMapping, on = "Sp"]
-  # gg <- ggplot(bestGrowthData, aes(standAge, BscaledNonLinear, colour = species)) +
-  #   geom_line() +
-  #   geom_line(aes(standAge, predNonLinear, col = species), lty = "dashed") +
-  #   geom_point(data = gamm$originalData, aes(standAge, biomass, colour = speciesTemp)) +
-  #   ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
-  #   theme_bw()
-
-  # bestPGs <- head(unique(ll$pixelGroup), 6)
-  # rr <- ll[pixelGroup %in% bestPGs & standAge == 1][, "speciesCode"]
   rr <- candFB[standAge == 1][, c("speciesCode", "llNonLinDelta", "inflationFactor")]
 
   # Take the average of the best
@@ -659,182 +659,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   bestTraits <- SpMapping[best, on = "Sp"]
   candFB <- SpMapping[candFB, on = "Sp"]
 
-  # bestTraits <- lapply(name, function(sp) {
-  #   predData <- data.table("age" = predData$standAge, "predBiomass" = output[[sp]]$fit,
-  #              "predSE" = output[[sp]]$se.fit, "predBiomassNonLin" = nlsoutput[[sp]])
-  #   closestLongevity <- abs(fT$longevity - traits$longevity) == min(abs(fT$longevity - traits$longevity)) |
-  #     (fT$longevity > max(gamm$simData$standAge) & (fT$longevity < traits$longevity))
-  #   #subset traits by closest longevity
-  #   CandidateTraits <- fT[closestLongevity]
-  #
-  #   #Constrain growth curve - this is because the effect is conflated with maxANPP
-  #   if (class(growthConstraints) == "list") {
-  #     growthConstraint <- growthConstraints[[name]]
-  #   } else {
-  #     growthConstraint <- growthConstraints
-  #   }
-  #
-  #   #growth constraint may be NULL if user passed constraints on partial list of species
-  #   if (!is.null(growthConstraint)){
-  #     CandidateTraits <- CandidateTraits[growthcurve %>=% min(growthConstraint)
-  #                                        & growthcurve %<=% max(growthConstraint),]
-  #   }
-  #   #Constrain mortality shape - limited available information on mortalitity in PSPs, too low adds computation strain
-  #   if (class(mortConstraints) == "list") {
-  #     mortConstraint <- mortConstraints[[name]]
-  #   } else {
-  #     mortConstraint <- mortConstraints
-  #   }
-  #
-  #   if (!is.null(mortConstraints)) {
-  #     CandidateTraits <- CandidateTraits[mortalityshape >= min(mortConstraint)
-  #                                        & mortalityshape <= max(mortConstraint)]
-  #   }
-  #
-  #   #Constrain growth curve - this is because the effect is conflated with maxANPP
-  #   if (class(mANPPconstraints) == "list") {
-  #     mANPPconstraint <- mANPPconstraints[[name]]
-  #   } else {
-  #     mANPPconstraint <- mANPPconstraints
-  #   }
-  #
-  #   #growth constraint may be NULL if user passed constraints on partial list of species
-  #   if (!is.null(mANPPconstraint)){
-  #     CandidateTraits <- CandidateTraits[mANPPproportion %>=% min(mANPPconstraint)
-  #                                        & mANPPproportion %<=% max(mANPPconstraint),]
-  #   }
-  #
-  #
-  #
-  #   #subset the simulation values by potential species
-  #   CandidateValues <- fB[CandidateTraits]
-  #
-  #   #This has to happen before age is subset, or it will underestimate
-  #   #  5000 is hard coded because that was the maxB used in the simulations
-  #   maxBInFactorial <- 5000
-  #   CandidateValues[, inflationFactor := maxBInFactorial/max(B), .(speciesCode)]
-  #   #subset the simulation values by age for which curve is represented
-  #   CandidateValues <- CandidateValues[age >= min(predData$age) & age <= max(predData$age),]
-  #
-  #   setkey(predData, age)
-  #   setkey(CandidateValues, age)
-  #   CandidateValues <- na.exclude(CandidateValues[predData])
-  #   scaleFactor <- max(CandidateValues$predBiomass)/maxBInFactorial
-  #   scaleFactorNonLin <- max(CandidateValues$predBiomassNonLin)/maxBInFactorial
-  #
-  #   #scale factor is the achieved maxB in the simulation / PSP maxB. We use this to scale simulation values to PSP
-  #   #inflationFactor is the the LANDIS speciesTrait maxB that was used (always 5000) / simulation's achieved maxB
-  #   #scale factor is NOT returned. inflation factor is returned to 'inflate' Biomass_borealDataPrep estimates
-  #   # CandidateValues <- CandidateValues[scaleFactors, on = c("speciesCode", "inflationFactor")]
-  #
-  #   #Find best possible candidate species
-  #   stdev <- sd(predData$predBiomass)
-  #   if (FALSE) {
-  #     c1 <- CandidateValues[growthcurve %>=% 0.9 & growthcurve %<=% 0.9 &
-  #                             (mANPPproportion >= 6 & mANPPproportion <= 6)]
-  #     inflFact <- sort(unique(c1$inflationFactor))
-  #     c1 <- c1[inflationFactor == inflFact[1]]
-  #     par(mfrow = c(2,1))
-  #     plot(c1$age, c1$predBiomassNonLin / (max(c1$predBiomassNonLin)/maxBInFactorial) / c1$inflationFactor, col = "green", pch = 19, cex = .3)
-  #     points(c1$age, c1$B, col = "blue", pch = 19, cex = .3)
-  #     plot(c1$age, c1$predBiomass / (max(c1$predBiomass)/maxBInFactorial) / c1$inflationFactor, col = "green", pch = 19, cex = .3)
-  #     points(c1$age, c1$B, col = "blue", pch = 19, cex = .3)
-  #   }
-  #   # c1$predBiomassNonLin / (max(c1$predBiomassNonLin)/maxBInFactorial) / c1$inflationFactor
-  #   #CandidateValues[, `:=`(#LogLikelihood = sum(dnorm(x = B * scaleFactor, mean = predBiomass,
-  #   #                                  #                          sd = stdev, log = TRUE)),
-  #   #                                  inflationFactor = mean(inflationFactor)), .(speciesCode)]
-  #   Candidates <- CandidateValues[, .(llGamm = sum(dnorm(x = B * scaleFactor * inflationFactor, mean = predBiomass,
-  #                                                        sd = stdev, log = TRUE)),
-  #                                     llNonLin = sum(dnorm(x = B * scaleFactor * inflationFactor, mean = predBiomassNonLin,
-  #                                                          sd = stdev, log = TRUE))), .(speciesCode)]
-  #   CandidatesAll <- CandidateTraits[Candidates, on = c("species" = "speciesCode")]
-  #
-  #   CandidateValuesDirectData <- gamm$simData[CandidateValues, on = c("standAge"="age"), allow.cartesian = TRUE, nomatch = 0]
-  #   CandidateDirectData <- CandidateValuesDirectData[, .(llDirect = sum(dnorm(x = biomass, mean = B * scaleFactor * inflationFactor,
-  #                                                                             sd = stdev, log = TRUE))
-  #   ), .(speciesCode)]
-  #   CandidatesAll <- CandidatesAll[CandidateDirectData, on = c("species" = "speciesCode")]
-  #   setorderv(CandidatesAll, "llNonLin", order = -1L)
-  #   CandidatesAll[, llNonLinRank := rev(frank(llNonLin))]
-  #   setorderv(CandidatesAll, "llGamm", order = -1L)
-  #   CandidatesAll[, llGammRank := rev(frank(llGamm))]
-  #   setorderv(CandidatesAll, "llDirect", order = -1L)
-  #   CandidatesAll[, llDirectRank := rev(frank(llDirect))]
-  #
-  #   bestCandidates <- CandidatesAll[, c("llDirectDelta", "llNonLinDelta", "llGammDelta") := list(abs(llDirect - max(llDirect)),
-  #                                                                                                abs(llNonLin - max(llNonLin)),
-  #                                                                                                abs(llGamm - max(llGamm)))]
-  #   deltaDiff <- 5
-  #   bestCandidates <- bestCandidates[llDirectDelta < deltaDiff |
-  #                                      llGammDelta < deltaDiff |
-  #                                      llNonLinDelta < deltaDiff]
-  #   # bestCandidates <- bestCandidates[ llNonLinDelta %==% 0 | llGammDelta %==% 0 | llDirectDelta %==% 0]
-  #   ccv <- CandidateValues[bestCandidates[, c("species", "llGammDelta", "llNonLinDelta", "llDirectDelta")],
-  #                          on = c("speciesCode" = "species")]
-  #   ccvNonLin <- ccv[llNonLinDelta %==% 0]
-  #   ccvGamm <- ccv[llGammDelta %==% 0]
-  #   ccvDirect <- ccv[llDirectDelta %==% 0]
-  #
-  #   # bestCandidate <- bestCandidates[ llNonLinDelta %==% 0]
-  #   bestCandidate <- bestCandidates
-  #   CandidateValues <- CandidateValues[speciesCode %in% bestCandidate$species]
-  #   CandidateValues <- unique(CandidateValues[, -c("age", "B", "predBiomass", "predBiomassNonLin", "predSE")], by = c("growthcurve", "mortalityshape", "inflationFactor"))
-  #   bestCandidate <- CandidateValues[bestCandidate[, c("species", "llGammDelta", "llNonLinDelta", "llDirectDelta")],
-  #                                    on = c("speciesCode" = "species")]
-  #
-  #   if (FALSE) { # This is about plotting (Eliot Nov 18, 2021) -- couldn't fit into the module in a modular way
-  #     ma <- match(name, names(gamm))
-  #     col <- factor(names(gamm))[ma]
-  #     if (FALSE) { # This is about plotting (Eliot Nov 18, 2021) -- couldn't fit into the module in a modular way
-  #       if (ma == 1)
-  #         plot(gamm$simData$standAge, gamm$simData$biomass, pch = 19, cex = 0.5, col = ma, xlim = c(0, 200), ylim = c(0, 40000))
-  #       else
-  #         points(gamm$simData$standAge, gamm$simData$biomass, pch = 19, cex = 0.5, col = ma)
-  #
-  #       # THese are the LandR equivalents
-  #       if (!isTRUE(nlsoutput == 0))
-  #         # direct from data
-  #         lines(ccvDirect$age, ccvDirect$B * scaleFactor * ccvDirect$inflationFactor, lty = "solid", lwd = 4, col = col )
-  #
-  #       lines(ccvGamm$age, ccvGamm$B * scaleFactor * ccvGamm$inflationFactor, lty = "dotted", lwd = 4, col = col )
-  #       lines(ccvNonLin$age, ccvNonLin$B * scaleFactor * ccvNonLin$inflationFactor, lty = "dashed", lwd = 2, col = col )
-  #
-  #       # These are the gamm or NonLin
-  #       lines(ccvGamm$age, ccvGamm$predBiomass, col = col, lty = "dotted", lwd = 1)
-  #       lines(ccvNonLin$age, ccvNonLin$predBiomassNonLin, col = col, lty = "dashed", lwd = 1)
-  #
-  #       if (ma == length(gamm)) {
-  #         legend("topleft",
-  #                lwd = c(4, 4, 2, 1, 1),
-  #                lty = c("solid", "dotted", "dashed", "dotted", "dashed"),
-  #                legend = c("LandR curve directly from points",
-  #                           "LandR curve from gamm (current method)",
-  #                           "LandR curve from Chapman Richards",
-  #                           "gamm",
-  #                           "Chapman Richards"))
-  #         # legend("bottomright",
-  #         #        pch = 19,
-  #         #        col = c(4, 5, 7),
-  #         #        legend = c("W Spruce", "B Spruce", "T Aspen"))
-  #       }
-  #     }
-  #
-  #   }
-  #
-  #
-  #
-  #   # What to do with the LogLikelihood? Report?
-  #   bestTraits <- bestCandidate[, .(mortalityshape, growthcurve, mANPPproportion, inflationFactor, llNonLinDelta, llGammDelta, llDirectDelta)]
-  #   #if there are multiple rows due to undifferentiated curves, then mortality hasn't kicked in. Take the max mortalityshape
-  #   # bestTraits <- bestTraits[mortalityshape == max(mortalityshape)]
-  #   bestTraits[, mortalityshape := asInteger(mortalityshape)]
-  # })
-  # if (NROW(bestTraits) > 1) {
-  #   traits <- rbindlist(lapply(seq(NROW(bestTraits$Abie_bal)), function(x) traits))
-  # }
-  #
-  # traits[, colnames(bestTraits) :=  bestTraits]
+
   return(list(bestTraits = bestTraits, fullData = candFB, ll = ll))
 }
 
@@ -860,34 +685,6 @@ makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
 
 gammFormula <- quote(biomass ~ s(standAge, k = K, pc = 0))
 randomFormula <- quote(~1)
-
-
-# updateInflationFactor <- function(traits, factorialTraits, factorialBiomass) {
-#   longs <- traits$longevity
-#   names(longs) <- traits$species
-#   closestLongevity <- sapply(longs, function(long) {
-#     unique(factorialTraits$longevity[abs(factorialTraits$longevity - long) ==
-#                                        min(abs(factorialTraits$longevity - long))])
-#   })
-#   newTraitsClosestLongevity <- copy(traits)
-#   newTraitsClosestLongevity[, longevity := closestLongevity]
-#
-#   maxBInFactorial <- 5000
-#   fT <- copy(factorialTraits)
-#   fB <- copy(factorialBiomass)
-#   setnames(fT, old = "species", new = "speciesDummy")
-#   setnames(fB, old = "speciesCode", new = "speciesDummy")
-#   set(fB, NULL, "species", NULL)
-#   factorialSp <- fT[newTraitsClosestLongevity, on = c("growthcurve", "mortalityshape", "mANPPproportion", "longevity")]
-#   factorialSp <- fB[speciesDummy %in% factorialSp$speciesDummy,
-#                     list(inflationFactor = maxBInFactorial/max(B)), by = "speciesDummy"][
-#                       factorialSp[, -"inflationFactor"], on = "speciesDummy"
-#                     ]
-#
-#   # Update traits with new inflationFactor
-#   traits <- factorialSp[, c("species", "inflationFactor")][traits[, -"inflationFactor"], on = "species"]
-#   traits[]
-# }
 
 dataForFit <- function(simDat2, sp) {
   simDat2[is.na(simDat2$speciesTemp) | simDat2$speciesTemp %in% sp]
