@@ -1,6 +1,5 @@
 prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                         useHeight, biomassModel, PSPperiod, minDBH) {
-
   #Crop points to studyArea
   if (!is.null(studyAreaANPP)) {
     tempSA <- spTransform(x = studyAreaANPP, CRSobj = crs(PSPgis)) %>%
@@ -26,7 +25,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
   #Join data (should be small enough by now)
   PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear")]
-  PSPmeasure[, c("Longitude", "Latitude", "Easting", "Northing", "Zone"):= NULL]
+  PSPmeasure[, c("Longitude", "Latitude", "Easting", "Northing", "Zone") := NULL]
 
   #Filter by > 30 trees at first measurement (P) to ensure forest.
   forestPlots <- PSPmeasure[, .(measures = .N), OrigPlotID1] %>%
@@ -51,7 +50,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                                   equationSource = biomassModel)
     #check if height is missing, join if so -- function fails if data.table is empty
     if (nrow(PSPmeasureNoHeight) > 0) {
-      tempOutNoHeight <- biomassCalculation(species =PSPmeasureNoHeight$newSpeciesName,
+      tempOutNoHeight <- biomassCalculation(species = PSPmeasureNoHeight$newSpeciesName,
                                             DBH = PSPmeasureNoHeight$DBH,
                                             height = PSPmeasureNoHeight$Height,
                                             includeHeight = FALSE,
@@ -154,7 +153,6 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
     spspList <- split(spsp, spsp$speciesTemp)
   }
 
-
   speciesForCurves <- names(spspList) %>% setNames(nm = .)
   message(crayon::yellow("-----------------------------------------------"))
   message(crayon::yellow("building growth curves from PSP data: "))
@@ -190,7 +188,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   outputTraits <- list()
 
   # This next try is because the factorial traits may have recovered from a memoised state and will fail this:
-  try(setnames(factorialTraits, old="species", new = "speciesCode"), silent = TRUE)
+  try(setnames(factorialTraits, old = "species", new = "speciesCode"), silent = TRUE)
   # Make column with Sp which is Sp1 and Sp2 in both datasets
   set(factorialBiomass, NULL, "Sp", gsub(".+_(Sp.)", "\\1", factorialBiomass$species, perl = TRUE))
   set(setDT(factorialTraits), NULL, "Sp", gsub(".+_(Sp.)", "\\1", factorialTraits$species, perl = TRUE))
@@ -206,7 +204,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   dig <- CacheDigest(list(factorialBiomass, factorialTraitsVarying,
                           gammsT$speciesGamm, gammsT$NonLinearModel, speciesTable))
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
-  
+
   #join with inflationFactorKey - it's possible this data.table::copy is unnecessary
   set(inflationFactorKey, NULL, "species", NULL)
   tempTraits <- copy(factorialTraitsVarying)
@@ -334,22 +332,20 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
                                        .(growthcurve = mean(growthcurve),
                                          mortalityshape = as.integer(mean(mortalityshape)),
                                          mANPPproportion = mean(mANPPproportion))]
-    #I don't think inflationFactor should be averaged if longevity isn't.. 
+    #I don't think inflationFactor should be averaged if longevity isn't..
     speciesTable[is.na(inflationFactor), `:=`(
       growthcurve = averageOfEstimated$growthcurve,
       mortalityshape = averageOfEstimated$mortalityshape,
       mANPPproportion = averageOfEstimated$mANPPproportion
     )]
-    
   }
-  
-  
+
   message("modifying speciesEcoregion table based on newly estimated traits")
   #modify things by species
-  
+
   newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
   newSpeciesEcoregion[!is.na(inflationFactor), maxB := round(maxB * inflationFactor)]
-  
+
   newSpeciesEcoregion[!is.na(mANPPproportion), maxANPP := maxB * mANPPproportion/100]
   cols <- names(speciesEcoregion)
   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
@@ -360,7 +356,6 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
 makeGAMMdata <- function(species, psp, speciesEquiv,
                          sppCol, NoOfIters, K, minSize, q) {
-
   # psp already contains all the correct species -- next chunk is now obsolete & commented
   if (identical(species, "all")) {
     #matchingSpecies <- unique(speciesEquiv[, .(PSP),])
@@ -373,7 +368,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
     # matchingSpecies <- unique(speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),])
   }
 
-  if (class(K) == "list"){
+  if (class(K) == "list") {
     K <- K[[species]]
   }
 
@@ -382,7 +377,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   }
 
   #subset the parameters that may be lists
-  if (class(NoOfIters) == "list"){
+  if (class(NoOfIters) == "list") {
     NoOfIters <- NoOfIters[[species]]
   }
 
@@ -569,13 +564,13 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     names(name) <- name
   }
   message("Estimating fit for ", nameOrig)
-  
-  
+
+
   #Subset traits to PSP species, return unchanged if no gamm present
   traits <- traits[species %in% name]
-  #with two species - the gamm might converge for one only 
+  #with two species - the gamm might converge for one only
   #this structure is to catch try-errors in both pairwise and single
-  if (class(gamm) == "try-error" | class(gamm) == "character") { 
+  if (class(gamm) == "try-error" | class(gamm) == "character") {
     message("not estimating traits for ", name)
     return(traits)
   } else {
@@ -587,12 +582,12 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
       message("not estimating traits for ", name)
       return(traits)
     }
-    
+
     # if (any("try-error" %in% classesGAMM)){
     #   browser()
     # }
   }
-  
+
   maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
   set(maxBiomass, NULL, "Sp", paste0("Sp", 1:2))
@@ -655,14 +650,13 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   rr <- candFB[standAge == 1][, c("speciesCode", "llNonLinDelta", "inflationFactor")]
 
   # Take the average of the best
-  best <- fT[rr, on = c("speciesCode"="speciesCode")]
+  best <- fT[rr, on = c("speciesCode" = "speciesCode")]
   bestTraits <- SpMapping[best, on = "Sp"]
   candFB <- SpMapping[candFB, on = "Sp"]
 
 
   return(list(bestTraits = bestTraits, fullData = candFB, ll = ll))
 }
-
 
 makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                          PSPplot, useHeight, biomassModel, speciesCol,
@@ -689,4 +683,3 @@ randomFormula <- quote(~1)
 dataForFit <- function(simDat2, sp) {
   simDat2[is.na(simDat2$speciesTemp) | simDat2$speciesTemp %in% sp]
 }
-
