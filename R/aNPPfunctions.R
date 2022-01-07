@@ -2,13 +2,12 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                         useHeight, biomassModel, PSPperiod, minDBH) {
   #Crop points to studyArea
   if (!is.null(studyAreaANPP)) {
-    tempSA <- spTransform(x = studyAreaANPP, CRSobj = crs(PSPgis)) %>%
-      st_as_sf(.)
+    studyAreaANPP <- st_as_sf(studyAreaANPP) # in case SPDF
+    studyAreaANPP <- st_transform(x = studyAreaANPP, crs = st_crs(PSPgis))
     message(yellow("Filtering PSPs for ANPP to study Area..."))
-    PSP_sa <- PSPgis[tempSA,] %>%
+    PSP_sa <- PSPgis[studyAreaANPP,] %>%
       setkey(., OrigPlotID1)
     message(yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
-
 
     #Filter other PSP datasets to those in study Area
     PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
@@ -183,6 +182,8 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   #setkey(factorialBiomass, species)
 
   #for each species (ie Gamm), find best fit
+  #first subset by speices that had data
+  gamms <- gamms[sapply(gamms, function(x) class(x) == "list")]
   species <- names(gamms)
   names(species) <- species
   outputTraits <- list()
@@ -330,7 +331,7 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
     #
     averageOfEstimated <- speciesTable[!is.na(inflationFactor),
                                        .(growthcurve = mean(growthcurve),
-                                         mortalityshape = as.integer(mean(mortalityshape)),
+                                         mortalityshape = asInteger(mean(mortalityshape)),
                                          mANPPproportion = mean(mANPPproportion))]
     #I don't think inflationFactor should be averaged if longevity isn't..
     speciesTable[is.na(inflationFactor), `:=`(
@@ -344,9 +345,9 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
   #modify things by species
 
   newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
-  newSpeciesEcoregion[!is.na(inflationFactor), maxB := round(maxB * inflationFactor)]
+  newSpeciesEcoregion[!is.na(inflationFactor), maxB := asInteger(maxB * inflationFactor)]
 
-  newSpeciesEcoregion[!is.na(mANPPproportion), maxANPP := maxB * mANPPproportion/100]
+  newSpeciesEcoregion[, maxANPP := asInteger(maxB * mANPPproportion/100)]
   cols <- names(speciesEcoregion)
   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
   newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
@@ -572,7 +573,8 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   #this structure is to catch try-errors in both pairwise and single
   if (class(gamm) == "try-error" | class(gamm) == "character") {
     message("not estimating traits for ", name)
-    return(traits)
+    # return(list(bestTraits = traits, fullData = NULL, ll = NULL))
+    return(NULL)
   } else {
     #catch when not all models converged
     classesNonLinear <- unlist(lapply(gamm$NonLinearModel, class))
@@ -580,7 +582,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     #decided to allow non-converged gamms, if non-linear converged
     if (any("try-error" %in% c(classesNonLinear, classesGAMM))) {
       message("not estimating traits for ", name)
-      return(traits)
+      return(NULL)
     }
 
     # if (any("try-error" %in% classesGAMM)){
