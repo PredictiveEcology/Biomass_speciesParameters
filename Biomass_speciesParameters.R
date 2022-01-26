@@ -373,7 +373,6 @@ Save <- function(sim) {
                                     destinationPath = dPath,
                                     fun = "readRDS")
     } else {
-
       if (!any(c("BC", "AB", "SK", "NFI", "all") %in% P(sim)$PSPdataTypes)) {
         stop("Please review P(sim)$dataTypes - incorrect value specified")
       }
@@ -390,6 +389,7 @@ Save <- function(sim) {
         PSPmeasure_sppParams[["BC"]] <- PSPbc$treeData
         PSPplot_sppParams[["BC"]] <- PSPbc$plotHeaderData
       }
+
       if ("AB" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
         PSPab <- Cache(prepInputsAlbertaPSP, dPath = dPath, userTags = c(cacheTags, "ABPSP"))
         PSPab <- PSPclean::dataPurification_ABPSP(treeMeasure = PSPab$pspABtreeMeasure,
