@@ -1,13 +1,11 @@
-# Everything in this file gets sourced during simInit, and all functions and objects
-# are put into the simList. To use objects, use sim$xxx, and are thus globally available
-# to all modules. Functions can be used without sim$ as they are namespaced, like functions
-# in R packages. If exact location is required, functions will be: sim$<moduleName>$FunctionName
 defineModule(sim, list(
   name = "Biomass_speciesParameters",
   description = "For estimating LANDIS-II species traits from PSP-derived growth curves",
   keywords = NA, # c("insert key words here"),
-  authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@@nrcan-rncan.gc.ca", role = c("aut", "cre")),
-              person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut"))),
+  authors = c(
+    person(c("Ian"), "Eddy", email = "ian.eddy@@nrcan-rncan.gc.ca", role = c("aut", "cre")),
+    person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut"))
+  ),
   childModules = character(0),
   version = list(Biomass_speciesParameters = "1.0.0"),
   spatialExtent = raster::extent(rep(NA_real_, 4)),
@@ -19,7 +17,7 @@ defineModule(sim, list(
                   "PredictiveEcology/LandR@development (>= 1.0.5)",
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
-                  "ianmseddy/PSPclean", "robustbase", "gridExtra", "ggplot2", "purrr"),
+                  "ianmseddy/PSPclean@development", "robustbase", "gridExtra", "ggplot2", "purrr"),
   parameters = rbind(
     defineParameter(".plots", "character", "screen", NA, NA,
                     "Used by Plots function, which can be optionally used here"),
@@ -243,10 +241,12 @@ Init <- function(sim) {
   }
   speciesWithNewlyEstimated <- unique(unlist(strsplit(names(sim$speciesGAMMs), "__")))
   speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
-  if (length(speciesWithoutNewlyEstimated))
-    message(crayon::yellow(paste(speciesWithoutNewlyEstimated,
-                                 collapse = ", "),
-                           "have insufficient data to estimate species parameters; using original user supplied"))
+  if (length(speciesWithoutNewlyEstimated)) {
+    message(crayon::yellow(
+      paste(speciesWithoutNewlyEstimated, collapse = ", "),
+      "have insufficient data to estimate species parameters; using original user supplied"
+    ))
+  }
   modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                               speciesTable = sim$species,
                                               factorialTraits = setDT(sim$speciesTableFactorial), # setDT to deal with reload from Cache (no effect otherwise)
@@ -298,7 +298,7 @@ Save <- function(sim) {
   if (!suppliedElsewhere("speciesTableFactorial", sim)) {
     sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial.Rdat",
                                             destinationPath = dPath,
-                                            url = extractURL('speciesTableFactorial', sim),
+                                            url = extractURL("speciesTableFactorial", sim),
                                             fun = "readRDS", overwrite = TRUE,
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
@@ -368,7 +368,7 @@ Save <- function(sim) {
       sim$PSPgis_sppParams <- Cache(prepInputs,
                                     targetFile = "randomizedPSPgis_sppParams.rds",
                                     archive = "randomized_LandR_speciesParameters_Inputs.zip",
-                                    url = extractURL('PSPgis_sppParams', sim),
+                                    url = extractURL("PSPgis_sppParams", sim),
                                     overwrite = TRUE,
                                     destinationPath = dPath,
                                     fun = "readRDS")
@@ -443,4 +443,3 @@ Save <- function(sim) {
 
   return(invisible(sim))
 }
-### add additional events as needed by copy/pasting from above
