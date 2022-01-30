@@ -16,3 +16,5 @@ outputs/
 #this is to hide all 700 years of cohortData in Ian's local repo
 temp
 *.pdf
+
+inputs/

@@ -262,18 +262,19 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
 
   # Take next lower longevity (the Inf in the rolling joing, on the "last" join column i.e., longevity)
   ll2 <- fullDataAll[, list(BscaledNonLinear = mean(BscaledNonLinear),
-                            predNonLinear = mean(predNonLinear)#,
-                            #Pair = Pair[1]
-                            #mortalityshape = mean(mortalityshape),
-                            #mANPPproportion = mean(mANPPproportion)
-  ), c("species", "standAge", "Pair")]
+                            predNonLinear = mean(predNonLinear)),
+                     c("species", "standAge", "Pair")]
+
+  ymaxes <- max(ll2$BscaledNonLinear, ll2$predNonLinear)
   gg <- ggplot(ll2, aes(standAge, BscaledNonLinear, colour = species)) +
     geom_line(size = 2) +
     geom_point(data = gammsList, aes(standAge, biomass, colour = speciesTemp), size = 0.25, alpha = 0.3) +
     geom_line(size = 2, aes(standAge, predNonLinear, col = species), lty = "dashed") +
     facet_wrap(~ Pair, nrow = ceiling(sqrt(length(outputTraits))), scales = "fixed") +
-    xlim(c(0, 150)) + # ggplot2::scale_y_log() +
-    ylim(c(0, 30000)) +
+    xlim(c(0, max(ll2$standAge))) + # ggplot2::scale_y_log() +
+    ylim(c(0, ymaxes)) +
+    ylab(label = "biomass") + 
+    xlab(label = "stand age") +
     ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
     theme_bw()
 
@@ -290,32 +291,8 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                 mANPPproportion = round(sum(AICWeightsStd * mANPPproportion), 3),
                                 inflationFactor = round(sum(AICWeightsStd * inflationFactor), 3)),
                             by = "species"]
-  # numSp <- length(unique(newTraits$species))
-  # best <- newTraits[, .(growthcurve = round(sum(AICWeightsStd * growthcurve)/numSp, 2)
-  #                       #, mortalityshape = round(sum(AICWeightsStd * mortalityshape)/numSp, 0)
-  #                       #, mANPPproportion = round(sum(AICWeightsStd * mANPPproportion)/numSp, 3)
-  #                       #, inflationFactor = round(sum(AICWeightsStd * inflationFactor)/numSp, 3)
-  # )]
-  # pick best
-  # newTraits <- newTraits[, whmin := .I[which.min(llNonLinDelta)], by = "speciesCode"][unique(whmin)]
-
-  # update growthcurve so all are same
-  # newTraits[ , c(names(best)) := best]
-
-  # Find associated "species" in factorial --> remove existing inflationFactor and
-  #  replace with the equivalent inflationFactor from the factorial
-  # newTraits <- updateInflationFactor(best, factorialTraits, factorialBiomass)
-
-  # Remove the loglikelihood and AIC columns
-  # set(newTraits, NULL, grep("^ll|^AIC", colnames(newTraits), value = TRUE), NULL)
-  #
-  #
-  #
-  # if (!is.null(newTraits$mANPPproportion)) {
-  #   newTraits[is.na(mANPPproportion), c("mANPPproportion", "inflationFactor") := .(3.33, 1)] #default mANPP
-  # } else {
-  # }
-  # Update speciesTable with bestWeighted
+ 
+ 
   speciesTable <- copy(speciesTable) # This is needed to allow the Cache on editSpeciesTraits to work because of pass-by-reference
   bestWeighted <- speciesTable[match(bestWeighted$species, species),
                                c(names(bestWeighted)) := bestWeighted]
@@ -323,26 +300,44 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   return(list(best = bestWeighted, gg = gg))
 }
 
-modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
+modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
+  if (is.null(speciesTable[["mANPPproportion"]])) {
+    stop("please supply a species table with inflationFactor and mANPPproportion")
+  }
+  
+  speciesTable[, growthCurveSource := 'estimated']
   if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
     missing <- speciesTable[is.na(inflationFactor)]$species
-    message("averaging traits for these species: ", missing)
-    #
+    message("averaging traits for these species: ", paste(missing, collapse = ", "))
+    #note that inflationFactor is dependent on longevity, which is not adjusted
     averageOfEstimated <- speciesTable[!is.na(inflationFactor),
-                                       .(growthcurve = mean(growthcurve),
+                                       .(growthcurve = round(mean(growthcurve), digits = 2),
                                          mortalityshape = asInteger(mean(mortalityshape)),
-                                         mANPPproportion = mean(mANPPproportion))]
-    #I don't think inflationFactor should be averaged if longevity isn't..
-    speciesTable[is.na(inflationFactor), `:=`(
-      growthcurve = averageOfEstimated$growthcurve,
-      mortalityshape = averageOfEstimated$mortalityshape,
-      mANPPproportion = averageOfEstimated$mANPPproportion
+                                         mANPPproportion = round(mean(mANPPproportion), digits = 2), 
+                                         inflationFactor = round(mean(inflationFactor), digits = 3)), .(HardSoft)]
+    
+    hardAverage <- averageOfEstimated[HardSoft == "hard"]
+    softAverage <- averageOfEstimated[HardSoft == "soft"]
+    
+    speciesTable[is.na(inflationFactor) & HardSoft == "soft", `:=`(
+      growthcurve = softAverage$growthcurve,
+      mortalityshape = softAverage$mortalityshape,
+      mANPPproportion = softAverage$mANPPproportion,
+      inflationFactor = softAverage$inflationFactor,
+      growthCurveSource = "imputed"
+    )]
+    
+    speciesTable[is.na(inflationFactor) & HardSoft == "hard", `:=`(
+      growthcurve = hardAverage$growthcurve,
+      mortalityshape = hardAverage$mortalityshape,
+      mANPPproportion = hardAverage$mANPPproportion,
+      inflationFactor = hardAverage$inflationFactor,
+      growthCurveSource = "imputed"
     )]
   }
 
   message("modifying speciesEcoregion table based on newly estimated traits")
-  #modify things by species
 
   newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
   newSpeciesEcoregion[!is.na(inflationFactor), maxB := asInteger(maxB * inflationFactor)]
@@ -352,7 +347,9 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
   newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
   newSpeciesEcoregion[, maxB := asInteger(maxB)]
-  return(newSpeciesEcoregion)
+  
+  return(list("newSpeciesEcoregion" = newSpeciesEcoregion,
+              "newSpeciesTable" = speciesTable))
 }
 
 makeGAMMdata <- function(species, psp, speciesEquiv,
