@@ -192,7 +192,13 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
 
 ### template initialization
 Init <- function(sim) {
-  #if no PSP data supplied, simList returned unchanged
+  origDTthreads <- data.table::getDTthreads()
+  if (getDTthreads() > 4) {
+    data.table::setDTthreads(4)
+  }
+  on.exit(data.table::setDTthreads(origDTthreads))
+
+  ## if no PSP data supplied, simList returned unchanged
 
   if (!P(sim)$PSPdataTypes %in% "none") {
     if (is.na(P(sim)$sppEquivCol)) {
@@ -278,16 +284,12 @@ Init <- function(sim) {
 }
 
 updateSpeciesTables <- function(sim) {
-
   modifiedTables <- modifySpeciesAndSpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
                                                               speciesTable = sim$species)
   sim$speciesEcoregion <- modifiedTables$newSpeciesEcoregion
   sim$species <- modifiedTables$newSpeciesTable
   return(sim)
 }
-
-
-
 
 ### template for save events
 Save <- function(sim) {
@@ -300,6 +302,12 @@ Save <- function(sim) {
 }
 
 .inputObjects <- function(sim) {
+  origDTthreads <- data.table::getDTthreads()
+  if (getDTthreads() > 4) {
+    data.table::setDTthreads(4)
+  }
+  on.exit(data.table::setDTthreads(origDTthreads))
+
   cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
@@ -390,7 +398,6 @@ Save <- function(sim) {
                                     destinationPath = dPath,
                                     fun = "readRDS")
     } else if (!P(sim)$PSPdataTypes %in% "none") {
-
       if (!any(c("BC", "AB", "SK", "NFI", "all") %in% P(sim)$PSPdataTypes)) {
         stop("Please review P(sim)$dataTypes - incorrect value specified")
       }
