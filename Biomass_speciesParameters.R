@@ -150,22 +150,22 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
     init = {
       ### check for more detailed object dependencies:
       ### (use `checkObject` or similar)
-      
+
       # build growth curves if applicable
       sim <- Init(sim)
-      #update tables 
-      
+      #update tables
+
       # schedule future event(s)
       # sim <- scheduleEvent(sim, P(sim)$.plotInitialTime, "Biomass_speciesParameters", "plot")
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "Biomass_speciesParameters", "save")
-      sim <- scheduleEvent(sim, start(sim), "Biomass_speciesParameters", 
+      sim <- scheduleEvent(sim, start(sim), "Biomass_speciesParameters",
                            "updateSpeciesTables", eventPriority = 1)
     },
-    
+
     updateSpeciesTables = {
       sim <- updateSpeciesTables(sim)
     },
-    
+
     plot = {
       # lapply(names(sim$speciesGAMMs), FUN = function(spp, GAMMs = sim$speciesGAMMs){
       #   if (!class(GAMMs[[spp]]) == "character"){
@@ -178,7 +178,7 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
     },
     save = {
       # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "Biomass_speciesParameters", "save")
-      
+
     },
 
     warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
@@ -193,27 +193,31 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
 ### template initialization
 Init <- function(sim) {
   #if no PSP data supplied, simList returned unchanged
-  
+
   if (!P(sim)$PSPdataTypes %in% "none") {
     if (is.na(P(sim)$sppEquivCol)) {
       stop("Please supply 'sppEquivCol' in parameters of Biomass_speciesParameters.")
     }
-    
+
     paramCheckOtherMods(sim, "maxBInFactorial")
     paramCheckOtherMods(sim, paramToCheck = "sppEquivCol",
                         ifSetButDifferent = "error")
-    
+
     #find the max biomass achieved by each species when growing with no competition
     tempMaxB <- sim$cohortDataFactorial[age == 1, .N, .(pixelGroup)]
     #take the pixelGroups with only 1 species at start of factorial
     tempMaxB <- tempMaxB[N == 1,]
-    tempMaxB <- sim$cohortDataFactorial[pixelGroup %in% tempMaxB$pixelGroup, 
+    tempMaxB <- sim$cohortDataFactorial[pixelGroup %in% tempMaxB$pixelGroup,
                                         .(inflationFactor = P(sim)$maxBInFactorial/max(B)),
                                         , .(pixelGroup, speciesCode)]
+    # in some cases the speciesTableFactorial doesn't have "species" column; just "speciesCode"
+    if (!("species" %in% colnames(sim$speciesTableFactorial))) { # TODO this is a work around -- the speciesTableFactorial should be stable
+      setnames(sim$speciesTableFactorial, old = "speciesCode", new = "species")
+    }
     tempMaxB <- sim$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
     #pair-wise species will be matched with traits, as the species code won't match
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
-    
+
     #prepare PSPdata
     speciesGAMMs <- Cache(makePSPgamms,
                           studyAreaANPP = sim$studyAreaANPP,
@@ -233,13 +237,13 @@ Init <- function(sim) {
                           speciesFittingApproach = P(sim)$speciesFittingApproach,
                           userTags = c(currentModule(sim), "makePSPgamms"))
     sim$speciesGAMMs <- speciesGAMMs
-    
+
     classes <- lapply(sim$speciesGAMMs, FUN = 'class')
-    
+
     noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
       x == "insufficient data"
     }, FUN.VALUE = logical(1))
-    
+
     if (any(noData)) {
       message("The following species did not have sufficient data for model estimation: ")
       print(names(noData))
@@ -247,14 +251,14 @@ Init <- function(sim) {
     speciesWithNewlyEstimated <- unique(unlist(strsplit(names(sim$speciesGAMMs), "__")))
     speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
     if (length(speciesWithoutNewlyEstimated))
-      message(crayon::yellow(paste(speciesWithoutNewlyEstimated, 
+      message(crayon::yellow(paste(speciesWithoutNewlyEstimated,
                                    collapse = ", "),
                              "have insufficient data to estimate species parameters; using original user supplied"))
     modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                                 speciesTable = sim$species,
-                                                factorialTraits = setDT(sim$speciesTableFactorial), 
+                                                factorialTraits = setDT(sim$speciesTableFactorial),
                                                 # setDT to deal with reload from Cache (no effect otherwise)
-                                                factorialBiomass = setDT(sim$cohortDataFactorial), 
+                                                factorialBiomass = setDT(sim$cohortDataFactorial),
                                                 # setDT to deal with reload from Cache (no effect otherwise)
                                                 sppEquiv = sim$sppEquiv,
                                                 approach = P(sim)$speciesFittingApproach,
@@ -386,7 +390,7 @@ Save <- function(sim) {
                                     destinationPath = dPath,
                                     fun = "readRDS")
     } else if (!P(sim)$PSPdataTypes %in% "none") {
-      
+
       if (!any(c("BC", "AB", "SK", "NFI", "all") %in% P(sim)$PSPdataTypes)) {
         stop("Please review P(sim)$dataTypes - incorrect value specified")
       }
