@@ -273,7 +273,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     facet_wrap(~ Pair, nrow = ceiling(sqrt(length(outputTraits))), scales = "fixed") +
     xlim(c(0, max(ll2$standAge))) + # ggplot2::scale_y_log() +
     ylim(c(0, ymaxes)) +
-    ylab(label = "biomass") + 
+    ylab(label = "biomass") +
     xlab(label = "stand age") +
     ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
     theme_bw()
@@ -291,8 +291,8 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                 mANPPproportion = round(sum(AICWeightsStd * mANPPproportion), 3),
                                 inflationFactor = round(sum(AICWeightsStd * inflationFactor), 3)),
                             by = "species"]
- 
- 
+
+
   speciesTable <- copy(speciesTable) # This is needed to allow the Cache on editSpeciesTraits to work because of pass-by-reference
   bestWeighted <- speciesTable[match(bestWeighted$species, species),
                                c(names(bestWeighted)) := bestWeighted]
@@ -305,7 +305,7 @@ modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable
   if (is.null(speciesTable[["mANPPproportion"]])) {
     stop("please supply a species table with inflationFactor and mANPPproportion")
   }
-  
+
   speciesTable[, growthCurveSource := 'estimated']
   if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
     missing <- speciesTable[is.na(inflationFactor)]$species
@@ -314,12 +314,12 @@ modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable
     averageOfEstimated <- speciesTable[!is.na(inflationFactor),
                                        .(growthcurve = round(mean(growthcurve), digits = 2),
                                          mortalityshape = asInteger(mean(mortalityshape)),
-                                         mANPPproportion = round(mean(mANPPproportion), digits = 2), 
+                                         mANPPproportion = round(mean(mANPPproportion), digits = 2),
                                          inflationFactor = round(mean(inflationFactor), digits = 3)), .(HardSoft)]
-    
+
     hardAverage <- averageOfEstimated[HardSoft == "hard"]
     softAverage <- averageOfEstimated[HardSoft == "soft"]
-    
+
     speciesTable[is.na(inflationFactor) & HardSoft == "soft", `:=`(
       growthcurve = softAverage$growthcurve,
       mortalityshape = softAverage$mortalityshape,
@@ -327,7 +327,7 @@ modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable
       inflationFactor = softAverage$inflationFactor,
       growthCurveSource = "imputed"
     )]
-    
+
     speciesTable[is.na(inflationFactor) & HardSoft == "hard", `:=`(
       growthcurve = hardAverage$growthcurve,
       mortalityshape = hardAverage$mortalityshape,
@@ -347,7 +347,7 @@ modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable
   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
   newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
   newSpeciesEcoregion[, maxB := asInteger(maxB)]
-  
+
   return(list("newSpeciesEcoregion" = newSpeciesEcoregion,
               "newSpeciesTable" = speciesTable))
 }
@@ -472,7 +472,9 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   species <- as.character(species) %>% setNames(nm = .)
   speciesForFits <- setdiff(species, "Other") %>% setNames(nm = .)
   speciesForFitsMessage <- paste(speciesForFits, collapse = ", ")
-  message(crayon::yellow(speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gomopertz)"))
+  message(crayon::yellow(
+    speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
+  ))
   nlsouts <- lapply(speciesForFits, function(sp) {
     datForFit <- dataForFit(simData2, sp)
     nlsoutInner <- list()
