@@ -32,7 +32,7 @@ defineModule(sim, list(
     defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                                  "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
-    defineParameter("speciesFittingApproach", "character", "pairwise", NA, NA,
+    defineParameter("speciesFittingApproach", "character", "focal", NA, NA,
                     desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
                                   "all species into one fit, do pairwise species (for multiple cohort situations), do",
                                   "pairwise species, but using a focal species approach where all other species are ",
