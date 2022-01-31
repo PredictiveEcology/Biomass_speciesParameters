@@ -364,7 +364,7 @@ Save <- function(sim) {
   if (!suppliedElsewhere("PSPmeasure_sppParams", sim) |
       !suppliedElsewhere("PSPplot_sppParams", sim) |
       !suppliedElsewhere("PSPgis_sppParams", sim)) {
-    message("one or more PSP objects not suppplied. Generating PSP data...")
+    message("one or more PSP objects not supplied. Generating PSP data...")
 
     if ("dummy" %in% P(sim)$PSPdataTypes) {
       message("generating randomized PSP data")
