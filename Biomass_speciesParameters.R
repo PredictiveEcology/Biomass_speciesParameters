@@ -137,7 +137,7 @@ defineModule(sim, list(
                   desc = paste("a list of mixed-effect general additive models (gamm) for each tree species",
                                "modeling biomass as a function of age")),
     createsOutput(objectName = "species", objectClass = "data.table",
-                  desc = "a table that has species traits such as longevity..."),
+                  desc = "a table of species traits used in LandR modules"),
   )
 ))
 
@@ -342,18 +342,6 @@ Save <- function(sim) {
     )
   }
 
-  if (!suppliedElsewhere("species", sim)) {
-    warning("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
-    sim$species <- data.table(
-      species = c("Abie_las", "Abie_bal", "Betu_pap", "Lari_lar", "Pice_eng",
-                  "Pice_gla", "Pice_mar", "Pinu_ban",
-                  "Pinu_con", "Pseu_men", "Popu_tre"),
-      longevity = c(300, 300, 150, 140, 450, 400, 250, 150, 325, 600, 200),
-      mortalityshape = 15,
-      growthcurve = 0
-    )
-  }
-
   if (!suppliedElsewhere("sppEquiv", sim)) {
     #pass a default sppEquivalencies_CA for common species in western Canada
     sppEquivalencies_CA <-  LandR::sppEquivalencies_CA
@@ -367,6 +355,15 @@ Save <- function(sim) {
     sppEquivalencies_CA <- sppEquivalencies_CA[!is.na(default)]
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS", LandR := "Abie_las"]
     sim$sppEquiv <- sppEquivalencies_CA
+  }
+  
+  
+  if (!suppliedElsewhere("species", sim)) {
+    message("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
+    speciesTable <- getSpeciesTable()
+    sim$species <- prepSpeciesTable(speciesTable, 
+                                    sppEquiv = sim$sppEquiv, 
+                                    sppEquivCol = P(sim)$sppEquivCol)
   }
 
   if (!suppliedElsewhere("PSPmeasure_sppParams", sim) |
