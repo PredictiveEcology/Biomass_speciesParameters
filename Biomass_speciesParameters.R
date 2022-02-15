@@ -97,11 +97,11 @@ defineModule(sim, list(
   inputObjects = bindrows(
     expectsInput(objectName  = "speciesTableFactorial", objectClass = "data.table",
                  desc = paste("table with species traits for matching to factorialCohortData"),
-                 sourceURL = "https://drive.google.com/file/d/15NqL58NvSfI0ppBzKCvUPgs5ylRmQV8A"),
+                 sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput(objectName = "cohortDataFactorial", objectClass = "data.table",
                  desc = paste("results of factorial species trait simulation. This can be found by running",
                               "SpeciesFactorial.R but requires a specific commit of Boreal_Biomass"),
-                 sourceURL = "https://drive.google.com/file/d/10t6RbR-1gSi7m42kG1-7iHO7m6ZZsEjA"),
+                 sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput(objectName = "PSPmeasure_sppParams", objectClass = "data.table",
                  desc = paste("merged PSP and TSP individual tree measurements. Must include the following columns:",
                               "MeasureID, OrigPlotID1, MeasureYear, TreeNumber, Species, DBH and newSpeciesName",
@@ -313,15 +313,15 @@ Save <- function(sim) {
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   if (!suppliedElsewhere("cohortDataFactorial", sim)) {
-    sim$cohortDataFactorial <- prepInputs(targetFile = "reducedFactorialCD.Rdat",
+    sim$cohortDataFactorial <- prepInputs(targetFile = "cohortDataFactorial_medium.rds",
                                           destinationPath = dPath,
                                           fun = "readRDS", overwrite = TRUE,
                                           url = extractURL('cohortDataFactorial', sim),
-                                          useCache = TRUE, userTags = c(cacheTags, "reducedFactorial"))
+                                          useCache = TRUE, userTags = c(cacheTags, "factorialCohort"))
   }
 
   if (!suppliedElsewhere("speciesTableFactorial", sim)) {
-    sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial.Rdat",
+    sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial_medium.rds",
                                             destinationPath = dPath,
                                             url = extractURL("speciesTableFactorial", sim),
                                             fun = "readRDS", overwrite = TRUE,
