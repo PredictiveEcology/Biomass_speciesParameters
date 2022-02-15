@@ -315,12 +315,19 @@ modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable
                                        .(growthcurve = round(mean(growthcurve), digits = 2),
                                          mortalityshape = asInteger(mean(mortalityshape)),
                                          mANPPproportion = round(mean(mANPPproportion), digits = 2),
-                                         inflationFactor = round(mean(inflationFactor), digits = 3)), .(HardSoft)]
+                                         inflationFactor = round(mean(inflationFactor), digits = 3)), .(hardsoft)]
 
-    hardAverage <- averageOfEstimated[HardSoft == "hard"]
-    softAverage <- averageOfEstimated[HardSoft == "soft"]
+    hardAverage <- averageOfEstimated[hardsoft == "hard"]
+    softAverage <- averageOfEstimated[hardsoft == "soft"]
+    
+    if (nrow(hardAverage) == 0){
+      hardAverage <- softAverage
+    }
+    if (nrow(softAverage) == 0){
+      softAverage <- hardAverage
+    }
 
-    speciesTable[is.na(inflationFactor) & HardSoft == "soft", `:=`(
+    speciesTable[is.na(inflationFactor) & hardsoft == "soft", `:=`(
       growthcurve = softAverage$growthcurve,
       mortalityshape = softAverage$mortalityshape,
       mANPPproportion = softAverage$mANPPproportion,
@@ -328,7 +335,7 @@ modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable
       growthCurveSource = "imputed"
     )]
 
-    speciesTable[is.na(inflationFactor) & HardSoft == "hard", `:=`(
+    speciesTable[is.na(inflationFactor) & hardsoft == "hard", `:=`(
       growthcurve = hardAverage$growthcurve,
       mortalityshape = hardAverage$mortalityshape,
       mANPPproportion = hardAverage$mANPPproportion,
@@ -528,18 +535,6 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   }
   )
 
-  if (FALSE) {
-    #this exists for manually debugging whether the encompassing environment will be cached
-    object_size(speciesGamm)
-    # 838 kB  # Same as above
-    tf <- tempfile(); system.time(saveRDS(speciesGamm, file = tf))
-    #check time elapsed
-    e1 <- new.env(parent = emptyenv())
-    e1$manualVers <- readRDS(tf)
-    object_size(e1$manualVers)
-    # This should be comparable to above (+/- 50%)
-    rm(e1, tf)
-  }
 
   #Append the true data to speciesGamm, so we don't have the 0s involved when we subset by age quantile
   if (!any(lengths(speciesGamm) == 1)) { #this means it was a try-error as converged gamm is length 2
