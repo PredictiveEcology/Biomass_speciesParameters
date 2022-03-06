@@ -3,7 +3,7 @@ defineModule(sim, list(
   description = "For estimating LANDIS-II species traits from PSP-derived growth curves",
   keywords = NA, # c("insert key words here"),
   authors = c(
-    person(c("Ian"), "Eddy", email = "ian.eddy@@nrcan-rncan.gc.ca", role = c("aut", "cre")),
+    person(c("Ian"), "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = c("aut", "cre")),
     person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut"))
   ),
   childModules = character(0),
@@ -206,8 +206,7 @@ Init <- function(sim) {
     }
 
     paramCheckOtherMods(sim, "maxBInFactorial")
-    paramCheckOtherMods(sim, paramToCheck = "sppEquivCol",
-                        ifSetButDifferent = "error")
+    paramCheckOtherMods(sim, paramToCheck = "sppEquivCol", ifSetButDifferent = "error")
 
     #find the max biomass achieved by each species when growing with no competition
     tempMaxB <- sim$cohortDataFactorial[age == 1, .N, .(pixelGroup)]
@@ -257,8 +256,7 @@ Init <- function(sim) {
     speciesWithNewlyEstimated <- unique(unlist(strsplit(names(sim$speciesGAMMs), "__")))
     speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
     if (length(speciesWithoutNewlyEstimated))
-      message(crayon::yellow(paste(speciesWithoutNewlyEstimated,
-                                   collapse = ", "),
+      message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "),
                              "have insufficient data to estimate species parameters; using original user supplied"))
     modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
                                                 speciesTable = sim$species,
