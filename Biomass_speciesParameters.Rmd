@@ -473,7 +473,7 @@ repository](https://github.com/CeresBarros/LandRBiomass_publication) and in
 
 ### Load `SpaDES` and other packages.
 
-```{r load-SpaDES-Biomass-speciesData}
+```{r load-SpaDES-Biomass-speciesParameters}
 if (!require(Require)) {
   install.packages("Require")
   library(Require)
@@ -486,7 +486,7 @@ Require(c("PredictiveEcology/SpaDES.install",
 
 ### Get module, necessary packages and set up folder directories
 
-```{r module usage example setup -Biomass-speciesData, eval = FALSE}
+```{r module usage example setup-Biomass-speciesParameters, eval = FALSE}
 tempDir <- tempdir()
 spadesModulesDirectory <- file.path(tempDir, "modules")
 
