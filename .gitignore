@@ -15,3 +15,7 @@ modules/
 #This hides all LBMR files in Ian's local repo
 outputs/
 #this is to hide all 700 years of cohortData in Ian's local repo
+
+## html cache/files
+*_cache/
+*_files/
