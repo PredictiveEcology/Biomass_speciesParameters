@@ -1,7 +1,7 @@
 ---
 title: "LandR _Biomass_speciesParameters_ Manual"
-subtitle: "v.0.0.1"
-date: "Last updated: 2022-03-18"
+subtitle: "v.1.0.0"
+date: "Last updated: 2022-03-28"
 output:
   bookdown::html_document2:
     toc: true
@@ -42,7 +42,7 @@ above\^\^**
 
 #### Authors:
 
-Ian Eddy <ian.eddy@example.com> [aut, cre]
+Ian Eddy <ian.eddy@nrcan-rncan.gc.ca> [aut, cre], Eliot McIntire <eliot.mcintire@nrcan-rncan.gc.ca> [aut]
 <!-- ideally separate authors with new lines, '\n' not working -->
 
 ## Module Overview
@@ -66,7 +66,7 @@ calibration procedure.
 
 **Note that a Google Account is necessary to access the data.**
 
-As of 2022-03-18, the PSP data needed for this module is not freely
+As of 2022-03-28, the PSP data needed for this module is not freely
 available, and data sharing agreements must be obtained from the governments of
 SK, AB, and BC.
 
@@ -101,24 +101,24 @@ access to their online files (see Tables
  </thead>
 <tbody>
   <tr>
-   <td style="text-align:left;"> factorialSpeciesTable </td>
-   <td style="text-align:left;"> table with species traits for matching to `reducedFactorialCohortData` </td>
+   <td style="text-align:left;"> speciesTableFactorial </td>
+   <td style="text-align:left;"> table with species traits for matching to factorialCohortData </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> reducedFactorialCohortData </td>
-   <td style="text-align:left;"> results of factorial species trait simulation. This can be found by running `SpeciesFactorial.R` but requires a specific commit of Biomass_core </td>
+   <td style="text-align:left;"> cohortDataFactorial </td>
+   <td style="text-align:left;"> results of factorial species trait simulation. This can be found by running SpeciesFactorial.R but requires a specific commit of Boreal_Biomass </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> PSPmeasure </td>
+   <td style="text-align:left;"> PSPmeasure_sppParams </td>
    <td style="text-align:left;"> merged PSP and TSP individual tree measurements. Must include the following columns: MeasureID, OrigPlotID1, MeasureYear, TreeNumber, Species, DBH and newSpeciesName the latter corresponding to species names in `LandR::sppEquivalencies_CA$PSP`. Defaults to randomized PSP data stripped of real plotIDs </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> PSPplot </td>
+   <td style="text-align:left;"> PSPplot_sppParams </td>
    <td style="text-align:left;"> merged PSP and TSP plot data. Defaults to randomized PSP data stripped of real plotIDs. Must contain fields 'MeasureID', 'MeasureYear', 'OrigPlotID1', and 'baseSA' the latter being stand age at year of first measurement </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> PSPgis </td>
-   <td style="text-align:left;"> Plot location sf object. Defaults to PSP data stripped of real plotIDs/location. Must include field 'OrigPlotID1' for joining to PSPplot object </td>
+   <td style="text-align:left;"> PSPgis_sppParams </td>
+   <td style="text-align:left;"> Plot location sf object. Defaults to PSP data stripped of real plotIDs/location. Must include field OrigPlotID1 for joining to PSPplot_sppParams object </td>
   </tr>
   <tr>
    <td style="text-align:left;"> species </td>
@@ -130,7 +130,7 @@ access to their online files (see Tables
   </tr>
   <tr>
    <td style="text-align:left;"> sppEquiv </td>
-   <td style="text-align:left;"> table of species equivalencies. See `?LandR::sppEquivalencies_CA`. </td>
+   <td style="text-align:left;"> table of species equivalencies. See `LandR::sppEquivalencies_CA`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> studyAreaANPP </td>
@@ -148,6 +148,10 @@ access to their online files (see Tables
   </tr>
  </thead>
 <tbody>
+  <tr>
+   <td style="text-align:left;"> .plots </td>
+   <td style="text-align:left;"> Used by Plots function, which can be optionally used here </td>
+  </tr>
   <tr>
    <td style="text-align:left;"> .plotInitialTime </td>
    <td style="text-align:left;"> This describes the simulation time at which the first plot event should occur </td>
@@ -169,6 +173,10 @@ access to their online files (see Tables
    <td style="text-align:left;"> Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> speciesFittingApproach </td>
+   <td style="text-align:left;"> Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool all species into one fit, do pairwise species (for multiple cohort situations), do pairwise species, but using a focal species approach where all other species are pooled into 'other' or do one species at a time. If 'all', all species will have identical species-level traits </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> biomassModel </td>
    <td style="text-align:left;"> The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008' </td>
   </tr>
@@ -178,11 +186,11 @@ access to their online files (see Tables
   </tr>
   <tr>
    <td style="text-align:left;"> constrainMortalityShape </td>
-   <td style="text-align:left;"> upper and lower bounds on mortality shape when fitting traits. low mortality curve needs to excessive cohorts with very little biomass as longevity is approached, adding computation strain. alternatively accepts a list of vectors, with names equal to `sppEquivCol` </td>
+   <td style="text-align:left;"> Upper and lower bounds on mortality shape when fitting traits. Low mortality curve needs to excessive cohorts with very little biomass as longevity is approached, adding computation strain. Alternatively accepts a list of vectors, with names equal to `sppEquivCol`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> constrainMaxANPP </td>
-   <td style="text-align:left;"> upper and lower bounds on `maxANPP` when fitting traits. cohorts are initiated with `B = maxANPP` which may be unreasonably high if `maxANPP` is also high. Both `maxANPP` and growthcurve params control when `maxB` is reached. High `maxANPP` results in earlier peaks alternatively accepts a list of vectors, with names equal to `sppEquivCol` </td>
+   <td style="text-align:left;"> upper and lower bounds on `maxANPP` when fitting traits. Cohorts are initiated with `B = maxANPP`, which may be unreasonably high if `mANPP` is also high. Both `mANPP` and `growthcurve` params control when `maxB` is reached. High `mANPP` results in earlier peaks. Alternatively, accepts a list of vectors, with names equal to `sppEquivCol`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> GAMMiterations </td>
@@ -193,12 +201,20 @@ access to their online files (see Tables
    <td style="text-align:left;"> the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a list of vectors, with names equal to `sppEquivCol`, so that GAMMS are customizable </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> maxBInFactorial </td>
+   <td style="text-align:left;"> The arbitrary maximum biomass for the factorial simulations. This is a per-species maximum within a pixel </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> minimumPlotsPerGamm </td>
-   <td style="text-align:left;"> minimum number of PSP plots before building GAMM </td>
+   <td style="text-align:left;"> minimum number of PSP plots before building GAMM. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> minDBH </td>
-   <td style="text-align:left;"> minimum diameter at breast height (DBH) in cm used to filter PSP data. Defaults to 0cm, i.e. all tree measurements are used. </td>
+   <td style="text-align:left;"> minimum diameter at breast height (DBH) in cm used to filter PSP data. Defaults to 0 cm, i.e. all tree measurements are used. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> PSPdataTypes </td>
+   <td style="text-align:left;"> Which PSP datasets to source, defaulting to all. Other available options include 'BC', 'AB', 'SK', 'NFI', and 'dummy'. 'dummy' should be used for unauthorized users. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> PSPperiod </td>
@@ -210,11 +226,15 @@ access to their online files (see Tables
   </tr>
   <tr>
    <td style="text-align:left;"> sppEquivCol </td>
-   <td style="text-align:left;"> The column in `sim$sppEquiv` data.table to group species by. This parameter should share the same name as in Biomass_borealDataPrep . PSPs are aggregated by names in the PSP column and traits estimated for the corresponding names in the `sppEquivCol` </td>
+   <td style="text-align:left;"> The column in `sim$sppEquiv` data.table to group species by. This parameter should share the same name as in Biomass_borealDataPrep. If set to 'default' (the default), this module will look in the other modules in the simList to use the same as elsewhere. PSPs are aggregated by names in the PSP column and traits estimated for the corresponding names in the `sppEquivCol` </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> standAgesForFitting </td>
+   <td style="text-align:left;"> The minimum and maximum ages to use while matching NonLinearFit (or GAMM) with LandR curves provided in the factorial. Since the majory of the data that went into fits for the NonLinearFit from PSPs is less than 200, it is likely wise to constrain the range to something smaller than 0 to 200 </td>
   </tr>
   <tr>
    <td style="text-align:left;"> useHeight </td>
-   <td style="text-align:left;"> Should height be used to calculate biomass (in addition to DBH). Advise against including height unless you are certain it is present in every PSP </td>
+   <td style="text-align:left;"> Should height be used to calculate biomass (in addition to DBH). DBH is used by itself when height is missing. </td>
   </tr>
 </tbody>
 </table>
@@ -483,33 +503,33 @@ input objects used by the module.
  </thead>
 <tbody>
   <tr>
-   <td style="text-align:left;"> factorialSpeciesTable </td>
+   <td style="text-align:left;"> speciesTableFactorial </td>
    <td style="text-align:left;"> data.table </td>
-   <td style="text-align:left;"> table with species traits for matching to `reducedFactorialCohortData` </td>
-   <td style="text-align:left;"> https://drive.google.com/open?id=1q0ou0CBzD9GqGSparpHqf318IWK6ycty </td>
+   <td style="text-align:left;"> table with species traits for matching to factorialCohortData </td>
+   <td style="text-align:left;"> https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/ </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> reducedFactorialCohortData </td>
+   <td style="text-align:left;"> cohortDataFactorial </td>
    <td style="text-align:left;"> data.table </td>
-   <td style="text-align:left;"> results of factorial species trait simulation. This can be found by running `SpeciesFactorial.R` but requires a specific commit of Biomass_core </td>
-   <td style="text-align:left;"> https://drive.google.com/open?id=1h8StXE0vm8xyDycRomCkwIaL7wfh5Irj </td>
+   <td style="text-align:left;"> results of factorial species trait simulation. This can be found by running SpeciesFactorial.R but requires a specific commit of Boreal_Biomass </td>
+   <td style="text-align:left;"> https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/ </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> PSPmeasure </td>
+   <td style="text-align:left;"> PSPmeasure_sppParams </td>
    <td style="text-align:left;"> data.table </td>
    <td style="text-align:left;"> merged PSP and TSP individual tree measurements. Must include the following columns: MeasureID, OrigPlotID1, MeasureYear, TreeNumber, Species, DBH and newSpeciesName the latter corresponding to species names in `LandR::sppEquivalencies_CA$PSP`. Defaults to randomized PSP data stripped of real plotIDs </td>
    <td style="text-align:left;"> https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> PSPplot </td>
+   <td style="text-align:left;"> PSPplot_sppParams </td>
    <td style="text-align:left;"> data.table </td>
    <td style="text-align:left;"> merged PSP and TSP plot data. Defaults to randomized PSP data stripped of real plotIDs. Must contain fields 'MeasureID', 'MeasureYear', 'OrigPlotID1', and 'baseSA' the latter being stand age at year of first measurement </td>
    <td style="text-align:left;"> https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> PSPgis </td>
+   <td style="text-align:left;"> PSPgis_sppParams </td>
    <td style="text-align:left;"> sf </td>
-   <td style="text-align:left;"> Plot location sf object. Defaults to PSP data stripped of real plotIDs/location. Must include field 'OrigPlotID1' for joining to PSPplot object </td>
+   <td style="text-align:left;"> Plot location sf object. Defaults to PSP data stripped of real plotIDs/location. Must include field OrigPlotID1 for joining to PSPplot_sppParams object </td>
    <td style="text-align:left;"> https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing </td>
   </tr>
   <tr>
@@ -527,7 +547,7 @@ input objects used by the module.
   <tr>
    <td style="text-align:left;"> sppEquiv </td>
    <td style="text-align:left;"> data.table </td>
-   <td style="text-align:left;"> table of species equivalencies. See `?LandR::sppEquivalencies_CA`. </td>
+   <td style="text-align:left;"> table of species equivalencies. See `LandR::sppEquivalencies_CA`. </td>
    <td style="text-align:left;"> NA </td>
   </tr>
   <tr>
@@ -550,10 +570,10 @@ attention:
 
 -   **Tables**
 
-    -   `factorialSpeciesTable` and `reducedFactorialCohortData` -- a tables of
+    -   `speciesTableFactorial` and `cohortDataFactorial` -- a tables of
         species trait combinations and the theoretical species grwoth curve data
         (respectively)
-    -   `PSPmeasure`, `PSPplot` and `PSPgis` -- tree measurement, biomass growth
+    -   `PSPmeasure_sppParams`, `PSPplot_sppParams` and `PSPgi_sppParamss` -- tree measurement, biomass growth
         and geographical data of the PSP datasets used to buildi observed
         species growth curves.
     -   `species` -- a table of invariant species traits that may have been
@@ -584,9 +604,17 @@ used in *Biomass_speciesParameters* and their detailed information.
  </thead>
 <tbody>
   <tr>
+   <td style="text-align:left;"> .plots </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> screen </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Used by Plots function, which can be optionally used here </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> .plotInitialTime </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> start(sim) </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> This describes the simulation time at which the first plot event should occur </td>
@@ -617,11 +645,19 @@ used in *Biomass_speciesParameters* and their detailed information.
   </tr>
   <tr>
    <td style="text-align:left;"> .useCache </td>
-   <td style="text-align:left;"> logical </td>
-   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> .inputOb.... </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> speciesFittingApproach </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> focal </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool all species into one fit, do pairwise species (for multiple cohort situations), do pairwise species, but using a focal species approach where all other species are pooled into 'other' or do one species at a time. If 'all', all species will have identical species-level traits </td>
   </tr>
   <tr>
    <td style="text-align:left;"> biomassModel </td>
@@ -634,7 +670,7 @@ used in *Biomass_speciesParameters* and their detailed information.
   <tr>
    <td style="text-align:left;"> constrainGrowthCurve </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> 0.5, 0.5 </td>
+   <td style="text-align:left;"> 0, 1 </td>
    <td style="text-align:left;"> 0 </td>
    <td style="text-align:left;"> 1 </td>
    <td style="text-align:left;"> upper and lower bounds on range of potential growth curves when fitting traits. This module accepts a list of vectors, with names equal to `sppEquivCol`, so that traits are customizable </td>
@@ -642,18 +678,18 @@ used in *Biomass_speciesParameters* and their detailed information.
   <tr>
    <td style="text-align:left;"> constrainMortalityShape </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> 15, 25 </td>
+   <td style="text-align:left;"> 12, 25 </td>
    <td style="text-align:left;"> 5 </td>
    <td style="text-align:left;"> 25 </td>
-   <td style="text-align:left;"> upper and lower bounds on mortality shape when fitting traits. low mortality curve needs to excessive cohorts with very little biomass as longevity is approached, adding computation strain. alternatively accepts a list of vectors, with names equal to `sppEquivCol` </td>
+   <td style="text-align:left;"> Upper and lower bounds on mortality shape when fitting traits. Low mortality curve needs to excessive cohorts with very little biomass as longevity is approached, adding computation strain. Alternatively accepts a list of vectors, with names equal to `sppEquivCol`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> constrainMaxANPP </td>
    <td style="text-align:left;"> numeric </td>
-   <td style="text-align:left;"> 2, 5 </td>
+   <td style="text-align:left;"> 3, 4 </td>
    <td style="text-align:left;"> 1 </td>
    <td style="text-align:left;"> 10 </td>
-   <td style="text-align:left;"> upper and lower bounds on `maxANPP` when fitting traits. cohorts are initiated with `B = maxANPP` which may be unreasonably high if `maxANPP` is also high. Both `maxANPP` and growthcurve params control when `maxB` is reached. High `maxANPP` results in earlier peaks alternatively accepts a list of vectors, with names equal to `sppEquivCol` </td>
+   <td style="text-align:left;"> upper and lower bounds on `maxANPP` when fitting traits. Cohorts are initiated with `B = maxANPP`, which may be unreasonably high if `mANPP` is also high. Both `mANPP` and `growthcurve` params control when `maxB` is reached. High `mANPP` results in earlier peaks. Alternatively, accepts a list of vectors, with names equal to `sppEquivCol`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> GAMMiterations </td>
@@ -672,12 +708,20 @@ used in *Biomass_speciesParameters* and their detailed information.
    <td style="text-align:left;"> the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a list of vectors, with names equal to `sppEquivCol`, so that GAMMS are customizable </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> maxBInFactorial </td>
+   <td style="text-align:left;"> integer </td>
+   <td style="text-align:left;"> 5000 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> The arbitrary maximum biomass for the factorial simulations. This is a per-species maximum within a pixel </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> minimumPlotsPerGamm </td>
    <td style="text-align:left;"> numeric </td>
    <td style="text-align:left;"> 50 </td>
    <td style="text-align:left;"> 10 </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> minimum number of PSP plots before building GAMM </td>
+   <td style="text-align:left;"> minimum number of PSP plots before building GAMM. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> minDBH </td>
@@ -685,7 +729,15 @@ used in *Biomass_speciesParameters* and their detailed information.
    <td style="text-align:left;"> 0 </td>
    <td style="text-align:left;"> 0 </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> minimum diameter at breast height (DBH) in cm used to filter PSP data. Defaults to 0cm, i.e. all tree measurements are used. </td>
+   <td style="text-align:left;"> minimum diameter at breast height (DBH) in cm used to filter PSP data. Defaults to 0 cm, i.e. all tree measurements are used. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> PSPdataTypes </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> all </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Which PSP datasets to source, defaulting to all. Other available options include 'BC', 'AB', 'SK', 'NFI', and 'dummy'. 'dummy' should be used for unauthorized users. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> PSPperiod </td>
@@ -709,15 +761,23 @@ used in *Biomass_speciesParameters* and their detailed information.
    <td style="text-align:left;"> default </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> The column in `sim$sppEquiv` data.table to group species by. This parameter should share the same name as in Biomass_borealDataPrep . PSPs are aggregated by names in the PSP column and traits estimated for the corresponding names in the `sppEquivCol` </td>
+   <td style="text-align:left;"> The column in `sim$sppEquiv` data.table to group species by. This parameter should share the same name as in Biomass_borealDataPrep. If set to 'default' (the default), this module will look in the other modules in the simList to use the same as elsewhere. PSPs are aggregated by names in the PSP column and traits estimated for the corresponding names in the `sppEquivCol` </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> standAgesForFitting </td>
+   <td style="text-align:left;"> integer </td>
+   <td style="text-align:left;"> 0, 150 </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> The minimum and maximum ages to use while matching NonLinearFit (or GAMM) with LandR curves provided in the factorial. Since the majory of the data that went into fits for the NonLinearFit from PSPs is less than 200, it is likely wise to constrain the range to something smaller than 0 to 200 </td>
   </tr>
   <tr>
    <td style="text-align:left;"> useHeight </td>
    <td style="text-align:left;"> logical </td>
-   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:left;"> TRUE </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Should height be used to calculate biomass (in addition to DBH). Advise against including height unless you are certain it is present in every PSP </td>
+   <td style="text-align:left;"> Should height be used to calculate biomass (in addition to DBH). DBH is used by itself when height is missing. </td>
   </tr>
 </tbody>
 </table>
@@ -825,9 +885,18 @@ library(SpaDES)
 times <- list(start = 0, end = 1)
 
 modules <- list("Biomass_speciesParameters")
+
+#the purpose of this table is experiment with modify longevity - longevity is not estimated by the module
+#but it is used in trait estimation. 
+inputSpecies <- data.table(species = c("Abie_bal", 'Abie_las', 'Betu_pap', 'Lari_lar',
+                                        'Pice_eng', 'Pice_gla', 'Pice_mar', 'Pinu_ban',
+                                       'Pinu_con', 'Pseu_men', "Popu_tre"),
+                           longevity = c(300, 300, 170, 170, 330, 250, 250, 175, 300, 600, 200),
+                           mortalityshape = 15, growthcurve = 0)
+objects <- list(species = inputSpecies)
+
 inputs <- list()
 outputs <- list()
-objects <- list()
 
 parameters <- list(Biomass_speciesParameters = 
                      list(GAMMiterations = 2, 
