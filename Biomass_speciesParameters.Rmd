@@ -385,7 +385,7 @@ attention:
     -   `speciesTableFactorial` and `cohortDataFactorial` -- a tables of
         species trait combinations and the theoretical species grwoth curve data
         (respectively)
-    -   `PSPmeasure_sppParams`, `PSPplot_sppParams` and `PSPgi_sppParamss` -- tree measurement, biomass growth
+    -   `PSPmeasure_sppParams`, `PSPplot_sppParams` and `PSPgis_sppParams` -- tree measurement, biomass growth
         and geographical data of the PSP datasets used to buildi observed
         species growth curves.
     -   `species` -- a table of invariant species traits that may have been
