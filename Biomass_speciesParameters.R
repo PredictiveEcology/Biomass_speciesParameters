@@ -19,25 +19,6 @@ defineModule(sim, list(
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
                   "ianmseddy/PSPclean@development", "robustbase", "gridExtra", "ggplot2", "purrr"),
   parameters = rbind(
-    defineParameter(".plots", "character", "screen", NA, NA,
-                    "Used by Plots function, which can be optionally used here"),
-    defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA,
-                    "This describes the simulation time at which the first plot event should occur"),
-    defineParameter(".plotInterval", "numeric", NA, NA, NA,
-                    "This describes the simulation time interval between plot events"),
-    defineParameter(".saveInitialTime", "numeric", NA, NA, NA,
-                    "This describes the simulation time at which the first save event should occur"),
-    defineParameter(".saveInterval", "numeric", NA, NA, NA,
-                    "This describes the simulation time interval between save events"),
-    defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
-                    desc = paste("Should this entire module be run with caching activated?",
-                                 "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
-    defineParameter("speciesFittingApproach", "character", "focal", NA, NA,
-                    desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
-                                  "all species into one fit, do pairwise species (for multiple cohort situations), do",
-                                  "pairwise species, but using a focal species approach where all other species are ",
-                                  "pooled into 'other'",
-                                  " or do one species at a time. If 'all', all species will have identical species-level traits")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
     defineParameter("constrainGrowthCurve", "numeric", c(0, 1), 0, 1,
@@ -78,6 +59,12 @@ defineModule(sim, list(
                                  "become vastly more influential. This parameter accepts both a single value and a list of vectors",
                                  "named by `sppEquivCol.` The PSP stand ages are found in `sim$speciesGAMMs$SPECIES$originalData`, where",
                                  "SPECIES is the species ID")),
+    defineParameter("speciesFittingApproach", "character", "focal", NA, NA,
+                    desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
+                                  "all species into one fit, do pairwise species (for multiple cohort situations), do",
+                                  "pairwise species, but using a focal species approach where all other species are ",
+                                  "pooled into 'other'",
+                                  " or do one species at a time. If 'all', all species will have identical species-level traits")),
     defineParameter("sppEquivCol", "character", 'default', NA, NA,
                     paste("The column in `sim$sppEquiv` data.table to group species by.",
                           "This parameter should share the same name as in Biomass_borealDataPrep.",
@@ -92,7 +79,20 @@ defineModule(sim, list(
                     "to something smaller than 0 to 200"),
     defineParameter("useHeight", "logical", TRUE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).",
-                                 "DBH is used by itself when height is missing."))
+                                 "DBH is used by itself when height is missing.")),
+    defineParameter(".plots", "character", "screen", NA, NA,
+                    "Used by Plots function, which can be optionally used here"),
+    defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA,
+                    "This describes the simulation time at which the first plot event should occur"),
+    defineParameter(".plotInterval", "numeric", NA, NA, NA,
+                    "This describes the simulation time interval between plot events"),
+    defineParameter(".saveInitialTime", "numeric", NA, NA, NA,
+                    "This describes the simulation time at which the first save event should occur"),
+    defineParameter(".saveInterval", "numeric", NA, NA, NA,
+                    "This describes the simulation time interval between save events"),
+    defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
+                    desc = paste("Should this entire module be run with caching activated?",
+                                 "This is generally intended for data-type modules, where stochasticity and time are not relevant"))
   ),
   inputObjects = bindrows(
     expectsInput(objectName  = "speciesTableFactorial", objectClass = "data.table",
@@ -361,13 +361,13 @@ Save <- function(sim) {
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS", LandR := "Abie_las"]
     sim$sppEquiv <- sppEquivalencies_CA
   }
-  
-  
+
+
   if (!suppliedElsewhere("species", sim)) {
     message("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
     speciesTable <- getSpeciesTable()
-    sim$species <- prepSpeciesTable(speciesTable, 
-                                    sppEquiv = sim$sppEquiv, 
+    sim$species <- prepSpeciesTable(speciesTable,
+                                    sppEquiv = sim$sppEquiv,
                                     sppEquivCol = P(sim)$sppEquivCol)
   }
 
