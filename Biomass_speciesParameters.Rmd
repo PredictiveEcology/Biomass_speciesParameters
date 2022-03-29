@@ -486,7 +486,7 @@ Require(c("PredictiveEcology/SpaDES.install",
 
 ### Get module, necessary packages and set up folder directories
 
-```{r module usage example setup-Biomass-speciesParameters, eval = FALSE}
+```{r module usage example pkg-Biomass-speciesParameters, eval = FALSE}
 tempDir <- tempdir()
 spadesModulesDirectory <- file.path(tempDir, "modules")
 
@@ -503,7 +503,7 @@ makeSureAllPackagesInstalled(spadesModulesDirectory)
 
 ### Setup simulation
 
-```{r}
+```{r module usage example setup-Biomass-speciesParameters, eval = FALSE}
 library(SpaDES)
 
 times <- list(start = 0, end = 1)
