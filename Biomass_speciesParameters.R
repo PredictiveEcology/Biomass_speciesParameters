@@ -361,6 +361,8 @@ Save <- function(sim) {
     sim$sppEquiv <- sppEquivalencies_CA
   }
 
+  ## check parameter consistency across modules
+  paramCheckOtherMods(sim, "sppEquivCol", ifSetButDifferent = "error")
 
   if (!suppliedElsewhere("species", sim)) {
     message("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
