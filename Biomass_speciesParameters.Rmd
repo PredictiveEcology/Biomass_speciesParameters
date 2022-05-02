@@ -272,9 +272,9 @@ The best fit of three nonlinear form, for each focal species, is then
 calculated. Focal species are defined as either 50% of dominance in the plot or
 20% if we are looking to capture the multi-species dynamics (currentyl the 
 default). Three model forms are then fit to the observations for the focal 
-species: a Chapman-Richard form, a Gompertz form and a Logistic form. Maximum 
-likelihood estimation methods are used via the *robustbase::nlrob* for each 
-form, and the best model fit is selected via an *AIC*. 
+species: a Chapman-Richard form, a Gompertz form and a Logistic form. Multiple 
+tries using the estimation methods from the *robustbase::nlrob* for each 
+form are used, and the best model fit is selected via an *AIC*. 
 
 <!-- the three equations below need to be written correctly -->
 
@@ -295,13 +295,13 @@ It is possible that some selected species do not have enough data to allow for
 model convergence. In this case, *Biomass_speciesParameters* skips parameter
 calibration, and parameter values remain unchanged.
 
-After each species GAMM is calculated, *Biomass_speciesParameters* compares it
-to the theoretical curves, and picks the best one based on maximum likelihood.
-This best theoretical curve will be associated with a given combination of
-`growthcurve`, `mortalityshape` and `maxANPPproportion` values, which are then
-used directly as the calibrated values, in case of `growthcurve` and
-`mortalityshape`, or to calibrate `maxANPP` in the case of `maxANPPproportion`
-(see below).
+After each species best fit is selected (using *AIC*), 
+*Biomass_speciesParameters* compares it to the library of theoretical curves,
+and picks the best one based on maximum likelihood. This best theoretical curve 
+will be associated with a given combination of `growthcurve`, `mortalityshape`
+and `maxANPPproportion` values, which are then used directly as the calibrated 
+values, in case of `growthcurve` and `mortalityshape`, or to calibrate `maxANPP`
+in the case of `maxANPPproportion` (see below).
 
 The user has the option to constrain the values of the `growthcurve` and
 `mortalityshape` parameters. By default, `growthcurve` is forced to 0.5,
@@ -309,23 +309,20 @@ The user has the option to constrain the values of the `growthcurve` and
 between 2.0 and 5.0 (see module parameters `P(sim)$constrainGrowthCurve`,
 `P(sim)constrainMortalityShape` and `P(sim)constrainMaxANPP`). These boundary
 values were based on preliminary runs and analyses using the default data and
-may not apply to other datasets, or to different spatial subsets of the default
+may not apply to other data sets, or to different spatial subsets of the default
 data.
 
 If boundary values are used, *Biomass_speciesParameters* subsets the theoretical
 species growth curves to those with trait values within the selected boundaries.
-Similarly, the module selects only the theoretical curves with longevity values
-matching those used in the supplied traits table (`species` input object; see
-[Input objects])
 
 Since simulated growth curves never achieve the maximum biomass parameter (the
 `maxBiomass` parameter set to 5000 for all simulations of theoretical species
 curves, or the `maxB` parameter in *Biomass_core* simulations), it acts as an
 asymptotic limit that reflects the potential maximum biomass for a species in an
 ecolocation (ecological zone and land cover combination),
-*Biomass_speciesParameters* uses uses the relationship between the achieved
-maximum biomass to the potential maximum biomass (`maxBiomass`), to rescale the
-`maxB` values estimated from data using an upstream module (e.g.
+*Biomass_speciesParameters* uses the relationship between the achieved maximum
+biomass to the potential maximum biomass (`maxBiomass`), to rescale the `maxB`
+values estimated from data using an upstream module (e.g.
 *Biomass_borealDataPrep*). This way, species dynamics simulated in
 *Biomass_core* are able to achieve the maximum observed biomasses (used to
 *initially* estimate `maxB`).
