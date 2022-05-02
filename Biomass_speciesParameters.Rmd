@@ -177,7 +177,7 @@ maximum aboveground net primary productivity (`maxANPP`) and `longevity`.
 The `growthcurve` and `mortalityshape` parameters (called 'growth curve' and
 'mortality shape' in LANDIS-II Biomass Succession Extension v3.2, the base model
 for *Biomass_core*) strongly modulate the shape of species growth curves and so
-it is important they they are calibrated to the study area in question.
+it is important that they are calibrated to the study area in question.
 
 Also, the growth and mortality equations used in *Biomass_core* are non-linear
 and their resulting actual biomass accumulation curve is an emergent phenomenon
@@ -186,15 +186,19 @@ cannot be estimated on a single species basis, as their resulting dynamics will
 be very different under in a multi-species context.
 
 The *Biomass_speciesParameters* module attempts to address these issues (at
-least partially) using a "curve-matching" approach. It compares a GAMM
-<!-- this needs to be revised in light of new methods --> fitted to permanent
-sample plot (PSP) data to a large collection of theoretical species curves, each
-representing a different set of growth and mortality parameters (`growthcurve`
-and `mortalityshape`, respectively).
+least partially) using a "curve-matching" approach. It compares the best fit 
+(according to their AIC) of three non-linear forms (Chapman-Richard's, Compertz,
+and a logistic form) fitted to permanent sample plot (PSP) data to a large 
+collection of theoretical (simulated) species curves, each representing a different set of 
+the five key parameters that govern biomass increment in *Biomass_core*, 
+`growthcurve`, `mortalityshape`, the ratio of `maxANPP` to `maxB`, and 
+`longevity`. This library of curves is produced by the 
+*Biomass_speciesFactorial* module.
 
-The module generally follows other data modules, like *Biomass_boreaDataPrep*,
-as it also attempts to calibrate previously estimated spatially varying species
-traits (`maxB` and `maxANPP`).
+The *Biomass_speciesParameters* module generally follows other data modules, 
+like *Biomass_boreaDataPrep*, which also attempts to calibrate previously 
+estimated spatially varying species traits such as `maxB` and `maxANPP` from the
+data layers.
 
 #### Permanent sample plot data
 
@@ -204,100 +208,88 @@ span several thousands of kilometres), or select the data based on a shapefile
 
 By default, the PSP data are obtained from the National Forest Inventory (NFI),
 the Alberta Ministry of Agriculture, the Saskatchewan Ministry of the
-Environment, and the British Columbian Ministry of Forests, Lands, Natural
-Resource Operations, and Rural Development. These data were previously treated
-for errors and standardized into a single dataset with the exact location and
-identifying attributes anonymized.
+Environment, and the British Columbian Ministry of Forests. These data were 
+previously treated for errors and standardized into a single data set with the 
+exact location and identifying attributes anonymized.
 
-The data include individual species and diameter at breast height (DBH)
-measurements for each tree in a plot, as well as stand age. As part of the
-standardization process, dead trees were removed from the dataset. Tree biomass
-was then derived from DBH using the model by @LambertEtAl2005 and summed by
-plot. Lastly, the proportional biomass of each species was calculated for every
-individual measurement of each plot.
+The data include individual species,  diameter at breast height (DBH), and 
+sometimes tree height measurements for each tree in a plot, as well as stand 
+age. As part of the standardization process, dead trees were removed from the 
+dataset. Tree biomass was then estimated using either the DBH-only model or the 
+DBH-height from @LambertEtAl2005 per tree species in g/m2. 
 
 Note that the model used to calculate biomass can be changed to @UngEtAl2008 via
 the `P(sim)$biomassModel` module parameter.
 
 #### Simulated species data
 
-<!-- the following need to be revised in light of new methods -->
+*Biomass_speciesFactorial* is the module used to create a library of theoretical
+species curves (biomass accumulation curves, to be more precise) to which the 
+best non-linear model form fit to the PSP-biomass will be matched for each 
+species and species combinations in the study area landscape. The library of 
+curves are created by running *Biomass_core* with no reproduction, competition, 
+disturbance, dispersal effects, on the study area. This cohort data table is the 
+table coming out of *Boreal_DataPrep* with each simulation varied in the 
+combination of species trait values that influence growth and mortality 
+dynamics, namely: `growthcurve`, `mortalityshape`, `longevity` and 
+`mANPPproportion`, the ratio of maximum above ground net primary productivity 
+(`maxANPP`) to maximum biomass (`maxBiomass`). The values for `maxB` and
+`maxANPP` were explored via the `mANPPproportion`, as it reflects their 
+relationship. `growthcurve` values  varied from 0 to 1, in  increments of 0.1; 
+`mortalityshape` varied from 5 to 25, in increments of 1; longevity varied from
+150 to 700 in increments of 25; `mANPPproportion` varied from 0.25 to 10 in 
+increments of 0.25.  
 
-The default dataset of theoretical species curves (biomass accumulation curves,
-to be more precise) was generated by running a simplified *Biomass_core*
-simulation with no reproduction, competition, disturbance, dispersal effects, on
-a single cohort and a single pixel. Each simulation varied in the combination of
-species trait values that influence growth and mortality dynamics, namely:
-`growthcurve`, `mortalityshape`, `longevity` and `mANPPproportion`, the ratio of
-maximum aboveground net primary productivity (`maxANPP`) to maximum biomass
-(`maxBiomass`). `growthcurve` values varied from 0 to 1, in increments of 0.1;
-`mortalityshape` varied from 5 to 25, in increments of 1; `longevity` varied
-from 150 to 700 in increments of 25; `mANPPproportion` varied from 0.25 to 10 in
-increments of 0.25; `maxBiomass` was kept constant at 5000.
 
-This resulted in over 200,000 combinations of parameter values.
+This resulted in over 64,000,000 theoretical curves.
 
-Results from these simulations were compiled into a table that is accessed by
+Results from these simulations were compiled into a table 
+(`cohortDataFactorial`; see [Input objects]) that is accessed by
 *Biomass_speciesParameters*, so that the module can be run without needing to
 re-simulate the theoretical curves.
 
 #### Parameter estimation/calibration
 
 *Biomass_speciesParameters* calibrates `growthcurve`, `mortalityshape`, `maxB`
-and `maxANPP` by matching the theoretical species curves against observed
-species growth curves from permanent sample plot (PSP) data. It does not attempt
-to calibrate `longevity`, as we feel this parameter should be obtained from
-published sources. `maxB` and `maxANPP` were calibrated using the parameter
-`mANPPproportion`, as it reflects the relationship between them.
+and `maxANPP` via `mANPPproportion` by matching the theoretical species curves 
+produced by *Biomass_speciesFactorial* (`cohortDataFactorial`) against observed 
+species growth curves from permanentsample plot (PSP) data. 
 
-Before calculating the *observed* species growth curves, the module subsets the
-PSP data to stand ages below the 95th percent quantile for all species (this can
-be changed via the `P(sim)$quantileAgeSubset` module parameter), as records for
-larger age classes were limited and constituted statistical outliers. In some
-species, changing the quantile value may improve results, however. Two examples
+Before calculating the *observed* species growth curves (i.e., the best of three
+non-linear form to match PSP data), the module subsets the PSP data to stand 
+ages below the 95th percent quantile for all species (this can be changed via 
+the `P(sim)$quantileAgeSubset` module parameter), as records for older age 
+classes were limited and constituted statistical outliers. In some species, 
+changing the quantile value may improve results, however. Two examples
 are *Pinus banksiana* and *Populus sp*, for which using the 99th percent
 quantile improved the models, because these are short-lived species for which
 data at advanced ages is scarce.
 
-The module attempts to use "pure" stands to estimate parameters, while balancing
-sample size (see biomass weighting below). Hence, for a given species, it only
-includes plots where the species' relative biomass is at least 50% (e.g. for
-*Populus tremuloides*, plots are only included if 50% of the stand biomass is
-composed of *P. tremuloides*).
+In addition, weights are added at the origin (age = 0 and biomass = 0) to
+force the intercept to be essentially 0 age and 0 biomass. 
 
-In addition, 50 points are added at the origin (age = 0 and biomass = 0) to
-force the intercept to be essentially 0 age and 0 biomass.
+The best fit of three nonlinear form, for each focal species, is then 
+calculated. Focal species are defined as either 50% of dominance in the plot or
+20% if we are looking to capture the multi-species dynamics (currentyl the 
+default). Three model forms are then fit to the observations for the focal 
+species: a Chapman-Richard form, a Gompertz form and a Logistic form. Maximum 
+likelihood estimation methods are used via the *robustbase::nlrob* for each 
+form, and the best model fit is selected via an *AIC*. 
 
-Observed growth curves for each species are then modelled using a generalized
-additive mixed models (GAMMs) that relate species biomass ($B$) with stand age
-($standAge$), accounting for the random effects of the measurement year
-($measureYear$) and plot ($plotID$) on the intercept:
+<!-- the three equations below need to be written correctly -->
 
 ```{=tex}
-\begin{equation}
+#Chapman Richards biomass ~ A * (1 - exp(-k * standAge))^p
+#Gompertz biomass ~ A * (exp(-k * exp(-p * standAge)))
+#Logistic biomass ~ A / (1 + k * exp(-p * standAge))
+\begin{equation} 
   B \sim f_{1}(standAge) + (\sim 1 | measureYear + plotID)
   (\#eq:GAMM)
 \end{equation}
 ```
-where $f_{1}$ denotes the smoother function. To avoid overfitting, the module
-constrains the smoother on stand age to a maximum smoothing degree of 3 (i.e. 3
-knots and a polynomial degree of 2) and a point constraint at 0 that attempts to
-force the intercept to 0, by default. The smoother degree constraint, however,
-can be changed via the `P(sim)$GAMMknots` module parameter.
 
-In addition, $B$ is weighted with respect to species dominance. This consisted
-in 1) calculating the average biomass of each dominant species (i.e. relative
-biomass in a plot \> 0.5; $domSpeciesB_{1}$), in each plot and measurement year,
-and 2) dividing the species average biomass by the average biomass across all
-*n* dominant species ($allDomSpeciesB$):
-
-```{=tex}
-\begin{equation}
-  \frac{\overline{\rm domSpeciesB_{1}}}{\overline{\rm allDomSpeciesB}}
-  (\#eq:Bweights)
-\end{equation}
-```
-For the added 0 age and 0 biomass data the module uses weights equal to 1.
+Species biomass ($B$) is estimated as a function of stand age ($standAge$), with
+ the best values of the $A$ abd $k$ parameters to fit the PSP data. 
 
 It is possible that some selected species do not have enough data to allow for
 model convergence. In this case, *Biomass_speciesParameters* skips parameter
