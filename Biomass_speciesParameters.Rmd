@@ -243,8 +243,8 @@ increments of 0.25.
 
 This resulted in over 64,000,000 theoretical curves.
 
-Results from these simulations were compiled into a table 
-(`cohortDataFactorial`; see [Input objects]) that is accessed by
+Results from these simulations were compiled into a table (`cohortDataFactorial`
+; see [Input objects]) that is accessed by
 *Biomass_speciesParameters*, so that the module can be run without needing to
 re-simulate the theoretical curves.
 
