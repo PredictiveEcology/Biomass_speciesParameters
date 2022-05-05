@@ -187,9 +187,9 @@ be very different under in a multi-species context.
 
 The *Biomass_speciesParameters* module attempts to address these issues (at
 least partially) using a "curve-matching" approach. It compares the best fit 
-(according to their AIC) of three non-linear forms (Chapman-Richard's, Compertz,
+(according to their AIC) of three non-linear forms (Chapman-Richard's, Gompertz,
 and a logistic form) fitted to permanent sample plot (PSP) data to a large 
-collection of theoretical (simulated) species curves, each representing a different set of 
+collection of theoretical (i.e. simulated) species curves, each representing a different set of 
 the five key parameters that govern biomass increment in *Biomass_core*, 
 `growthcurve`, `mortalityshape`, the ratio of `maxANPP` to `maxB`, and 
 `longevity`. This library of curves is produced by the 
@@ -216,7 +216,7 @@ The data include individual species,  diameter at breast height (DBH), and
 sometimes tree height measurements for each tree in a plot, as well as stand 
 age. As part of the standardization process, dead trees were removed from the 
 dataset. Tree biomass was then estimated using either the DBH-only model or the 
-DBH-height from @LambertEtAl2005 per tree species in g/m2. 
+DBH-height from @LambertEtAl2005 per tree species in g/m^2. 
 
 Note that the model used to calculate biomass can be changed to @UngEtAl2008 via
 the `P(sim)$biomassModel` module parameter.
@@ -228,14 +228,14 @@ species curves (biomass accumulation curves, to be more precise) to which the
 best non-linear model form fit to the PSP-biomass will be matched for each 
 species and species combinations in the study area landscape. The library of 
 curves are created by running *Biomass_core* with no reproduction, competition, 
-disturbance, dispersal effects, on the study area. This cohort data table is the 
+disturbance, or dispersal effects, on the study area. This cohort data table is the 
 table coming out of *Boreal_DataPrep* with each simulation varied in the 
 combination of species trait values that influence growth and mortality 
 dynamics, namely: `growthcurve`, `mortalityshape`, `longevity` and 
 `mANPPproportion`, the ratio of maximum above ground net primary productivity 
 (`maxANPP`) to maximum biomass (`maxBiomass`). The values for `maxB` and
 `maxANPP` were explored via the `mANPPproportion`, as it reflects their 
-relationship. `growthcurve` values  varied from 0 to 1, in  increments of 0.1; 
+relationship. `growthcurve` values  varied from 0 to 1, in increments of 0.1; 
 `mortalityshape` varied from 5 to 25, in increments of 1; longevity varied from
 150 to 700 in increments of 25; `mANPPproportion` varied from 0.25 to 10 in 
 increments of 0.25.  
@@ -253,10 +253,10 @@ re-simulate the theoretical curves.
 *Biomass_speciesParameters* calibrates `growthcurve`, `mortalityshape`, `maxB`
 and `maxANPP` via `mANPPproportion` by matching the theoretical species curves 
 produced by *Biomass_speciesFactorial* (`cohortDataFactorial`) against observed 
-species growth curves from permanentsample plot (PSP) data. 
+species growth curves from permanent sample plot (PSP) data. 
 
 Before calculating the *observed* species growth curves (i.e., the best of three
-non-linear form to match PSP data), the module subsets the PSP data to stand 
+non-linear forms to match PSP data), the module subsets the PSP data to stand 
 ages below the 95th percent quantile for all species (this can be changed via 
 the `P(sim)$quantileAgeSubset` module parameter), as records for older age 
 classes were limited and constituted statistical outliers. In some species, 
@@ -295,7 +295,7 @@ It is possible that some selected species do not have enough data to allow for
 model convergence. In this case, *Biomass_speciesParameters* skips parameter
 calibration, and parameter values remain unchanged.
 
-After each species best fit is selected (using *AIC*), 
+After each species best fit is selected (using AIC), 
 *Biomass_speciesParameters* compares it to the library of theoretical curves,
 and picks the best one based on maximum likelihood. This best theoretical curve 
 will be associated with a given combination of `growthcurve`, `mortalityshape`
@@ -336,8 +336,9 @@ the best matching theoretical growth curve as:
   (\#eq:maxANPPcalib)
 \end{equation}
 ```
+
 where `maxB` is already the calibrated version. In cases where there are not
-sufficient PSP data to fit the GAMMs and perform the calibration,
+sufficient PSP data to fit the growth models and perform the calibration,
 `mANPPproportion` defaults to 3.33, which corresponds to the value used in
 LANDIS-II applications in Canada's boreal forests. As already stated above, the
 final `maxANPP` value is constrained between 2.0 and 5.0 by default.
