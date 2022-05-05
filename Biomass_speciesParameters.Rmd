@@ -268,28 +268,48 @@ data at advanced ages is scarce.
 In addition, weights are added at the origin (age = 0 and biomass = 0) to
 force the intercept to be essentially 0 age and 0 biomass. 
 
-The best fit of three nonlinear form, for each focal species, is then 
-calculated. Focal species are defined as either 50% of dominance in the plot or
-20% if we are looking to capture the multi-species dynamics (currentyl the 
-default). Three model forms are then fit to the observations for the focal 
-species: a Chapman-Richard form, a Gompertz form and a Logistic form. Multiple 
-tries using the estimation methods from the *robustbase::nlrob* for each 
-form are used, and the best model fit is selected via an *AIC*. 
-
-<!-- the three equations below need to be written correctly -->
+The best fit of three non-linear forms, for each focal species, is then 
+calculated. Focal species are defined as either 50% of dominance in the plot, or
+20% if we are looking to capture the multi-species dynamics (currently the 
+default). Three growth model forms are then fit to the observations for the focal 
+species: a Chapman-Richard's form <!-- REF -->(Equation \@ref(eq:Chapman); see, e.g., Coble & Lee 2006), 
+a Gompertz form (Equation \@ref(eq:Gompertz)) and a Logistic form (Equation 
+\@ref(eq:Logistic); see Fekedulegn et al. 1999 for a complete overview of these equations). 
+Multiple tries using the estimation methods from the `robustbase::nlrob` function
+for each form are used, and the best model fit is selected via Akaike Information 
+Criterion (AIC). 
 
 ```{=tex}
-#Chapman Richards biomass ~ A * (1 - exp(-k * standAge))^p
-#Gompertz biomass ~ A * (exp(-k * exp(-p * standAge)))
-#Logistic biomass ~ A / (1 + k * exp(-p * standAge))
 \begin{equation} 
-  B \sim f_{1}(standAge) + (\sim 1 | measureYear + plotID)
-  (\#eq:GAMM)
+  B \sim A \times (1 - e^{-k \times age})^{p}
+  (\#eq:Chapman)
 \end{equation}
 ```
 
-Species biomass ($B$) is estimated as a function of stand age ($standAge$), with
- the best values of the $A$ abd $k$ parameters to fit the PSP data. 
+```{=tex}
+\begin{equation} 
+  B \sim A \times e^{-k \times e^{-p \times age}}
+  (\#eq:Gompertz)
+\end{equation}
+```
+
+```{=tex}
+\begin{equation} 
+  B \sim \frac{A}{1 + k \times e^{-p \times age}} 
+  (\#eq:Logistic)
+\end{equation}
+```
+
+<!-- below is the old GAMM equation -->
+<!-- ```{=tex} -->
+<!-- \begin{equation}  -->
+<!--   B \sim f_{1}(standAge) + (\sim 1 | measureYear + plotID) -->
+<!--   (\#eq:GAMM) -->
+<!-- \end{equation} -->
+<!-- ``` -->
+
+Species biomass ($B$) is estimated as a function of stand age ($age$), with
+the best values of the $A$, $k$ and $p$ parameters to fit the PSP data. 
 
 It is possible that some selected species do not have enough data to allow for
 model convergence. In this case, *Biomass_speciesParameters* skips parameter
