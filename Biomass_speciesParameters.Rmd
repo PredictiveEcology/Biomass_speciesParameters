@@ -274,12 +274,12 @@ The best fit of three non-linear forms, for each focal species, is then
 calculated. Focal species are defined as either 50% of dominance in the plot, or
 20% if we are looking to capture the multi-species dynamics (currently the
 default). Three growth model forms are then fit to the observations for the
-focal species: a Chapman-Richard's form [Equation @ref(eq:Chapman); see, e.g.,
-@CobleLee2006], a Gompertz form (Equation @ref(eq:Gompertz)) and a Logistic form
-[Equation @ref(eq:Logistic); see @FekedulegnEtAl1999 for a complete overview of
-these equations]. Multiple tries using the estimation methods from the
-`robustbase::nlrob` function for each form are used, and the best model fit is
-selected via Akaike Information Criterion (AIC).
+focal species: a Chapman-Richard's form [Equation \@ref(eq:Chapman); see, e.g.,
+@CobleLee2006], a Gompertz form (Equation \@ref(eq:Gompertz)) and a Logistic
+form [Equation \@ref(eq:Logistic); see @FekedulegnEtAl1999 for a complete
+overview of these equations]. Multiple tries using the estimation methods from
+the `robustbase::nlrob` function for each form are used, and the best model fit
+is selected via Akaike Information Criterion (AIC).
 
 ```{=tex}
 \begin{equation} 
