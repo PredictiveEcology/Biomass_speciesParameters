@@ -56,7 +56,8 @@ download.file(url = "https://img.shields.io/badge/Get%20help-Report%20issues-%3C
 
 [![made-with-Markdown](figures/markdownBadge.png)](http://commonmark.org)
 
-[![Generic badge](figures/genericBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
+[![Generic
+badge](figures/genericBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
 
 <!-- if knitting to pdf remember to add the pandoc_args: ["--extract-media", "."] option to yml in order to get the badge images -->
 
@@ -189,17 +190,17 @@ cannot be estimated on a single species basis, as their resulting dynamics will
 be very different under in a multi-species context.
 
 The *Biomass_speciesParameters* module attempts to address these issues (at
-least partially) using a "curve-matching" approach. It compares the best fit 
+least partially) using a "curve-matching" approach. It compares the best fit
 (according to their AIC) of three non-linear forms (Chapman-Richard's, Gompertz,
-and a logistic form) fitted to permanent sample plot (PSP) data to a large 
-collection of theoretical (i.e. simulated) species curves, each representing a different set of 
-the five key parameters that govern biomass increment in *Biomass_core*, 
-`growthcurve`, `mortalityshape`, the ratio of `maxANPP` to `maxB`, and 
-`longevity`. This library of curves is produced by the 
+and a logistic form) fitted to permanent sample plot (PSP) data to a large
+collection of theoretical (i.e. simulated) species curves, each representing a
+different set of the five key parameters that govern biomass increment in
+*Biomass_core*, `growthcurve`, `mortalityshape`, the ratio of `maxANPP` to
+`maxB`, and `longevity`. This library of curves is produced by the
 *Biomass_speciesFactorial* module.
 
-The *Biomass_speciesParameters* module generally follows other data modules, 
-like *Biomass_boreaDataPrep*, which also attempts to calibrate previously 
+The *Biomass_speciesParameters* module generally follows other data modules,
+like *Biomass_boreaDataPrep*, which also attempts to calibrate previously
 estimated spatially varying species traits such as `maxB` and `maxANPP` from the
 data layers.
 
@@ -211,15 +212,15 @@ span several thousands of kilometres), or select the data based on a shapefile
 
 By default, the PSP data are obtained from the National Forest Inventory (NFI),
 the Alberta Ministry of Agriculture, the Saskatchewan Ministry of the
-Environment, and the British Columbian Ministry of Forests. These data were 
-previously treated for errors and standardized into a single data set with the 
+Environment, and the British Columbian Ministry of Forests. These data were
+previously treated for errors and standardized into a single data set with the
 exact location and identifying attributes anonymized.
 
-The data include individual species,  diameter at breast height (DBH), and 
-sometimes tree height measurements for each tree in a plot, as well as stand 
-age. As part of the standardization process, dead trees were removed from the 
-dataset. Tree biomass was then estimated using either the DBH-only model or the 
-DBH-height from @LambertEtAl2005 per tree species in g/m^2. 
+The data include individual species, diameter at breast height (DBH), and
+sometimes tree height measurements for each tree in a plot, as well as stand
+age. As part of the standardization process, dead trees were removed from the
+dataset. Tree biomass was then estimated using either the DBH-only model or the
+DBH-height from @LambertEtAl2005 per tree species in g/m\^2.
 
 Note that the model used to calculate biomass can be changed to @UngEtAl2008 via
 the `P(sim)$biomassModel` module parameter.
@@ -227,60 +228,58 @@ the `P(sim)$biomassModel` module parameter.
 #### Simulated species data
 
 *Biomass_speciesFactorial* is the module used to create a library of theoretical
-species curves (biomass accumulation curves, to be more precise) to which the 
-best non-linear model form fit to the PSP-biomass will be matched for each 
-species and species combinations in the study area landscape. The library of 
-curves are created by running *Biomass_core* with no reproduction, competition, 
-disturbance, or dispersal effects, on the study area. This cohort data table is the 
-table coming out of *Boreal_DataPrep* with each simulation varied in the 
-combination of species trait values that influence growth and mortality 
-dynamics, namely: `growthcurve`, `mortalityshape`, `longevity` and 
-`mANPPproportion`, the ratio of maximum above ground net primary productivity 
+species curves (biomass accumulation curves, to be more precise) to which the
+best non-linear model form fit to the PSP-biomass will be matched for each
+species and species combinations in the study area landscape. The library of
+curves are created by running *Biomass_core* with no reproduction, competition,
+disturbance, or dispersal effects, on the study area. This cohort data table is
+the table coming out of *Boreal_DataPrep* with each simulation varied in the
+combination of species trait values that influence growth and mortality
+dynamics, namely: `growthcurve`, `mortalityshape`, `longevity` and
+`mANPPproportion`, the ratio of maximum above ground net primary productivity
 (`maxANPP`) to maximum biomass (`maxBiomass`). The values for `maxB` and
-`maxANPP` were explored via the `mANPPproportion`, as it reflects their 
-relationship. `growthcurve` values  varied from 0 to 1, in increments of 0.1; 
+`maxANPP` were explored via the `mANPPproportion`, as it reflects their
+relationship. `growthcurve` values varied from 0 to 1, in increments of 0.1;
 `mortalityshape` varied from 5 to 25, in increments of 1; longevity varied from
-150 to 700 in increments of 25; `mANPPproportion` varied from 0.25 to 10 in 
-increments of 0.25.  
-
+150 to 700 in increments of 25; `mANPPproportion` varied from 0.25 to 10 in
+increments of 0.25.
 
 This resulted in over 64,000,000 theoretical curves.
 
 Results from these simulations were compiled into a table (`cohortDataFactorial`
-; see [Input objects]) that is accessed by
-*Biomass_speciesParameters*, so that the module can be run without needing to
-re-simulate the theoretical curves.
+; see [Input objects]) that is accessed by *Biomass_speciesParameters*, so that
+the module can be run without needing to re-simulate the theoretical curves.
 
 #### Parameter estimation/calibration
 
 *Biomass_speciesParameters* calibrates `growthcurve`, `mortalityshape`, `maxB`
-and `maxANPP` via `mANPPproportion` by matching the theoretical species curves 
-produced by *Biomass_speciesFactorial* (`cohortDataFactorial`) against observed 
-species growth curves from permanent sample plot (PSP) data. 
+and `maxANPP` via `mANPPproportion` by matching the theoretical species curves
+produced by *Biomass_speciesFactorial* (`cohortDataFactorial`) against observed
+species growth curves from permanent sample plot (PSP) data.
 
 Before calculating the *observed* species growth curves (i.e., the best of three
-non-linear forms to match PSP data), the module subsets the PSP data to stand 
-ages below the 95th percent quantile for all species (this can be changed via 
-the `P(sim)$quantileAgeSubset` module parameter), as records for older age 
-classes were limited and constituted statistical outliers. In some species, 
-changing the quantile value may improve results, however. Two examples
-are *Pinus banksiana* and *Populus sp*, for which using the 99th percent
-quantile improved the models, because these are short-lived species for which
-data at advanced ages is scarce.
+non-linear forms to match PSP data), the module subsets the PSP data to stand
+ages below the 95th percent quantile for all species (this can be changed via
+the `P(sim)$quantileAgeSubset` module parameter), as records for older age
+classes were limited and constituted statistical outliers. In some species,
+changing the quantile value may improve results, however. Two examples are
+*Pinus banksiana* and *Populus sp*, for which using the 99th percent quantile
+improved the models, because these are short-lived species for which data at
+advanced ages is scarce.
 
-In addition, weights are added at the origin (age = 0 and biomass = 0) to
-force the intercept to be essentially 0 age and 0 biomass. 
+In addition, weights are added at the origin (age = 0 and biomass = 0) to force
+the intercept to be essentially 0 age and 0 biomass.
 
-The best fit of three non-linear forms, for each focal species, is then 
+The best fit of three non-linear forms, for each focal species, is then
 calculated. Focal species are defined as either 50% of dominance in the plot, or
-20% if we are looking to capture the multi-species dynamics (currently the 
-default). Three growth model forms are then fit to the observations for the focal 
-species: a Chapman-Richard's form <!-- REF -->(Equation \@ref(eq:Chapman); see, e.g., Coble & Lee 2006), 
-a Gompertz form (Equation \@ref(eq:Gompertz)) and a Logistic form (Equation 
-\@ref(eq:Logistic); see Fekedulegn et al. 1999 for a complete overview of these equations). 
-Multiple tries using the estimation methods from the `robustbase::nlrob` function
-for each form are used, and the best model fit is selected via Akaike Information 
-Criterion (AIC). 
+20% if we are looking to capture the multi-species dynamics (currently the
+default). Three growth model forms are then fit to the observations for the
+focal species: a Chapman-Richard's form [Equation @ref(eq:Chapman); see, e.g.,
+@CobleLee2006], a Gompertz form (Equation @ref(eq:Gompertz)) and a Logistic form
+[Equation @ref(eq:Logistic); see @FekedulegnEtAl1999 for a complete overview of
+these equations]. Multiple tries using the estimation methods from the
+`robustbase::nlrob` function for each form are used, and the best model fit is
+selected via Akaike Information Criterion (AIC).
 
 ```{=tex}
 \begin{equation} 
@@ -288,43 +287,46 @@ Criterion (AIC).
   (\#eq:Chapman)
 \end{equation}
 ```
-
 ```{=tex}
 \begin{equation} 
   B \sim A \times e^{-k \times e^{-p \times age}}
   (\#eq:Gompertz)
 \end{equation}
 ```
-
 ```{=tex}
 \begin{equation} 
   B \sim \frac{A}{1 + k \times e^{-p \times age}} 
   (\#eq:Logistic)
 \end{equation}
 ```
-
 <!-- below is the old GAMM equation -->
+
 <!-- ```{=tex} -->
+
 <!-- \begin{equation}  -->
+
 <!--   B \sim f_{1}(standAge) + (\sim 1 | measureYear + plotID) -->
+
 <!--   (\#eq:GAMM) -->
+
 <!-- \end{equation} -->
+
 <!-- ``` -->
 
-Species biomass ($B$) is estimated as a function of stand age ($age$), with
-the best values of the $A$, $k$ and $p$ parameters to fit the PSP data. 
+Species biomass ($B$) is estimated as a function of stand age ($age$), with the
+best values of the $A$, $k$ and $p$ parameters to fit the PSP data.
 
 It is possible that some selected species do not have enough data to allow for
 model convergence. In this case, *Biomass_speciesParameters* skips parameter
 calibration, and parameter values remain unchanged.
 
-After each species best fit is selected (using AIC), 
-*Biomass_speciesParameters* compares it to the library of theoretical curves,
-and picks the best one based on maximum likelihood. This best theoretical curve 
-will be associated with a given combination of `growthcurve`, `mortalityshape`
-and `maxANPPproportion` values, which are then used directly as the calibrated 
-values, in case of `growthcurve` and `mortalityshape`, or to calibrate `maxANPP`
-in the case of `maxANPPproportion` (see below).
+After each species best fit is selected (using AIC), *Biomass_speciesParameters*
+compares it to the library of theoretical curves, and picks the best one based
+on maximum likelihood. This best theoretical curve will be associated with a
+given combination of `growthcurve`, `mortalityshape` and `maxANPPproportion`
+values, which are then used directly as the calibrated values, in case of
+`growthcurve` and `mortalityshape`, or to calibrate `maxANPP` in the case of
+`maxANPPproportion` (see below).
 
 The user has the option to constrain the values of the `growthcurve` and
 `mortalityshape` parameters. By default, `growthcurve` is forced to 0.5,
@@ -359,7 +361,6 @@ the best matching theoretical growth curve as:
   (\#eq:maxANPPcalib)
 \end{equation}
 ```
-
 where `maxB` is already the calibrated version. In cases where there are not
 sufficient PSP data to fit the growth models and perform the calibration,
 `mANPPproportion` defaults to 3.33, which corresponds to the value used in
@@ -395,12 +396,12 @@ attention:
 
 -   **Tables**
 
-    -   `speciesTableFactorial` and `cohortDataFactorial` -- a tables of
-        species trait combinations and the theoretical species grwoth curve data
+    -   `speciesTableFactorial` and `cohortDataFactorial` -- a tables of species
+        trait combinations and the theoretical species grwoth curve data
         (respectively)
-    -   `PSPmeasure_sppParams`, `PSPplot_sppParams` and `PSPgis_sppParams` -- tree measurement, biomass growth
-        and geographical data of the PSP datasets used to buildi observed
-        species growth curves.
+    -   `PSPmeasure_sppParams`, `PSPplot_sppParams` and `PSPgis_sppParams` --
+        tree measurement, biomass growth and geographical data of the PSP
+        datasets used to buildi observed species growth curves.
     -   `species` -- a table of invariant species traits that may have been
         produced by another module. It **must** contain the columns 'species',
         'growthcurve' and 'mortality shape', whose values will be calibrated.
@@ -427,7 +428,7 @@ Of these parameters, the following are particularly important:
 -   **Calibration parameters**
 
     -   `GAMMiterations` and `GAMMknots` -- control the number of iterattions
-        and smoother degree used to fit the GAMMs, respectively. Soon to be 
+        and smoother degree used to fit the GAMMs, respectively. Soon to be
         deprecated as GAMMs have been replaced by the Chapman-Richards, Gompertz
         and Logistic models (see [Parameter estimation/calibration])
 
@@ -439,9 +440,8 @@ Of these parameters, the following are particularly important:
 
     -   `minimumPlotsPerGamm` -- define a minimum number of PSP plots needed to
         fit the GAMMs. Soon to be deprecated as GAMMs have been replaced by the
-        Chapman-Richards, Gompertz and Logistic models (see [Parameter 
+        Chapman-Richards, Gompertz and Logistic models (see [Parameter
         estimation/calibration])
-
 
     -   `PSPperiod` -- PSP data period to use.
 
@@ -453,10 +453,9 @@ Of these parameters, the following are particularly important:
 
     -   `species` and `speciesEcoregion` -- tables with calibrated trait values.
 
-    -   `speciesGAMMs` -- the fitted model objects for each species. Soon to be 
-        renamed as GAMMs have been replaced by Chapman-Richards, Gompertz and 
+    -   `speciesGAMMs` -- the fitted model objects for each species. Soon to be
+        renamed as GAMMs have been replaced by Chapman-Richards, Gompertz and
         Logistic models (see [Parameter estimation/calibration])
-
 
 ### Simulation flow
 
@@ -484,9 +483,9 @@ The general flow of *Biomass_speciesParameters* processes is:
 This module can be run stand-alone, but it won't do much more than calibrate
 species trait values based on dummy input trait values. We provide an example of
 this below, since it may be of value to run the module by itself to become
-acquainted with the calibration process and explore the fitted non-linear models. 
-However, we remind that to run this example you will need a Google Account, 
-and to be granted access to the data.
+acquainted with the calibration process and explore the fitted non-linear
+models. However, we remind that to run this example you will need a Google
+Account, and to be granted access to the data.
 
 A realistic usage example of this module and a few others can be found in [this
 repository](https://github.com/CeresBarros/LandRBiomass_publication) and in
