@@ -404,7 +404,9 @@ Of these parameters, the following are particularly important:
 -   **Calibration parameters**
 
     -   `GAMMiterations` and `GAMMknots` -- control the number of iterattions
-        and smoother degree used to fit the GAMMs, respectively.
+        and smoother degree used to fit the GAMMs, respectively. Soon to be 
+        deprecated as GAMMs have been replaced by the Chapman-Richards, Gompertz
+        and Logistic models (see [Parameter estimation/calibration])
 
     -   `constrainGrowthCurve`, `constrainMortalityShape` and `constrainMaxANPP`
         -- determine the upper and lower boundaries of the calibrated values of
@@ -413,7 +415,10 @@ Of these parameters, the following are particularly important:
 -   **Data processing**
 
     -   `minimumPlotsPerGamm` -- define a minimum number of PSP plots needed to
-        fit the GAMMs.
+        fit the GAMMs. Soon to be deprecated as GAMMs have been replaced by the
+        Chapman-Richards, Gompertz and Logistic models (see [Parameter 
+        estimation/calibration])
+
 
     -   `PSPperiod` -- PSP data period to use.
 
@@ -425,7 +430,10 @@ Of these parameters, the following are particularly important:
 
     -   `species` and `speciesEcoregion` -- tables with calibrated trait values.
 
-    -   `speciesGAMMs` -- the fitted GAMM model objects for each species.
+    -   `speciesGAMMs` -- the fitted model objects for each species. Soon to be 
+        renamed as GAMMs have been replaced by Chapman-Richards, Gompertz and 
+        Logistic models (see [Parameter estimation/calibration])
+
 
 ### Simulation flow
 
@@ -435,7 +443,7 @@ The general flow of *Biomass_speciesParameters* processes is:
     parameter fitting (e.g., the theoretical species growth curve data);
 
 2.  Sub-setting PSP data and calculating the observed species growth curves
-    using GAMMs;
+    using non-linear growth models;
 
 3.  Finding the theoretical species growth curve that best matches the observed
     curve, for each species, within curves produced with similar longevity
@@ -453,9 +461,9 @@ The general flow of *Biomass_speciesParameters* processes is:
 This module can be run stand-alone, but it won't do much more than calibrate
 species trait values based on dummy input trait values. We provide an example of
 this below, since it may be of value to run the module by itself to become
-acquainted with the calibration process and explore the fitted GAMMs. However,
-we remind that to run this example you will need a Google Account, and to be
-granted access to the data.
+acquainted with the calibration process and explore the fitted non-linear models. 
+However, we remind that to run this example you will need a Google Account, 
+and to be granted access to the data.
 
 A realistic usage example of this module and a few others can be found in [this
 repository](https://github.com/CeresBarros/LandRBiomass_publication) and in
