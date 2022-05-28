@@ -6,7 +6,7 @@ defineModule(sim, list(
   name = "Biomass_speciesParameters",
   description = "For estimating LANDIS-II species traits from PSP-derived growth curves",
   keywords = NA, # c("insert key words here"),
-  authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@@nrcan-rncan.gc.ca", role = c("aut", "cre")),
+  authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = c("aut", "cre")),
               person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut"))),
   childModules = character(0),
   version = list(Biomass_speciesParameters = "1.0.0"),
