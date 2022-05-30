@@ -56,7 +56,7 @@ if (!file.exists("figures/issuesBadge.png")) {
 }
 
 modversion <- paste(unlist(SpaDES.core::moduleMetadata(module = 'Biomass_speciesParameters', path = '..')$version), collapse = ".")
-download.file(url = paste0("https://img.shields.io/badge/Biomass_speciesParameters-", paste("v.", modversion),
+download.file(url = paste0("https://img.shields.io/badge/Biomass_speciesParameters-", paste0("v.%20", modversion),
                            "-%3CCOLOR%3E.png"),
               destfile = "figures/moduleVersionBadge.png",
               mode = 'wb')
@@ -93,7 +93,7 @@ link above\^\^**
 
 ### Summary
 
-*Biomass_speciesParameters* calibrates species growth and mortality trait values used
+LandR *Biomass_speciesParameters* (hereafter *Biomass_speciesParameters*) calibrates species growth and mortality trait values used
 in *Biomass_core*, by matching theoretical species' growth curves obtained with
 different trait values (see [Simulated species data](#bsppparam-simdata)) against observed 
 growth curves derived from Permanent Sample Plots (PSP data) across Canada 
@@ -136,8 +136,8 @@ from the drop-down menu to see potential linkages.
 
 -   [*Biomass_borealDataPrep*](https://github.com/PredictiveEcology/Biomass_borealDataPrep):
     prepares all parameters and inputs (including initial landscape conditions)
-    that *Biomass_core* needs to run a realistic simulation. By default, the
-    values/inputs produced are relevant for boreal forests of Western Canada. Used 
+    that *Biomass_core* needs to run a realistic simulation. Default values/inputs
+    produced are relevant for boreal forests of Western Canada. Used 
     upstream from *Biomass_speciesParameters*;
 
 -   [*Biomass_core*](https://github.com/PredictiveEcology/Biomass_core):
