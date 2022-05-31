@@ -57,7 +57,7 @@ defineModule(sim, list(
                                  'alternatively accepts a list of vectors, with names equal to `sppEquivCol`')),
     defineParameter("GAMMiterations", "numeric", 8, 1, NA,
                     desc = paste("number of iterations for GAMMs. This module accepts a",
-                                 "list of vectors, with names equal to `sppEquivCol`, so that GAMMS are customizable")),
+                                 "list of vectors, with names equal to `sppEquivCol`, so that GAMMs are customizable")),
     defineParameter("GAMMknots", "numeric", 3, NA, NA,
                     desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
                                  "list of vectors, with names equal to `sppEquivCol`, so that GAMMS are customizable")),
@@ -127,13 +127,11 @@ defineModule(sim, list(
   outputObjects = bindrows(
     #createsOutput("objectName", "objectClass", "output object description", ...),
     createsOutput("species", "data.table",
-                  desc = "a table that has species traits such as longevity..."),
+                  desc = "updated invariant species traits."),
     createsOutput(objectName = "speciesEcoregion", "data.table",
-                  desc = paste("table of spatially-varying species traits (`maxB`, `maxANPP`,",
-                              "`establishprob`), defined by species and `ecoregionGroup`)",
-                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
+                  desc = paste("table of updated spatially-varying species traits")),
     createsOutput(objectName = 'speciesGAMMs', objectClass = 'list',
-                  desc = paste('a list of mixed-effect general additive models (gamm) for each tree species',
+                  desc = paste('a list of mixed-effect general additive models (GAMMs) for each tree species',
                                'modeling biomass as a function of age'))
   )
 ))
