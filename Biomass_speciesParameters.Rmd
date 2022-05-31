@@ -24,7 +24,7 @@ always_allow_html: true
 
 (ref:Biomass-speciesParameters) *Biomass_speciesParameters*
 
-```{r setup-Biomass-speciesParameters, include=FALSE}
+```{r setup-Biomass-speciesParameters, include = FALSE}
 ## set cache.rebuild = TRUE whenever there are changes to the module code/metadata
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE, warning = FALSE, 
                       cache = TRUE, cache.rebuild = FALSE, results = "hold", dpi = 300)
@@ -43,7 +43,7 @@ Require(c("dplyr", "SpaDES.core", "git2r", "kableExtra"),
         require = FALSE)
 ```
 
-```{r badgeFigs-Biomass-speciesParameters, include=FALSE, eval = TRUE, cache = FALSE}
+```{r badgeFigs-Biomass-speciesParameters, include = FALSE, eval = TRUE, cache = FALSE}
 dir.create("figures", showWarnings = FALSE)
 
 if (!file.exists("figures/markdownBadge.png")) {
@@ -67,9 +67,9 @@ download.file(url = paste0("https://img.shields.io/badge/Biomass_speciesParamete
 ``` {r moduleBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
 ## try to automatically get the commit URL and the path to the badge image
 badgeURL <-  if (!git2r::is_detached()){
-commitSHA <- git2r::sha(git2r::revparse_single(".", "HEAD"))
+  commitSHA <- git2r::sha(git2r::revparse_single(".", "HEAD"))
   repo <- sub(".*github.com:", "https://github.com/",
-      git2r::branch_remote_url(git2r::branch_get_upstream(git2r::repository_head("."))))
+              git2r::branch_remote_url(git2r::branch_get_upstream(git2r::repository_head("."))))
   repo <- sub(".git$", "/commit/", repo)
   paste0(repo, commitSHA)
 } else {
@@ -77,7 +77,7 @@ commitSHA <- git2r::sha(git2r::revparse_single(".", "HEAD"))
   badgeURL <- git2r::remote_url()[1]
 }
 
-badgePath <- normalizePath("figures/moduleVersionBadge.png", winslash = "/")
+badgePath <- normPath("figures/moduleVersionBadge.png")
 
 ## make string of markdown code to be executed as-is
 cat(paste0("[![module-version-Badge](", badgePath, ")](", badgeURL,")"))
@@ -85,7 +85,7 @@ cat(paste0("[![module-version-Badge](", badgePath, ")](", badgeURL,")"))
 
 ``` {r issuesBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
 badgeURL <- "https://github.com/PredictiveEcology/Biomass_speciesParameters/issues"
-badgePath <- normalizePath("figures/issuesBadge.png", winslash = "/")
+badgePath <- normPath("figures/issuesBadge.png")
 
 ## make string of markdown code to be executed as-is
 cat(paste0("[![Issues-badge](", badgePath, ")](", badgeURL,")"))
