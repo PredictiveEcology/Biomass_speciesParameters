@@ -80,7 +80,7 @@ commitSHA <- git2r::sha(git2r::revparse_single(".", "HEAD"))
 badgePath <- normalizePath("figures/moduleVersionBadge.png", winslash = "/")
 
 ## make string of markdown code to be executed as-is
-paste0("[![module-version-Badge](", badgePath, ")](", badgeURL,")")
+cat(paste0("[![module-version-Badge](", badgePath, ")](", badgeURL,")"))
 ```
 
 ``` {r issuesBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
@@ -88,7 +88,7 @@ badgeURL <- "https://github.com/PredictiveEcology/Biomass_speciesParameters/issu
 badgePath <- normalizePath("figures/issuesBadge.png", winslash = "/")
 
 ## make string of markdown code to be executed as-is
-paste0("[![Issues-badge](", badgePath, ")](", badgeURL,")")
+cat(paste0("[![Issues-badge](", badgePath, ")](", badgeURL,")"))
 ```
 
 
@@ -107,15 +107,15 @@ link above\^\^**
 
 ### Quick links
 
--   [General functioning](bsppparam-general-functioning)
+-   [General functioning](#bsppparam-general-functioning)
 
--   [List of input objects](bsppparam-inputs-list)
+-   [List of input objects](#bsppparam-inputs-list)
 
--   [List of parameters](bsppparam-params-list)
+-   [List of parameters](#bsppparam-params-list)
 
--   [List of outputs](bsppparam-outputs-list)
+-   [List of outputs](#bsppparam-outputs-list)
 
--   [Simulation flow and module events](bsppparam-sim-flow)
+-   [Simulation flow and module events](#bsppparam-sim-flow)
 
 ### Summary
 
@@ -125,11 +125,11 @@ matching theoretical species' growth curves obtained with different trait values
 (see [Simulated species data](#bsppparam-simdata)) against observed growth
 curves derived from Permanent Sample Plots (PSP data) across Canada (see
 [Permanent sample plot data](#bsppparam-PSPdata)), to find the combination of
-traits that allows a better match to the observed curves.
+trait values that allows a better match to the observed curves.
 
 In particular, it directly calibrates the `growthcurve`, `mortalityshape`
 invariant species traits and two new traits `inflationFactor` and
-`mANPPproportion` that are used to calibrate previously estimated species
+`mANPPproportion`, which are used to calibrate previously estimated species
 maximum biomass (`maxB`) and maximum aboveground net primary productivity
 (`maxANPP`) values (see [Parameter estimation/calibration](#bsppparam-calib)).
 
@@ -140,10 +140,10 @@ module that does so (e.g., *Biomass_borealDataPrep*).
 It can however be used stand-alone in an initial developmental phase for easier
 inspection of the statistical calibration procedure employed.
 
-As of `r Sys.Date()`, the raw PSP data needed for this module is not freely
+As of `r format(Sys.time(), '%B %d, %Y')`, the *raw* PSP data used in this module is not freely
 available, and data sharing agreements must be obtained from the governments of
-SK, AB, and BC. The processed and anonymized PSP data is however provided via a
-Google Drive folder that is accessed automatically by the module.
+SK, AB, and BC to obtain it. However, the *processed and anonymized* PSP data is 
+provided via a Google Drive folder accessed automatically by the module.
 
 **A Google Account is therefore necessary to access the data used for
 calibration.**
@@ -151,7 +151,7 @@ calibration.**
 If you do not have a Google Account, or cannot access the data, please report an
 issue by clicking on the "Get help" link above.
 
-### Links to other modules {bsppparam-links-modules}
+### Links to other modules {#bsppparam-links-modules}
 
 *Biomass_speciesParameters* is intended to be used with another data module,
 like *Biomass_borealDataPrep*, that prepares all other traits and parameters
@@ -172,7 +172,7 @@ forest dynamics simulation module. Used downstream from
 
 ## Module manual
 
-### General functioning {bsppparam-general-functioning}
+### General functioning {#bsppparam-general-functioning}
 
 Tree cohort growth and mortality in *Biomass_core* are essentially determined by
 five parameters: the invariant species traits 'growth curve' (`growthcurve`),
@@ -187,9 +187,9 @@ Also, the growth and mortality equations used in *Biomass_core* are non-linear
 and their resulting actual biomass accumulation curve is an emergent phenomenon
 due to competition effects. This means that the ideal trait/parameter values
 should not be estimated on pure single species growth conditions, as their
-resulting dynamics will be different under in a multi-species context.
+resulting dynamics will be different in a multi-species context.
 
-The *Biomass_speciesParameters* module attempts to address these issues (at
+*Biomass_speciesParameters* attempts to address these issues (at
 least partially) using a "curve-matching" approach. It compares a GAMM fitted to
 permanent sample plot (PSP) data to a large collection of theoretical species
 curves, each representing a different set of growth and mortality parameters.
@@ -207,41 +207,38 @@ data modules, like *Biomass_boreaDataPrep*, that prepare other traits such as
 
 *Biomass_speciesParameters* can use all the PSP data available (note that it may
 span several thousands of kilometres), or select the data based on a polygon
-(`studyAreaANPP`; see [List of input objects](bsppparam-inputs-list)).
+(`studyAreaANPP`; see [List of input objects](#bsppparam-inputs-list)).
 
 The default PSP data were initially obtained from the National Forest Inventory
 (NFI), the Alberta Ministry of Agriculture, the Saskatchewan Ministry of the
-Environment, and the British Columbian Ministry of Forests, treated for errors
+Environment, and the British Columbia Ministry of Forests, treated for errors
 and standardized into a single data set with the exact location and identifying
-attributes anonymized. We only share the anonymized dataset, as the data sharing
-agreements must be met to utilise the raw data.
+attributes anonymized. We only share the randomized and anonymized dataset, as data sharing
+agreements must be met to access the raw data.
 
 The data include individual species, diameter at breast height (DBH), and
 sometimes tree height measurements for each tree in a plot, as well as stand
 age. As part of the standardization process, dead trees were removed from the
-dataset. Tree biomass was then estimated using either the DBH-only model or the
-DBH-height from @LambertEtAl2005 per tree species, in $g/m^2$.
-
-Note that the model used to calculate biomass can be changed to @UngEtAl2008 via
-the `P(sim)$biomassModel` module parameter.
+dataset. Tree biomass was then estimated by tree species, in $g/m^2$, using either the DBH-only model or a
+DBH-height model from either @LambertEtAl2005 or @UngEtAl2008 (see `P(sim)$biomassModel` module parameter
+in [list of parameters](#bsppparam-params-list)).
 
 #### Simulated species data {#bsppparam-simdata}
 
 The *Biomass_speciesFactorial* module was used to create a library of
 theoretical species curves (biomass accumulation curves, to be more precise) to
 which the empirical species curves derived from PSP-biomass are matched for each
-species trait combination in the study area landscape. The library of curves are
-created by running *Biomass_core* with no reproduction, competition,
-disturbance, or dispersal effects, on the study area. This cohort data table is
-the table coming out of *Biomass_borealDataPrep* with each simulation varied in
+species trait combination in the study area. The library of curves was
+created by running several *Biomass_core* simulations with no reproduction, competition,
+disturbance, or dispersal effects, on the study area. Each simulation differed in
 the combination of species trait values that influence growth and mortality
 dynamics, namely: `growthcurve`, `mortalityshape`, `longevity`, `maxANPP` and
 maximum biomass (`maxBiomass`, not to be confused with the data-driven `maxB`
 which is later calibrated).
 
-The values for `maxB` (the calibrated parameter) and `maxANPP` were explored via
-the `mANPPproportion`, the ratio of `maxANPP` to `maxBiomass` (the parameter
-used for theroetical curves), as it reflects their relationship.
+The values for `maxANPP` were explored via the `mANPPproportion`, the ratio of 
+`maxANPP` to `maxBiomass` (the parameter used for theroetical curves), as it 
+reflects their relationship.
 
 `growthcurve` values varied from 0 to 1, in increments of 0.1; `mortalityshape`
 varied from 5 to 25, in increments of 1; `longevity` varied from 150 to 700 in
@@ -251,7 +248,7 @@ increments of 25; `mANPPproportion` varied from 0.25 to 10 in increments of
 This resulted in over 64,000,000 theoretical curves.
 
 Results from these simulations were compiled into a table (`cohortDataFactorial`
-; see [List of input objects](bsppparam-inputs-list)) that is accessed by
+; see [List of input objects](#bsppparam-inputs-list)) that is accessed by
 *Biomass_speciesParameters*, so that the module can be run without needing to
 re-simulate the theoretical curves.
 
@@ -271,9 +268,9 @@ are *Pinus banksiana* and *Populus sp*, for which using the 99th percent
 quantile improved the models, because these are short-lived species for which
 data at advanced ages is scarce.
 
-The module attempts to use stands where the focal species is dominant (but not
-monocultures) to estimate parameters, while balancing sample size (see biomass
-weighting below). Hence, for a given species, it only includes plots where the
+The module attempts to fit the models using stands where the focal species is 
+dominant (but not monocultures), while balancing sample size (see [biomass
+weighting](#bsppparam-calibbw) below). Hence, for a given species, it only includes plots where the
 species' relative biomass is at least 50%. This is, when calibrating *Populus
 tremuloides* traits, PSP daa plots are only included if 50% of the stand biomass
 is composed of *P. tremuloides*.
@@ -294,10 +291,11 @@ B \sim f_{1}(standAge) + (\sim 1 | measureYear + plotID)
 ```
 where $f_{1}$ denotes the smoother function. To avoid overfitting, the module
 constrains the smoother on stand age to a maximum smoothing degree of 3 (i.e. 3
-knots and a polynomial degree of 2) and a point constraint at 0 that attempts to
-force the intercept to 0, by default. The smoother degree constraint, however,
+knots and a polynomial degree of 2) and a default point constraint at 0 that attempts to
+force the intercept to 0. The smoother degree constraint, however,
 can be changed via the `P(sim)$GAMMknots` module parameter.
 
+##### Biomass-weighting {#bsppparam-calibbw}
 In addition, $B$ is weighted with respect to species dominance. This consisted
 in 1) calculating the average biomass of each dominant species (i.e. relative
 biomass in a plot \> 0.5; $domSpeciesB_{1}$), in each plot and measurement year,
@@ -314,11 +312,11 @@ For the added 0 age and 0 biomass data the module uses weights equal to 1.
 
 It is possible that some selected species do not have enough data to allow for
 model convergence. In this case, *Biomass_speciesParameters* skips trait
-calibration, and values remain unchanged.
+(re-)calibration, and values remain unchanged.
 
 After fitting each species GAMM, *Biomass_speciesParameters* compares it to the
 theoretical curves obtained with a `longevity` value that matches the focal
-species longevity, and picks the best one based on maximum likelihood. This best
+species' longevity, and picks the best one based on maximum likelihood. This best
 theoretical curve will be associated with a given combination of `growthcurve`,
 `mortalityshape` and `mANPPproportion` values, which are then used directly as
 the calibrated values, in case of `growthcurve` and `mortalityshape`, or to
@@ -359,17 +357,17 @@ maxB \times \frac{mANPPproportion}{100}
 (\#eq:maxANPPcalib)
 \end{equation}
 ```
-where `maxB` is the already calibrated version. As already stated above, the
+where `maxB` is the already (re-)calibrated version. As already stated above, the
 final `maxANPP` value is then constrained between 2.0 and 5.0 by default.
 
 In cases where insufficient PSP data prevent fitting the GAMMs and performing
 the calibration, `mANPPproportion` defaults to 3.33 (the value used in LANDIS-II
 applications in Canada's boreal forests) and the `inflationFactor` to 1.
 
-### List of input objects {bsppparam-inputs-list}
+### List of input objects {#bsppparam-inputs-list}
 
 The full list of input objects required by the module is presented below (Table
-\@ref(tab:moduleInputs2-Biomass-speciesParameters)). The only inputs that
+\@ref(tab:moduleInputs2-Biomass-speciesParameters)). The only input that
 **must** be provided is `studyAreaANPP` (the study area used extract the PSP
 data from). All other input objects have internal defaults, but the user may
 need to request access to their online files.
@@ -381,15 +379,15 @@ attention:
 
 -   `studyAreaANPP` -- shapefile. A `SpatialPolygonsDataFrame` with a single
 polygon determining the where the PSP should be subset to simulation will
-take place. This input object **must be supplied by the user**.
+take place. This input object **must be supplied by the user or another module**.
 
 **Tables**
 
 -   `factorialSpeciesTable` and `reducedFactorialCohortData` -- a tables of
 species trait combinations and the theoretical species grwoth curve data
-(respectively)
+(respectively).
 -   `PSPmeasure`, `PSPplot` and `PSPgis` -- tree measurement, biomass growth and
-geographical data of the PSP datasets used to buildi observed species growth
+geographical data of the PSP datasets used to build observed species growth
 curves.
 -   `species` -- a table of invariant species traits that may have been produced
 by another module. It **must** contain the columns 'species', 'growthcurve'
@@ -397,7 +395,7 @@ and 'mortality shape', whose values will be calibrated.
 -   `speciesEcoregion` -- table of spatially-varying species traits that may
 have been produced by another module. It **must** contain the columns
 'speciesCode', 'maxB' and 'maxANPP' and 'ecoregionGroup' (the ecolocation
-ID). 'maxB' and 'maxANPP' values will be calibrated by species.
+ID). 'maxB' and 'maxANPP' values are (re-)calibrated by species.
 
 ```{r moduleInputs2-Biomass-speciesParameters, cache.rebuild = TRUE, echo = FALSE, eval = TRUE, message = FALSE}
 df_inputs <- SpaDES.core::moduleInputs("Biomass_speciesParameters", "..")
@@ -406,7 +404,7 @@ knitr::kable(df_inputs,
   kableExtra::kable_styling(latex_options = c("scale_down", "repeat_header"), full_width = TRUE)
 ```
 
-### List of parameters {bsppparam-params-list}
+### List of parameters {#bsppparam-params-list}
 
 The full list of parameters used by the module is presented below (Table
 \@ref(tab:moduleParams2-Biomass-speciesParameters)), all of which have default
@@ -416,7 +414,7 @@ Of these parameters, the following are particularly important:
 
 **Calibration parameters**
 
--   `GAMMiterations` and `GAMMknots` -- control the number of iterattions and
+-   `GAMMiterations` and `GAMMknots` -- control the number of iterations and
 smoother degree used to fit the GAMMs, respectively.
 
 -   `constrainGrowthCurve`, `constrainMortalityShape` and `constrainMaxANPP` --
@@ -439,7 +437,7 @@ knitr::kable(df_params,
   kableExtra::kable_styling(latex_options = c("scale_down", "repeat_header"), full_width = TRUE)
 ```
 
-### List of outputs {bsppparam-outputs-list}
+### List of outputs {#bsppparam-outputs-list}
 
 The module produces the following outputs (Table
 \@ref(tab:moduleOutputs-Biomass-borealDataPrep)). Note that `species` and
@@ -456,11 +454,10 @@ name.
 df_outputs <- SpaDES.core::moduleOutputs("Biomass_speciesParameters", "..")
 knitr::kable(df_outputs,
              caption = "List of (ref:Biomass-speciesParameters) output objects and their description.") %>%
-  kableExtra::kable_styling(latex_options = c("scale_down", "repeat_header"), full_width = TRUE) %>%
-  kableExtra::column_spec(column = 2, width = "40em")
+  kableExtra::kable_styling(latex_options = c("scale_down", "repeat_header"), full_width = TRUE)
 ```
 
-### Simulation flow and module events {bsppparam-sim-flow}
+### Simulation flow and module events {#bsppparam-sim-flow}
 
 *Biomass_speciesParameters* initialies itself and prepares all inputs provided
 there is an active internet connection and the user has access to the data (and
@@ -482,8 +479,8 @@ parameter fitting (e.g., the theoretical species growth curve data);
 using GAMMs;
 
 3.  Finding the theoretical species growth curve that best matches the observed
-curve, for each species, within curves produced with similar longevity
-values to those in the species traits table (`species`) and with
+curve, for each species. Theoretical curves are subset to those with longevity
+matching the species' longevity (in `species` table) and with
 `growthcurve` and `mortalityshape` values within the chosen boundaries
 (`P(sim)$constrainGrowthCurve`, `P(sim)$constrainMortalityShape`);
 
@@ -492,7 +489,7 @@ values to those in the species traits table (`species`) and with
 5.  Adjusting `maxANPP` to match the chosen boundaries
 (`P(sim)$constrainMaxANPP`)
 
-## Usage example {bsppparam-example}
+## Usage example {#bsppparam-example}
 
 This module can be run stand-alone, but it won't do much more than calibrate
 species trait values based on dummy input trait values. We provide an example of
@@ -622,4 +619,4 @@ mySim <- simInitAndSpades(times = times,
 mySim$speciesGAMMs$Pice_mar
 ```
 
-## References {bsppparam-refs}
+## References {#bsppparam-refs}
