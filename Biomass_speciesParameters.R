@@ -17,8 +17,8 @@ defineModule(sim, list(
                   "PredictiveEcology/LandR@development (>= 1.0.5)",
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible (>= 1.2.8)",
-                  "robustbase", "gridExtra", "ggplot2", "purrr"),
-                  "ianmseddy/PSPclean@development",
+                  "robustbase", "gridExtra", "ggplot2", "purrr",
+                  "ianmseddy/PSPclean@development"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
