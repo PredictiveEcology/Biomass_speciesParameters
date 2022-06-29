@@ -20,7 +20,8 @@ defineModule(sim, list(
                   "ianmseddy/PSPclean@development", "robustbase", "gridExtra", "ggplot2", "purrr"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
-                    desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
+                    desc =  paste("The model used to calculate biomass from DBH.",
+                                  "Can be either 'Lambert2005' or 'Ung2008'.")),
     defineParameter("constrainGrowthCurve", "numeric", c(0, 1), 0, 1,
                     desc = paste("upper and lower bounds on range of potential growth curves when fitting traits. This module accepts a",
                                  "list of vectors, with names equal to `sppEquivCol`, so that traits are customizable")),
