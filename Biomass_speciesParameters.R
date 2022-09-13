@@ -21,7 +21,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
                   "ianmseddy/PSPclean@development",
-                  "PredictiveEcology/reproducible (>= 1.2.8)",
+                  "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "robustbase", "gridExtra", "ggplot2", "purrr"),
   parameters = rbind(
     defineParameter(".plots", "character", "screen", NA, NA,
