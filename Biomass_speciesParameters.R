@@ -37,12 +37,6 @@ defineModule(sim, list(
     defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                                  "This is generally intended for data-type modules, where stochasticity and time are not relevant")),
-    defineParameter("speciesFittingApproach", "character", "pairwise", NA, NA,
-                    desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
-                                  "all species into one fit, do pairwise species (for multiple cohort situations), do",
-                                  "pairwise species, but using a focal species approach where all other species are ",
-                                  "pooled into 'other'",
-                                  " or do one species at a time. If 'all', all species will have identical species-level traits")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
     defineParameter("constrainGrowthCurve", "numeric", c(0, 1), 0, 1,
@@ -86,6 +80,12 @@ defineModule(sim, list(
                     "LandR curves provided in the factorial. Since the majory of the data that went into fits ",
                     "for the NonLinearFit from PSPs is less than 200, it is likely wise to constrain the range ",
                     "to something smaller than 0 to 200"),
+    defineParameter("speciesFittingApproach", "character", "pairwise", NA, NA,
+                    desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
+                                  "all species into one fit, do pairwise species (for multiple cohort situations), do",
+                                  "pairwise species, but using a focal species approach where all other species are ",
+                                  "pooled into 'other'",
+                                  " or do one species at a time. If 'all', all species will have identical species-level traits")),
     defineParameter("useHeight", "logical", FALSE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
                     Advise against including height unless you are certain it is present in every PSP"))
@@ -343,7 +343,6 @@ Save <- function(sim) {
     sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS", LandR := "Abie_las"]
     sim$sppEquiv <- sppEquivalencies_CA
   }
-
   if (!suppliedElsewhere("PSPmeasure_sppParams", sim) |
       !suppliedElsewhere("PSPplot_sppParams", sim) |
       !suppliedElsewhere("PSPgis_sppParams", sim)) {
