@@ -584,7 +584,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
 
   maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
-  set(maxBiomass, NULL, "Sp", paste0("Sp", 1:2))
+  set(maxBiomass, NULL, "Sp", paste0("Sp", 1:nrow(maxBiomass)))
   SpNames <- maxBiomass$Sp[match(names(gamm$NonLinearModel), maxBiomass$speciesTemp)]
   SpMapping <- data.table(Sp = SpNames, species = name)
   names(gamm$NonLinearModel) <- SpNames
