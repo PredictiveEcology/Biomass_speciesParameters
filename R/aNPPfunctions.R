@@ -606,10 +606,17 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
 
   # Predict from statistical fits to data
-  predGrid[, `:=`(
-    predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
-    predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]], .SD, , se.fit = FALSE))
+  if (all(names(gamm$speciesGamm[[1]]) == c("lme", "gam"))) {# means from gamm (ie. mixed effect, not gam)
+    predGrid[, `:=`(
+      predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
+      predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]][["gam"]], .SD, se.fit = FALSE))
   ), "Sp", .SDcols = "standAge"]
+  } else {
+    predGrid[, `:=`(
+      predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
+      predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]], .SD, se.fit = FALSE))
+    ), by = "Sp", .SDcols = "standAge"]
+  }
   # misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
   dt <- as.data.table(expand.grid(speciesCode = unique(fB$speciesCode), standAge = unique(predGrid$standAge)))
   set(dt, NULL, "Sp", gsub(".+_", "", dt$speciesCode))
