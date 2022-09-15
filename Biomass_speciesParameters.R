@@ -292,13 +292,13 @@ Save <- function(sim) {
                                           destinationPath = dPath,
                                           fun = "readRDS", overwrite = TRUE,
                                           url = extractURL('cohortDataFactorial', sim),
-                                          useCache = TRUE, userTags = c(cacheTags, "reducedFactorial"))
+                                          useCache = TRUE, userTags = c(cacheTags, "factorialCohort"))
   }
 
   if (!suppliedElsewhere("speciesTableFactorial", sim)) {
     sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial_medium.rds",
                                             destinationPath = dPath,
-                                            url = extractURL('speciesTableFactorial', sim),
+                                            url = extractURL("speciesTableFactorial", sim),
                                             fun = "readRDS", overwrite = TRUE,
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
