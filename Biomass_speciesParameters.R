@@ -81,6 +81,11 @@ defineModule(sim, list(
                     paste("The column in `sim$sppEquiv` data.table to group species by. This parameter should share the same",
                           "name as in *Biomass_borealDataPrep*. PSPs are aggregated by names in the PSP column and traits estimated",
                           "for the corresponding names in the `sppEquivCol`")),
+    defineParameter("standAgesForFitting", "integer", c(0, 150), NA, NA,
+                    desc = "The minimum and maximum ages to use while matching NonLinearFit (or GAMM) with ",
+                    "LandR curves provided in the factorial. Since the majory of the data that went into fits ",
+                    "for the NonLinearFit from PSPs is less than 200, it is likely wise to constrain the range ",
+                    "to something smaller than 0 to 200"),
     defineParameter("useHeight", "logical", FALSE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).
                     Advise against including height unless you are certain it is present in every PSP"))
