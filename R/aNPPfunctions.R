@@ -326,7 +326,7 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
   if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
     missing <- speciesTable[is.na(inflationFactor)]$species
-    message("averaging traits for these species: ", missing)
+    message("averaging traits for these species: ", paste(missing, collapse = ", "))
     #
     averageOfEstimated <- speciesTable[!is.na(inflationFactor),
                                        .(growthcurve = mean(growthcurve),
