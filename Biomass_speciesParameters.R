@@ -40,26 +40,27 @@ defineModule(sim, list(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'")),
     defineParameter("constrainGrowthCurve", "numeric", c(0, 1), 0, 1,
-                    desc = paste("upper and lower bounds on range of potential growth curves when fitting traits. This module accepts a",
+                    desc = paste("Upper and lower bounds on range of potential growth curves when fitting traits. This module accepts a",
                                  "list of vectors, with names equal to `sppEquivCol`, so that traits are customizable")),
-    defineParameter("constrainMortalityShape", 'numeric', c(15, 25), 5, 25,
-                    desc = paste('upper and lower bounds on mortality shape when fitting traits. low mortality curve needs to excessive',
-                                 'cohorts with very little biomass as longevity is approached, adding computation strain.',
-                                 'alternatively accepts a list of vectors, with names equal to `sppEquivCol`')),
-    defineParameter("constrainMaxANPP", 'numeric', c(2.0, 5.0), 1, 10,
-                    desc = paste("upper and lower bounds on `maxANPP` when fitting traits. cohorts are initiated with `B = maxANPP`",
+    defineParameter("constrainMortalityShape", "numeric", c(15, 25), 5, 25,
+                    desc = paste("Upper and lower bounds on mortality shape when fitting traits. Low mortality curve needs to excessive",
+                                 "cohorts with very little biomass as longevity is approached, adding computation strain.",
+                                 "alternatively accepts a list of vectors, with names equal to `sppEquivCol`")),
+    defineParameter("constrainMaxANPP", "numeric", c(2.0, 5.0), 1, 10,
+                    desc = paste("Upper and lower bounds on `maxANPP` when fitting traits. Cohorts are initiated with `B = maxANPP`",
                                  "which may be unreasonably high if `maxANPP` is also high. Both `maxANPP` and growthcurve params",
                                  "control when `maxB` is reached. High `maxANPP` results in earlier peaks",
-                                 'alternatively accepts a list of vectors, with names equal to `sppEquivCol`')),
+                                 "alternatively accepts a list of vectors, with names equal to `sppEquivCol`")),
     defineParameter("GAMMiterations", "numeric", 8, 1, NA,
-                    desc = paste("number of iterations for GAMMs. This module accepts a",
+                    desc = paste("Number of iterations for GAMMs. This module accepts a",
                                  "list of vectors, with names equal to `sppEquivCol`, so that GAMMs are customizable")),
     defineParameter("GAMMknots", "numeric", 3, NA, NA,
-                    desc = paste("the number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
+                    desc = paste("The number of knots to use in the GAMM. Either 3 or 4 is recommended. This module accepts a",
                                  "list of vectors, with names equal to `sppEquivCol`, so that GAMMS are customizable")),
-    defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA, desc = paste("minimum number of PSP plots before building GAMM")),
+    defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA,
+                    desc = paste("Minimum number of PSP plots before building GAMM")),
     defineParameter("minDBH", "integer", 0L, 0L, NA,
-                    desc = paste("minimum diameter at breast height (DBH) in cm used to filter PSP data.",
+                    desc = paste("Minimum diameter at breast height (DBH) in cm used to filter PSP data.",
                                  "Defaults to 0 cm, i.e. all tree measurements are used.")),
     defineParameter("PSPdataTypes", "character", "all", NA, NA,
                     desc = paste("Which PSP datasets to source, defaulting to all. Other available options include",
@@ -67,19 +68,19 @@ defineModule(sim, list(
     defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA,
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
     defineParameter("quantileAgeSubset", "numeric", 95, 1, 100,
-                    desc = paste("quantile by which to subset PSP data. As older stands are sparsely represented, the oldest measurements",
+                    desc = paste("Quantile by which to subset PSP data. As older stands are sparsely represented, the oldest measurements",
                                  "become vastly more influential. This parameter accepts both a single value and a list of vectors",
                                  "named by `sppEquivCol.` The PSP stand ages are found in `sim$speciesGAMMs$SPECIES$originalData`, where",
                                  "SPECIES is the species ID")),
-    defineParameter("sppEquivCol", "character", 'default', NA, NA,
+    defineParameter("sppEquivCol", "character", "default", NA, NA,
                     paste("The column in `sim$sppEquiv` data.table to group species by. This parameter should share the same",
                           "name as in *Biomass_borealDataPrep*. PSPs are aggregated by names in the PSP column and traits estimated",
                           "for the corresponding names in the `sppEquivCol`")),
     defineParameter("standAgesForFitting", "integer", c(0, 150), NA, NA,
-                    desc = "The minimum and maximum ages to use while matching NonLinearFit (or GAMM) with ",
-                    "LandR curves provided in the factorial. Since the majory of the data that went into fits ",
-                    "for the NonLinearFit from PSPs is less than 200, it is likely wise to constrain the range ",
-                    "to something smaller than 0 to 200"),
+                    desc = paste("The minimum and maximum ages to use while matching NonLinearFit (or GAMM) with",
+                                 "LandR curves provided in the factorial. Since the majory of the data that went into fits",
+                                 "for the NonLinearFit from PSPs is less than 200, it is likely wise to constrain the range",
+                                 "to something smaller than 0 to 200")),
     defineParameter("speciesFittingApproach", "character", "pairwise", NA, NA,
                     desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
                                   "all species into one fit, do pairwise species (for multiple cohort situations), do",
@@ -87,8 +88,8 @@ defineModule(sim, list(
                                   "pooled into 'other'",
                                   " or do one species at a time. If 'all', all species will have identical species-level traits")),
     defineParameter("useHeight", "logical", FALSE, NA, NA,
-                    desc = paste("Should height be used to calculate biomass (in addition to DBH).
-                    Advise against including height unless you are certain it is present in every PSP"))
+                    desc = paste("Should height be used to calculate biomass (in addition to DBH).",
+                                 "We advise against including height unless you are certain it is present in every PSP"))
   ),
   inputObjects = bindrows(
     expectsInput(objectName = "speciesTableFactorial", objectClass = "data.table",
@@ -137,9 +138,9 @@ defineModule(sim, list(
                   desc = "updated invariant species traits."),
     createsOutput(objectName = "speciesEcoregion", "data.table",
                   desc = paste("table of updated spatially-varying species traits")),
-    createsOutput(objectName = 'speciesGAMMs', objectClass = 'list',
-                  desc = paste('a list of mixed-effect general additive models (GAMMs) for each tree species',
-                               'modeling biomass as a function of age'))
+    createsOutput(objectName = "speciesGAMMs", objectClass = "list",
+                  desc = paste("a list of mixed-effect general additive models (GAMMs) for each tree species",
+                               "modeling biomass as a function of age"))
   )
 ))
 
@@ -231,7 +232,7 @@ Init <- function(sim) {
                         userTags = c(currentModule(sim), "makePSPgamms"))
   sim$speciesGAMMs <- speciesGAMMs
 
-  classes <- lapply(sim$speciesGAMMs, FUN = 'class')
+  classes <- lapply(sim$speciesGAMMs, FUN = "class")
 
   noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
     x == "insufficient data"
@@ -291,7 +292,7 @@ Save <- function(sim) {
     sim$cohortDataFactorial <- prepInputs(targetFile = "cohortDataFactorial_medium.rds",
                                           destinationPath = dPath,
                                           fun = "readRDS", overwrite = TRUE,
-                                          url = extractURL('cohortDataFactorial', sim),
+                                          url = extractURL("cohortDataFactorial", sim),
                                           useCache = TRUE, userTags = c(cacheTags, "factorialCohort"))
   }
 
@@ -353,21 +354,21 @@ Save <- function(sim) {
       sim$PSPmeasure_sppParams <- Cache(prepInputs,
                                         targetFile = "randomizedPSPmeasure_sppParams.rds",
                                         archive = "randomized_LandR_speciesParameters_Inputs.zip",
-                                        url =  extractURL('PSPmeasure_sppParams', sim),
+                                        url =  extractURL("PSPmeasure_sppParams", sim),
                                         destinationPath = dPath,
                                         fun = "readRDS")
 
       sim$PSPplot_sppParams <- Cache(prepInputs,
                                      targetFile = "randomizedPSPplot_sppParams.rds",
                                      archive = "randomized_LandR_speciesParameters_Inputs.zip",
-                                     url = extractURL('PSPplot_sppParams', sim),
+                                     url = extractURL("PSPplot_sppParams", sim),
                                      destinationPath = dPath,
                                      fun = "readRDS")
 
       sim$PSPgis_sppParams <- Cache(prepInputs,
                                     targetFile = "randomizedPSPgis_sppParams.rds",
                                     archive = "randomized_LandR_speciesParameters_Inputs.zip",
-                                    url = extractURL('PSPgis_sppParams', sim),
+                                    url = extractURL("PSPgis_sppParams", sim),
                                     overwrite = TRUE,
                                     destinationPath = dPath,
                                     fun = "readRDS")
