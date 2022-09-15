@@ -93,11 +93,11 @@ defineModule(sim, list(
   inputObjects = bindrows(
     expectsInput(objectName = "speciesTableFactorial", objectClass = "data.table",
                  desc = paste("table with species traits for matching to `cohortDataFactorial`"),
-                 sourceURL = "https://drive.google.com/open?id=1q0ou0CBzD9GqGSparpHqf318IWK6ycty"),
+                 sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput(objectName = "cohortDataFactorial", objectClass = "data.table",
                  desc = paste("results of factorial species trait simulation. This can be found by running",
                               "`SpeciesFactorial.R` but requires a specific commit of *Biomass_core*"),
-                 sourceURL = "https://drive.google.com/open?id=1h8StXE0vm8xyDycRomCkwIaL7wfh5Irj"),
+                 sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput(objectName = "PSPmeasure_sppParams", objectClass = "data.table",
                  desc = paste("merged PSP and TSP individual tree measurements. Must include the following columns:",
                               "MeasureID, OrigPlotID1, MeasureYear, TreeNumber, Species, DBH and newSpeciesName",
