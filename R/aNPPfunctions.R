@@ -610,7 +610,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     predGrid[, `:=`(
       predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
       predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]][["gam"]], .SD, se.fit = FALSE))
-  ), "Sp", .SDcols = "standAge"]
+    ), by = "Sp", .SDcols = "standAge"]
   } else {
     predGrid[, `:=`(
       predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
