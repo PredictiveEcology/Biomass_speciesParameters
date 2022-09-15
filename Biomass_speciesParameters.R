@@ -78,9 +78,10 @@ defineModule(sim, list(
                                   "pairwise species, but using a focal species approach where all other species are ",
                                   "pooled into 'other'",
                                   " or do one species at a time. If 'all', all species will have identical species-level traits")),
-    defineParameter("useHeight", "logical", FALSE, NA, NA,
+    defineParameter("useHeight", "logical", TRUE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).",
-                                 "We advise against including height unless you are certain it is present in every PSP"))
+                                 "DBH is used by itself when height is missing."))
+
   ),
   inputObjects = bindrows(
     expectsInput(objectName = "speciesTableFactorial", objectClass = "data.table",
