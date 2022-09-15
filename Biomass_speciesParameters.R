@@ -288,7 +288,7 @@ Save <- function(sim) {
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   if (!suppliedElsewhere("cohortDataFactorial", sim)) {
-    sim$cohortDataFactorial <- prepInputs(targetFile = "reducedFactorialCD.Rdat",
+    sim$cohortDataFactorial <- prepInputs(targetFile = "cohortDataFactorial_medium.rds",
                                           destinationPath = dPath,
                                           fun = "readRDS", overwrite = TRUE,
                                           url = extractURL('cohortDataFactorial', sim),
@@ -296,7 +296,7 @@ Save <- function(sim) {
   }
 
   if (!suppliedElsewhere("speciesTableFactorial", sim)) {
-    sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial.Rdat",
+    sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial_medium.rds",
                                             destinationPath = dPath,
                                             url = extractURL('speciesTableFactorial', sim),
                                             fun = "readRDS", overwrite = TRUE,
