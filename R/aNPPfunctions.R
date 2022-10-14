@@ -174,8 +174,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 }
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
-                               sppEquivCol, inflationFactorKey, mortConstraints, growthConstraints,
-                               mANPPconstraints, standAgesForFitting, approach, maxBInFactorial) {
+                               sppEquivCol, inflationFactorKey, standAgesForFitting,
+                               approach, maxBInFactorial) {
 
   #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
   #setkey(factorialTraits, species)
@@ -223,8 +223,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     # use for loop to allow for Cache on each species
     outputTraits[[name]] <- Cache(editSpeciesTraits, name = name, gamm = gamms[[name]],
                                   traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
-                                  speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
-                                  growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
+                                  speciesEquiv = sppEquiv, sppCol = sppEquivCol,
                                   standAgesForFitting = standAgesForFitting,
                                   approach = approach,
                                   maxBInFactorial = maxBInFactorial,
@@ -327,7 +326,7 @@ modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
 
   if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
     missing <- speciesTable[is.na(inflationFactor)]$species
-    message("averaging traits for these species: ", missing)
+    message("averaging traits for these species: ", paste(missing, collapse = ", "))
     #
     averageOfEstimated <- speciesTable[!is.na(inflationFactor),
                                        .(growthcurve = mean(growthcurve),
@@ -555,8 +554,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
-                              standAgesForFitting = c(0, 150), approach, inflationFactorKey,
-                              mortConstraints, growthConstraints, mANPPconstraints) {
+                              standAgesForFitting = c(0, 150), approach, inflationFactorKey) {
 
   # Gamm <- gamm[[name]]
   nameOrig <- name
@@ -592,24 +590,27 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
 
   maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
-  set(maxBiomass, NULL, "Sp", paste0("Sp", 1:2))
+  set(maxBiomass, NULL, "Sp", paste0("Sp", 1:nrow(maxBiomass)))
   SpNames <- maxBiomass$Sp[match(names(gamm$NonLinearModel), maxBiomass$speciesTemp)]
   SpMapping <- data.table(Sp = SpNames, species = name)
   names(gamm$NonLinearModel) <- SpNames
   names(gamm$speciesGamm) <- SpNames
-  constraints <- list(growthcurve = growthConstraints,
-                      mortalityshape = mortConstraints,
-                      #longevityConstraints,
-                      mANPPproportion = mANPPconstraints)
   standAge <- unique(fB$standAge)
   standAge <- standAge[standAge <= max(standAgesForFitting) & standAge >= min(standAgesForFitting)]
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
 
   # Predict from statistical fits to data
-  predGrid[, `:=`(
-    predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
-    predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]], .SD, , se.fit = FALSE))
-  ), "Sp", .SDcols = "standAge"]
+  if (all(names(gamm$speciesGamm[[1]]) == c("lme", "gam"))) {# means from gamm (ie. mixed effect, not gam)
+    predGrid[, `:=`(
+      predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
+      predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]][["gam"]], .SD, se.fit = FALSE))
+    ), by = "Sp", .SDcols = "standAge"]
+  } else {
+    predGrid[, `:=`(
+      predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
+      predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]], .SD, se.fit = FALSE))
+    ), by = "Sp", .SDcols = "standAge"]
+  }
   # misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
   dt <- as.data.table(expand.grid(speciesCode = unique(fB$speciesCode), standAge = unique(predGrid$standAge)))
   set(dt, NULL, "Sp", gsub(".+_", "", dt$speciesCode))
