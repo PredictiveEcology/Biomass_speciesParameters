@@ -20,6 +20,7 @@ defineModule(sim, list(
   reqdPkgs = list("mgcv", "nlme", "fpCompare", "crayon",
                   "PredictiveEcology/LandR@development (>= 1.0.5)",
                   "PredictiveEcology/pemisc@development",
+                  "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "PredictiveEcology/SpaDES.core@development (>= 0.2.6)"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
