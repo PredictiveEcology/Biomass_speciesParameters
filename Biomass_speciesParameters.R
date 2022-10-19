@@ -50,7 +50,7 @@ defineModule(sim, list(
                     desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
                                   "all species into one fit, do pairwise species (for multiple cohort situations), do",
                                   "pairwise species, but using a focal species approach where all other species are ",
-                                  "pooled into 'other' or do one species at a time. If 'all', all species will have", 
+                                  "pooled into 'other' or do one species at a time. If 'all', all species will have",
                                   "identical species-level traits")),
     defineParameter("sppEquivCol", "character", "default", NA, NA,
                     paste("The column in `sim$sppEquiv` data.table to group species by. This parameter should share the same",
@@ -63,7 +63,7 @@ defineModule(sim, list(
                                  "to something smaller than 0 to 200")),
     defineParameter("useHeight", "logical", TRUE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).",
-                                 "DBH is used by itself when height is missing."))
+                                 "DBH is used by itself when height is missing.")),
     defineParameter(".plots", "character", "screen", NA, NA,
                     "Used by Plots function, which can be optionally used here"),
     defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA,
