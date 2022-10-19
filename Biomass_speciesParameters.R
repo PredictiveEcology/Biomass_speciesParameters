@@ -22,20 +22,6 @@ defineModule(sim, list(
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
-    defineParameter("constrainGrowthCurve", "numeric", c(0, 1), 0, 1,
-                    desc = paste("upper and lower bounds on range of potential growth curves when fitting traits. This module accepts a",
-                                 "list of vectors, with names equal to `sppEquivCol`, so that traits are customizable")),
-    defineParameter("constrainMortalityShape", 'numeric', c(12, 25), 5, 25,
-                    desc = paste("Upper and lower bounds on mortality shape when fitting traits.",
-                                 "Low mortality curve needs to excessive cohorts with very little",
-                                 "biomass as longevity is approached, adding computation strain.",
-                                 "Alternatively accepts a list of vectors, with names equal to `sppEquivCol`.")),
-    defineParameter("constrainMaxANPP", 'numeric', c(3.0, 4.0), 1, 10,
-                    desc = paste("upper and lower bounds on `maxANPP` when fitting traits.",
-                                 "Cohorts are initiated with `B = maxANPP`, which may be unreasonably high if `mANPP` is also high.",
-                                 "Both `mANPP` and `growthcurve` params control when `maxB` is reached.",
-                                 "High `mANPP` results in earlier peaks.",
-                                 "Alternatively, accepts a list of vectors, with names equal to `sppEquivCol`.")),
     defineParameter("GAMMiterations", "numeric", 8, 1, NA,
                     desc = paste("Number of iterations for GAMMs. This module accepts a",
                                  "list of vectors, with names equal to `sppEquivCol`, so that GAMMs are customizable")),
@@ -272,10 +258,7 @@ Init <- function(sim) {
                                                 sppEquivCol = P(sim)$sppEquivCol,
                                                 maxBInFactorial = P(sim)$maxBInFactorial,
                                                 inflationFactorKey = tempMaxB,
-                                                standAgesForFitting = P(sim)$standAgesForFitting,
-                                                mortConstraints = P(sim)$constrainMortalityShape,
-                                                growthConstraints = P(sim)$constrainGrowthCurve,
-                                                mANPPconstraints = P(sim)$constrainMaxANPP)
+                                                standAgesForFitting = P(sim)$standAgesForFitting)
     gg <- modifiedSpeciesTables$gg
     Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
           filename = paste("Pairwise species fits ", gsub(":", "_", sim$._startClockTime)))

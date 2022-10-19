@@ -174,8 +174,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 }
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
-                               sppEquivCol, inflationFactorKey, mortConstraints, growthConstraints,
-                               mANPPconstraints, standAgesForFitting, approach, maxBInFactorial) {
+                               sppEquivCol, inflationFactorKey, standAgesForFitting,
+                               approach, maxBInFactorial) {
 
   #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
   #setkey(factorialTraits, species)
@@ -223,8 +223,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     # use for loop to allow for Cache on each species
     outputTraits[[name]] <- Cache(editSpeciesTraits, name = name, gamm = gamms[[name]],
                                   traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
-                                  speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
-                                  growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
+                                  speciesEquiv = sppEquiv, sppCol = sppEquivCol,
                                   standAgesForFitting = standAgesForFitting,
                                   approach = approach,
                                   maxBInFactorial = maxBInFactorial,
@@ -549,8 +548,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
-                              standAgesForFitting = c(0, 150), approach, inflationFactorKey,
-                              mortConstraints, growthConstraints, mANPPconstraints) {
+                              standAgesForFitting = c(0, 150), approach, inflationFactorKey) {
 
   # Gamm <- gamm[[name]]
   nameOrig <- name
@@ -591,10 +589,6 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   SpMapping <- data.table(Sp = SpNames, species = name)
   names(gamm$NonLinearModel) <- SpNames
   names(gamm$speciesGamm) <- SpNames
-  constraints <- list(growthcurve = growthConstraints,
-                      mortalityshape = mortConstraints,
-                      #longevityConstraints,
-                      mANPPproportion = mANPPconstraints)
   standAge <- unique(fB$standAge)
   standAge <- standAge[standAge <= max(standAgesForFitting) & standAge >= min(standAgesForFitting)]
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
