@@ -598,12 +598,12 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     predGrid[, `:=`(
       predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
       predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]][["gam"]], .SD, se.fit = FALSE))
-    ), "Sp", .SDcols = "standAge"]
+    ), by = "Sp", .SDcols = "standAge"]
   } else {
     predGrid[, `:=`(
       predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
       predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]], .SD, se.fit = FALSE))
-    ), "Sp", .SDcols = "standAge"]
+    ), by = "Sp", .SDcols = "standAge"]
   }
   # misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
   dt <- as.data.table(expand.grid(speciesCode = unique(fB$speciesCode), standAge = unique(predGrid$standAge)))
