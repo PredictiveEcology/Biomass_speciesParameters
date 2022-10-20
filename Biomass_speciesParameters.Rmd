@@ -488,7 +488,7 @@ panble(df_params, caption, landscape = TRUE,
 ### List of outputs {#bsppparam-outputs-list}
 
 The module produces the following outputs (Table
-\@ref(tab:moduleOutputs-Biomass-borealDataPrep)). Note that `species` and
+\@ref(tab:moduleOutputs-Biomass-speciesParameters)). Note that `species` and
 `speciesEcoregion` are modified versions of the inputed objects with the same
 name.
 
