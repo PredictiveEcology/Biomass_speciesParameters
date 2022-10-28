@@ -35,13 +35,11 @@ if (!file.exists("citations/ecology-letters.csl")) {
   download.file("https://www.zotero.org/styles/ecology-letters?source=1", destfile = "citations/ecology-letters.csl")
 }
 
-if (!require(Require)) {
-  install.packages("Require")
-  library(Require)
-}
+library(Require)
 
-Require(c("SpaDES.core", "git2r", "openxlsx"), require = FALSE)
-Require(c("dplyr", "data.table", "kableExtra", "pander", "PredictiveEcology/SpaDES.docs"))
+Require(c("SpaDES.core", "git2r", "dplyr", "data.table", "kableExtra",
+          "pander", "PredictiveEcology/SpaDES.docs"),
+        upgrade = FALSE, install = FALSE)
 ```
 
 ```{r badgeFigs-Biomass-speciesParameters, include = FALSE, eval = TRUE, cache = FALSE}
@@ -58,7 +56,7 @@ if (!file.exists("figures/issuesBadge.png")) {
                 mode = 'wb')
 }
 
-modversion <- paste(unlist(SpaDES.core::moduleMetadata(module = 'Biomass_speciesParameters', path = '..')$version), collapse = ".")
+modversion <- paste(unlist(moduleMetadata(module = 'Biomass_speciesParameters', path = '..')$version), collapse = ".")
 download.file(url = paste0("https://img.shields.io/badge/Biomass_speciesParameters-", paste0("v.%20", modversion),
                            "-%3CCOLOR%3E.png"),
               destfile = "figures/moduleVersionBadge.png",
@@ -67,16 +65,26 @@ download.file(url = paste0("https://img.shields.io/badge/Biomass_speciesParamete
 
 ``` {r moduleBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
 ## try to automatically get the commit URL and the path to the badge image
-badgeURL <- if (!git2r::is_detached()) {
-  commitSHA <- git2r::sha(git2r::revparse_single(".", "HEAD"))
+modulePath <- if (grepl("Biomass_speciesParameters$", normPath("."))) {
+    normPath(".")
+  } else {
+    modulePath <- grep("Biomass_speciesParameters$", 
+                       list.files(pattern = "Biomass_speciesParameters", recursive = TRUE, include.dirs = TRUE),
+                       value = TRUE)
+    modulePath <- grep("docs/", modulePath, value = TRUE, invert = TRUE)  ## exclude "copied" modules dirs for bookdown
+    normPath(modulePath)
+  }
+
+badgeURL <- if (!is_detached(modulePath)) {
+  commitSHA <- sha(revparse_single(modulePath, "HEAD"))
   repo <- sub("[.]git$", "/commit/",
-              git2r::branch_remote_url(git2r::branch_get_upstream(git2r::repository_head("."))))
-  paste0(repo, "/tree/", commitSHA)
+              branch_remote_url(branch_get_upstream(repository_head(modulePath))))
+  paste0(repo, commitSHA)
 } else {
   ## if detached point to the first remote
-  git2r::remote_url()[1]
+  remote_url(modulePath)[1]
 }
-badgeURL <- sub(".*github[.]com", "https://github.com", badgeURL)
+badgeURL <- sub(".*github[.]com:", "https://github.com/", badgeURL)
 
 badgePath <- normPath("figures/moduleVersionBadge.png")
 
@@ -97,7 +105,7 @@ cat(paste0("[![Issues-badge](", badgePath, ")](", badgeURL,")"))
 
 #### Authors:
 
-`r paste(as.character(SpaDES.core::moduleMetadata(module = 'Biomass_speciesParameters', path = '..')$authors), sep = ', ')`
+`r paste(as.character(moduleMetadata(module = 'Biomass_speciesParameters', path = '..')$authors), sep = ', ')`
 <!-- ideally separate authors with new lines, '\n' not working -->
 
 **This documentation is work in progress. Potential discrepancies and omissions
@@ -402,7 +410,7 @@ ID). 'maxB' and 'maxANPP' values are (re-)calibrated by species.
 \blandscape
 
 ```{r moduleInputs2-Biomass-speciesParameters, echo = FALSE, eval = TRUE, message = FALSE, results = 'asis'}
-df_inputs <- SpaDES.core::moduleInputs("Biomass_speciesParameters", "..")
+df_inputs <- moduleInputs("Biomass_speciesParameters", "..")
 caption <- "List of (ref:Biomass-speciesParameters) input objects and their description."
 
 # knitr::kable(df_inputs, caption = caption) %>%
@@ -459,7 +467,7 @@ the GAMMs.
 
 
 ```{r moduleParams2-Biomass-speciesParameters, echo = FALSE, eval = TRUE, message = FALSE, results = 'asis'}
-df_params <- SpaDES.core::moduleParams("Biomass_speciesParameters", "..")
+df_params <- moduleParams("Biomass_speciesParameters", "..")
 caption <- "List of (ref:Biomass-speciesParameters) parameters and their description."
 
 # knitr::kable(df_params, caption = caption) %>%
@@ -478,7 +486,7 @@ panble(df_params, caption, landscape = TRUE,
 ### List of outputs {#bsppparam-outputs-list}
 
 The module produces the following outputs (Table
-\@ref(tab:moduleOutputs-Biomass-borealDataPrep)). Note that `species` and
+\@ref(tab:moduleOutputs-Biomass-speciesParameters)). Note that `species` and
 `speciesEcoregion` are modified versions of the inputed objects with the same
 name.
 
@@ -489,7 +497,7 @@ name.
 -   `speciesGAMMs` -- the fitted GAMM model objects for each species.
 
 ```{r moduleOutputs-Biomass-speciesParameters, echo = FALSE, eval = TRUE, message = FALSE, results = 'asis'}
-df_outputs <- SpaDES.core::moduleOutputs("Biomass_speciesParameters", "..")
+df_outputs <- moduleOutputs("Biomass_speciesParameters", "..")
 caption <- "List of (ref:Biomass-speciesParameters) output objects and their description."
 
 # knitr::kable(tab, caption = caption) %>%
