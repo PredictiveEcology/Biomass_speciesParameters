@@ -521,8 +521,10 @@ dir.create(pkgPath, recursive = TRUE)
 .libPaths(pkgPath, include.site = FALSE)
 
 if (!require(Require, lib.loc = pkgPath)) {
-  remotes::install_github("PredictiveEcology/Require@5c44205bf407f613f53546be652a438ef1248147",
-                          upgrade = FALSE, force = TRUE)
+  remotes::install_github(
+    paste0("PredictiveEcology/",
+           "Require@5c44205bf407f613f53546be652a438ef1248147"),
+    upgrade = FALSE, force = TRUE)
   library(Require, lib.loc = pkgPath)
 }
 
@@ -532,7 +534,8 @@ setLinuxBinaryRepo()
 ### Get the module and module dependencies {#bsppparam-example-pkg-mods}
 
 ```{r getModule-Biomass-Biomass-speciesParameters, eval = FALSE}
-Require("PredictiveEcology/SpaDES.project@6d7de6ee12fc967c7c60de44f1aa3b04e6eeb5db", 
+Require(pasteo("PredictiveEcology/",
+               "SpaDES.project@6d7de6ee12fc967c7c60de44f1aa3b04e6eeb5db"), 
         require = FALSE, upgrade = FALSE, standAlone = TRUE)
 
 paths <- list(inputPath = normPath(file.path(tempDir, "inputs")), 
@@ -555,7 +558,7 @@ Require(c("SpaDES"), upgrade = FALSE, install = FALSE)
 
 ### Setup simulation
 
-```{r module usage example setup-Biomass-speciesParameters, eval = FALSE}
+```{r module usage example setup-Biomass-speciesParameters, eval = FALSE, tidy.opts = list(width.cutoff = 70)}
 times <- list(start = 0, end = 1)
 
 modules <- list("Biomass_speciesParameters")
