@@ -324,18 +324,6 @@ values, which are then used directly as the calibrated values, in case of
 `growthcurve` and `mortalityshape`, or to calibrate `maxANPP` in the case of
 `maxANPPproportion` (see below).
 
-The user has the option to constrain the values of the `growthcurve` and
-`mortalityshape` parameters. By default, `growthcurve` is forced to 0.5,
-`mortalityshape` is allowed to vary between 15 and 25, and `mANPPproportion`
-between 2.0 and 5.0 (see module parameters `P(sim)$constrainGrowthCurve`,
-`P(sim)constrainMortalityShape` and `P(sim)constrainMaxANPP`). These boundary
-values were based on preliminary runs and analyses using the default data and
-may not apply to other data sets, or to different spatial subsets of the default
-data.
-
-If boundary values are used, *Biomass_speciesParameters* subsets the theoretical
-species growth curves to those with trait values within the selected boundaries.
-
 Since simulated growth curves never achieve the maximum biomass parameter (the
 `maxBiomass` parameter set to 5000 for all simulations of theoretical species
 curves, or the `maxB` parameter in *Biomass_core* simulations), it acts as an
@@ -359,8 +347,7 @@ maxB \times \frac{mANPPproportion}{100}
 (\#eq:maxANPPcalib)
 \end{equation}
 ```
-where `maxB` is the already (re-)calibrated version. As already stated above, the
-final `maxANPP` value is then constrained between 2.0 and 5.0 by default.
+where `maxB` is the already (re-)calibrated version.
 
 In cases where there are not sufficient PSP data to fit the growth models and 
 perform the calibration, `mANPPproportion` defaults to 3.33 (the value used in LANDIS-II
@@ -433,21 +420,16 @@ Of these parameters, the following are particularly important:
 
 **Calibration parameters**
 
--   `GAMMiterations` and `GAMMknots` -- control the number of iterations and
-smoother degree used to fit the GAMMs, respectively.
-
--   `constrainGrowthCurve`, `constrainMortalityShape` and `constrainMaxANPP` --
-determine the upper and lower boundaries of the calibrated values of
-`growthcurve`, `mortalityshape` and `maxANPP`, respectively.
+    -   `biomassModel` -- the model used to calculate biomass from DBH
+    
+    -   `speciesFittingApproach` -- should the calibration take into account species
+    growing in single- or multi-species context?
 
 **Data processing**
 
--   `minimumPlotsPerGamm` -- define a minimum number of PSP plots needed to fit
-the GAMMs.
-
--   `PSPperiod` -- PSP data period to use.
-
--   `quantileAgeSubset` -- upper quantile age value used to subset PSP data.
+    -   `PSPperiod` -- PSP data period to use.
+    
+    -   `quantileAgeSubset` -- upper quantile age value used to subset PSP data.
 
 \newpage
 \blandscape
@@ -472,9 +454,9 @@ name.
 
 **Tables**
 
--   `species` and `speciesEcoregion` -- tables with calibrated trait values.
-
--   `speciesGAMMs` -- the fitted GAMM model objects for each species.
+    -   `species` and `speciesEcoregion` -- tables with calibrated trait values.
+    
+    -   `speciesGAMMs` -- the fitted GAMM model objects for each species.
 
 ```{r moduleOutputs-Biomass-speciesParameters, echo = FALSE, eval = TRUE, message = FALSE, results = 'asis'}
 df_outputs <- moduleOutputs("Biomass_speciesParameters", "..")
@@ -508,13 +490,9 @@ parameter fitting (e.g., the theoretical species growth curve data);
 3.  Finding the theoretical species growth curve that best matches the observed
 curve, for each species. Theoretical curves are subset to those with longevity
 matching the species' longevity (in `species` table) and with
-`growthcurve` and `mortalityshape` values within the chosen boundaries
-(`P(sim)$constrainGrowthCurve`, `P(sim)$constrainMortalityShape`);
+`growthcurve` and `mortalityshape` values;
 
-4.  Calibrating `maxB` and `maxANPP`
-
-5.  Adjusting `maxANPP` to match the chosen boundaries
-(`P(sim)$constrainMaxANPP`)
+4.  Calibrating `maxB` and `maxANPP`.
 
 ## Usage example {#bsppparam-example}
 
