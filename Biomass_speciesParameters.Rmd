@@ -509,38 +509,53 @@ repository](https://github.com/CeresBarros/LandRBiomass_publication) and in
 
 ### Load `SpaDES` and other packages.
 
-```{r load-SpaDES-Biomass-speciesParameters}
-if (!require(Require)) {
-  install.packages("Require")
-  library(Require)
+### Set up R libraries {#bsppparam-example-libs}
+
+```{r load-Rlibs-Biomass-speciesParameters, eval=FALSE}
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+tempDir <- tempdir()
+
+pkgPath <- file.path(tempDir, "packages", version$platform,
+                     paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1]))
+dir.create(pkgPath, recursive = TRUE)
+.libPaths(pkgPath, include.site = FALSE)
+
+if (!require(Require, lib.loc = pkgPath)) {
+  remotes::install_github("PredictiveEcology/Require@5c44205bf407f613f53546be652a438ef1248147",
+                          upgrade = FALSE, force = TRUE)
+  library(Require, lib.loc = pkgPath)
 }
 
-Require(c("PredictiveEcology/SpaDES.install",
-          "SpaDES", "PredictiveEcology/SpaDES.core@development"), 
-        install_githubArgs = list(dependencies = TRUE))
+setLinuxBinaryRepo()
 ```
 
-### Get module, necessary packages and set up folder directories
+### Get the module and module dependencies {#bsppparam-example-pkg-mods}
 
-```{r module usage example pkg-Biomass-speciesParameters, eval = FALSE}
-tempDir <- tempdir()
+```{r module usage example setup-Biomass-speciesParameters, eval = FALSE}
+Require("PredictiveEcology/SpaDES.project@6d7de6ee12fc967c7c60de44f1aa3b04e6eeb5db", 
+        require = FALSE, upgrade = FALSE, standAlone = TRUE)
 
 paths <- list(inputPath = normPath(file.path(tempDir, "inputs")), 
               cachePath = normPath(file.path(tempDir, "cache")), 
               modulePath = normPath(file.path(tempDir, "modules")), 
               outputPath = normPath(file.path(tempDir, "outputs")))
 
-getModule("PredictiveEcology/Biomass_speciesParameters@79896a4e3b785e34e5f509798ab6c2204bb334d7", modulePath = paths$modulePath, overwrite = TRUE)
+SpaDES.project::getModule(modulePath = paths$modulePath,
+                          c("PredictiveEcology/Biomass_speciesParameters@master"),
+                          overwrite = TRUE)
 
 ## make sure all necessary packages are installed:
-makeSureAllPackagesInstalled(paths$modulePath)
+outs <- SpaDES.project::packagesInModules(modulePath = paths$modulePath)
+Require(c(unname(unlist(outs)), "SpaDES"),
+        require = FALSE, standAlone = TRUE)
+
+## load necessary packages
+Require(c("SpaDES"), upgrade = FALSE, install = FALSE)
 ```
 
 ### Setup simulation
 
 ```{r module usage example setup-Biomass-speciesParameters, eval = FALSE}
-library(SpaDES)
-
 times <- list(start = 0, end = 1)
 
 modules <- list("Biomass_speciesParameters")
