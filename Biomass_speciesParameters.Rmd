@@ -413,11 +413,6 @@ ID). 'maxB' and 'maxANPP' values are (re-)calibrated by species.
 df_inputs <- moduleInputs("Biomass_speciesParameters", "..")
 caption <- "List of (ref:Biomass-speciesParameters) input objects and their description."
 
-# knitr::kable(df_inputs, caption = caption) %>%
-#   kableExtra::kable_styling(latex_options = c("repeat_header"))
-
-## setting the options is necessary to escape special characters (must have chunk opt results = 'asis')
-# opts <- panderOptions("knitr.auto.asis", FALSE)  
 ## pander's hyphenation doesn't work with URLs and big/strange words (like obj names). split manually
 if (knitr::is_latex_output()) {
   df_inputs$objectName <- wrapStrFun(df_inputs$objectName, size = 10)
@@ -426,12 +421,10 @@ if (knitr::is_latex_output()) {
   df_inputs$sourceURL <- wrapStrFun(df_inputs$sourceURL, size = 10)
 }
 
-# pander::pander(df_inputs, caption = addLabel(caption), justify = "left",
-#                split.tables = Inf, keep.line.breaks = TRUE)
-# options(opts)
 panble(df_inputs, caption, landscape = TRUE,
        panderArgs = list("justify" = "left", "split.tables" = Inf,
-                                       "keep.line.breaks" = TRUE))
+                                       "keep.line.breaks" = TRUE),
+       kable_stylingArgs = list(full_width = TRUE))
 ```
 
 \elandscape
@@ -470,15 +463,9 @@ the GAMMs.
 df_params <- moduleParams("Biomass_speciesParameters", "..")
 caption <- "List of (ref:Biomass-speciesParameters) parameters and their description."
 
-# knitr::kable(df_params, caption = caption) %>%
-#   kableExtra::kable_styling(latex_options = c("repeat_header"))
-
-# opts <- panderOptions("knitr.auto.asis", FALSE)    
-# pander(df_params, caption = addLabel(caption), justify = "left", 
-#        digits = 3, split.cells = c(15,15, 5, 5, 5, 40), split.tables = Inf)
-# options(opts)
 panble(df_params, caption, landscape = TRUE,
-       panderArgs = list("justify" = "left", "digits" = 3, "split.cells" = c(15,15, 5, 5, 5, 40), "split.tables" = Inf))
+       panderArgs = list("justify" = "left", "digits" = 3, "split.cells" = c(15,15, 5, 5, 5, 40), "split.tables" = Inf),
+       kable_stylingArgs = list(full_width = TRUE))
 ```
 
 \elandscape
@@ -500,13 +487,9 @@ name.
 df_outputs <- moduleOutputs("Biomass_speciesParameters", "..")
 caption <- "List of (ref:Biomass-speciesParameters) output objects and their description."
 
-# knitr::kable(tab, caption = caption) %>%
-#   kableExtra::kable_styling(latex_options = c("repeat_header"))
-
-# pander(df_outputs, caption = addLabel(caption), justify = "left", 
-#        digits = 3, split.cells = c(15, 15, 40), split.tables = Inf)
 panble(df_outputs, caption, 
-       panderArgs = list("justify" = "left", "digits" = 3, "split.cells" = c(15, 15, 40), "split.tables" = Inf))
+       panderArgs = list("justify" = "left", "digits" = 3, "split.cells" = c(15, 15, 40), "split.tables" = Inf),
+       kable_stylingArgs = list(full_width = TRUE))
 ```
 
 ### Simulation flow and module events {#bsppparam-sim-flow}
