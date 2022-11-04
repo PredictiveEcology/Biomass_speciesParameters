@@ -531,7 +531,7 @@ setLinuxBinaryRepo()
 
 ### Get the module and module dependencies {#bsppparam-example-pkg-mods}
 
-```{r module usage example setup-Biomass-speciesParameters, eval = FALSE}
+```{r getModule-Biomass-Biomass-speciesParameters, eval = FALSE}
 Require("PredictiveEcology/SpaDES.project@6d7de6ee12fc967c7c60de44f1aa3b04e6eeb5db", 
         require = FALSE, upgrade = FALSE, standAlone = TRUE)
 
