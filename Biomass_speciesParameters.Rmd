@@ -511,7 +511,7 @@ repository](https://github.com/CeresBarros/LandRBiomass_publication) and in
 
 ### Set up R libraries {#bsppparam-example-libs}
 
-```{r load-Rlibs-Biomass-speciesParameters, eval=FALSE}
+```{r load-Rlibs-Biomass-speciesParameters, eval = FALSE}
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 tempDir <- tempdir()
 
