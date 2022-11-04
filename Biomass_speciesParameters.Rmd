@@ -573,47 +573,7 @@ inputs <- list()
 outputs <- list()
 
 parameters <- list(Biomass_speciesParameters = 
-                     list(GAMMiterations = 2, 
-                          GAMMknots = list(
-                            "Abie_bal" = 3,
-                            "Abie_las" = 3,
-                            "Betu_pap" = 3,
-                            "Lari_lar" = 4,
-                            "Pice_eng" = 4,
-                            "Pice_gla" = 3,
-                            "Pice_mar" = 4,
-                            "Pinu_ban" = 3,
-                            "Pinu_con" = 4, 
-                            "Popu_tre" = 4,
-                            "Pseu_men" = 3),
-                          minimumPlotsPerGamm = 40,
-                          constrainMortalityShape = list(
-                            "Abie_bal" = c(15,25),
-                            "Abie_las" = c(15,25),
-                            "Betu_pap" = c(15,20),
-                            "Lari_lar" = c(20,25),
-                            "Pice_eng" = c(20,25),
-                            "Pice_gla" = c(20,25),
-                            "Pice_mar" = c(15,25),
-                            "Pinu_ban" = c(15,25),
-                            "Pinu_con" = c(15,25), 
-                            "Popu_tre" = c(20,25),
-                            "Pseu_men" = c(20,25)
-                          ),
-                          constrainGrowthCurve = list(
-                            "Abie_bal" = c(0, 1),
-                            "Abie_las" = c(0, 1),
-                            "Betu_pap" = c(0, 1),
-                            "Lari_lar" = c(0, 1),
-                            "Pice_eng" = c(0, 1),
-                            "Pice_gla" = c(0, 1),
-                            "Pice_mar" = c(0, 1),
-                            "Pinu_ban" = c(0, 1),
-                            "Pinu_con" = c(0, 1), 
-                            "Popu_tre" = c(0, 1),
-                            "Pseu_men" = c(0, 1)
-                          ),
-                          quantileAgeSubset = list(
+                     list(quantileAgeSubset = list(
                             "Abie_bal" = 95, 
                             "Abie_las" = 95,
                             "Betu_pap" = 95,
