@@ -66,14 +66,14 @@ download.file(url = paste0("https://img.shields.io/badge/Biomass_speciesParamete
 ``` {r moduleBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
 ## try to automatically get the commit URL and the path to the badge image
 modulePath <- if (grepl("Biomass_speciesParameters$", normPath("."))) {
-    normPath(".")
-  } else {
-    modulePath <- grep("Biomass_speciesParameters$", 
-                       list.files(pattern = "Biomass_speciesParameters", recursive = TRUE, include.dirs = TRUE),
-                       value = TRUE)
-    modulePath <- grep("docs/", modulePath, value = TRUE, invert = TRUE)  ## exclude "copied" modules dirs for bookdown
-    normPath(modulePath)
-  }
+  normPath(".")
+} else {
+  modulePath <- grep("Biomass_speciesParameters$", 
+                     list.files(pattern = "Biomass_speciesParameters", recursive = TRUE, include.dirs = TRUE),
+                     value = TRUE)
+  modulePath <- grep("docs/", modulePath, value = TRUE, invert = TRUE)  ## exclude "copied" modules dirs for bookdown
+  normPath(modulePath)
+}
 
 badgeURL <- if (!is_detached(modulePath)) {
   commitSHA <- sha(revparse_single(modulePath, "HEAD"))
@@ -404,7 +404,7 @@ if (knitr::is_latex_output()) {
 
 panble(df_inputs, caption, landscape = TRUE,
        panderArgs = list("justify" = "left", "split.tables" = Inf,
-                                       "keep.line.breaks" = TRUE),
+                         "keep.line.breaks" = TRUE),
        kable_stylingArgs = list(full_width = TRUE))
 ```
 
@@ -565,10 +565,12 @@ modules <- list("Biomass_speciesParameters")
 
 #the purpose of this table is experiment with modify longevity - longevity is not estimated by the module
 #but it is used in trait estimation. 
-inputSpecies <- data.table(species = c("Abie_bal", 'Abie_las', 'Betu_pap', 'Lari_lar',
-                                       'Pice_eng', 'Pice_gla', 'Pice_mar', 'Pinu_ban',
-                                       'Pinu_con', 'Pseu_men', "Popu_tre"),
-                           longevity = c(300, 300, 170, 170, 330, 250, 250, 175, 300, 600, 200),
+inputSpecies <- data.table(species = c("Abie_bal", 'Abie_las', 'Betu_pap', 
+                                       'Lari_lar', 'Pice_eng', 'Pice_gla', 
+                                       'Pice_mar', 'Pinu_ban', 'Pinu_con', 
+                                       'Pseu_men', "Popu_tre"),
+                           longevity = c(300, 300, 170, 170, 330, 250, 
+                                         250, 175, 300, 600, 200),
                            mortalityshape = 15, growthcurve = 0)
 objects <- list(species = inputSpecies)
 
