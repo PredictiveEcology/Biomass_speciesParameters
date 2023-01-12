@@ -452,6 +452,7 @@ Save <- function(sim) {
       PSPmeasure_sppParams <- rbindlist(PSPmeasure_sppParams, fill = TRUE)
       PSPplot_sppParams <- rbindlist(PSPplot_sppParams, fill = TRUE)
       PSPgis_sppParams <- geoCleanPSP(Locations = PSPplot_sppParams)
+      PSPplot_sppParams[, c("Zone", "Datum", "Easting", "Northing", "Latitude", "Longitude") := NULL]
       #keep only plots with valid coordinates
       PSPmeasure_sppParams <- PSPmeasure_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
       PSPplot_sppParams <- PSPplot_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]

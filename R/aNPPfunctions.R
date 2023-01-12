@@ -24,7 +24,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
   #Join data (should be small enough by now)
   PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear")]
-  PSPmeasure[, c("Longitude", "Latitude", "Easting", "Northing", "Zone") := NULL]
 
   #Filter by > 30 trees at first measurement (P) to ensure forest.
   forestPlots <- PSPmeasure[, .(measures = .N), OrigPlotID1] %>%
