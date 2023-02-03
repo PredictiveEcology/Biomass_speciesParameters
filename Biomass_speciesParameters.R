@@ -18,7 +18,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
-                  "ianmseddy/PSPclean (>= 0.1.3.9000)"),
+                  "ianmseddy/PSPclean (>= 0.1.3.9001)"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
@@ -293,11 +293,11 @@ Save <- function(sim) {
     data.table::setDTthreads(4)
   }
   on.exit(data.table::setDTthreads(origDTthreads))
-  
+
   cacheTags <- c(currentModule(sim), "function:.inputObjects") ## uncomment this if Cache is being used
   dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
-  
+
   if (!suppliedElsewhere("cohortDataFactorial", sim)) {
     sim$cohortDataFactorial <- prepInputs(targetFile = "cohortDataFactorial_medium.rds",
                                           destinationPath = dPath,
@@ -305,7 +305,7 @@ Save <- function(sim) {
                                           url = extractURL("cohortDataFactorial", sim),
                                           useCache = TRUE, userTags = c(cacheTags, "factorialCohort"))
   }
-  
+
   if (!suppliedElsewhere("speciesTableFactorial", sim)) {
     sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial_medium.rds",
                                             destinationPath = dPath,
@@ -313,7 +313,7 @@ Save <- function(sim) {
                                             fun = "readRDS", overwrite = TRUE,
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
-  
+
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
     sim$speciesEcoregion <- data.table(
@@ -327,7 +327,7 @@ Save <- function(sim) {
       year = 0
     )
   }
-  
+
   if (!suppliedElsewhere("sppEquiv", sim)) {
     #pass a default sppEquivalencies_CA for common species in western Canada
     sppEquivalencies_CA <-  LandR::sppEquivalencies_CA
@@ -341,10 +341,10 @@ Save <- function(sim) {
     sppEquivalencies_CA <- sppEquivalencies_CA[!is.na(default)]
     sim$sppEquiv <- sppEquivalencies_CA
   }
-  
+
   ## check parameter consistency across modules
   paramCheckOtherMods(sim, "sppEquivCol", ifSetButDifferent = "error")
-  
+
   if (!suppliedElsewhere("species", sim)) {
     message("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
     speciesTable <- getSpeciesTable()
@@ -352,12 +352,12 @@ Save <- function(sim) {
                                     sppEquiv = sim$sppEquiv,
                                     sppEquivCol = P(sim)$sppEquivCol)
   }
-  
+
   if (!suppliedElsewhere("PSPmeasure_sppParams", sim) |
       !suppliedElsewhere("PSPplot_sppParams", sim) |
       !suppliedElsewhere("PSPgis_sppParams", sim)) {
     message("one or more PSP objects not supplied. Generating PSP data...")
-    
+
     if ("dummy" %in% P(sim)$PSPdataTypes) {
       message("generating randomized PSP data")
       sim$PSPmeasure_sppParams <- Cache(prepInputs,
@@ -366,14 +366,14 @@ Save <- function(sim) {
                                         url =  extractURL("PSPmeasure_sppParams", sim),
                                         destinationPath = dPath,
                                         fun = "readRDS")
-      
+
       sim$PSPplot_sppParams <- Cache(prepInputs,
                                      targetFile = "randomizedPSPplot_sppParams.rds",
                                      archive = "randomized_LandR_speciesParameters_Inputs.zip",
                                      url = extractURL("PSPplot_sppParams", sim),
                                      destinationPath = dPath,
                                      fun = "readRDS")
-      
+
       sim$PSPgis_sppParams <- Cache(prepInputs,
                                     targetFile = "randomizedPSPgis_sppParams.rds",
                                     archive = "randomized_LandR_speciesParameters_Inputs.zip",
@@ -385,10 +385,10 @@ Save <- function(sim) {
       if (!any(c("BC", "AB", "SK", "NFI", "ON", "all") %in% P(sim)$PSPdataTypes)) {
         stop("Please review P(sim)$dataTypes - incorrect value specified")
       }
-      
+
       PSPmeasure_sppParams <- list()
       PSPplot_sppParams <- list()
-      
+
       if ("BC" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
         PSPbc <- Cache(prepInputsBCPSP, dPath = dPath, userTags = c(cacheTags, "BCPSP"))
         PSPbc <- dataPurification_BCPSP(treeDataRaw = PSPbc$treeDataRaw,
@@ -398,7 +398,7 @@ Save <- function(sim) {
         PSPmeasure_sppParams[["BC"]] <- PSPbc$treeData
         PSPplot_sppParams[["BC"]] <- PSPbc$plotHeaderData
       }
-      
+
       if ("AB" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
         PSPab <- Cache(prepInputsAlbertaPSP, dPath = dPath, userTags = c(cacheTags, "ABPSP"))
         PSPab <- dataPurification_ABPSP(treeMeasure = PSPab$pspABtreeMeasure,
@@ -410,7 +410,7 @@ Save <- function(sim) {
         PSPmeasure_sppParams[["AB"]] <- PSPab$treeData
         PSPplot_sppParams[["AB"]] <- PSPab$plotHeaderData
       }
-      
+
       if ("SK" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
         PSPsk <- Cache(prepInputsSaskatchwanPSP, dPath = dPath, userTags = c(cacheTags, "SKPSP"))
         PSPsk <- dataPurification_SKPSP(SADataRaw = PSPsk$SADataRaw,
@@ -419,14 +419,14 @@ Save <- function(sim) {
                                         treeDataRaw = PSPsk$treeDataRaw)
         PSPmeasure_sppParams[["SK"]] <- PSPsk$treeData
         PSPplot_sppParams[["SK"]] <- PSPsk$plotHeaderData
-        
+
         TSPsk <- Cache(prepInputsSaskatchwanTSP, dPath = dPath, userTags = c(cacheTags, "SKTSP"))
         TSPsk <- dataPurification_SKTSP_Mistik(compiledPlotData = TSPsk$compiledPlotData,
                                                compiledTreeData = TSPsk$compiledTreeData)
         PSPmeasure_sppParams[["SKtsp"]] <- TSPsk$treeData
         PSPplot_sppParams[["SKtsp"]] <- TSPsk$plotHeaderData
       }
-      
+
       if ("ON" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
         PSPon <- prepInputsOntarioPSP(dPath = dPath)
         #sppEquiv should not be subset to species of interest the way LandR requires
@@ -436,9 +436,9 @@ Save <- function(sim) {
         PSPmeasure_sppParams[["ON"]] <- PSPon$treeData
         PSPplot_sppParams[["ON"]] <- PSPon$plotHeaderData
       }
-      
+
       if ("NFI" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        
+
         PSPnfi <- Cache(prepInputsNFIPSP, dPath = dPath, userTags = c(cacheTags, "NFIPSP"))
         PSPnfi <- dataPurification_NFIPSP(lgptreeRaw = PSPnfi$pspTreeMeasure,
                                           lgpHeaderRaw = PSPnfi$pspHeader,
@@ -448,7 +448,7 @@ Save <- function(sim) {
         PSPmeasure_sppParams[["NFI"]] <- PSPnfi$treeData
         PSPplot_sppParams[["NFI"]] <- PSPnfi$plotHeaderData
       }
-      
+
       PSPmeasure_sppParams <- rbindlist(PSPmeasure_sppParams, fill = TRUE)
       PSPplot_sppParams <- rbindlist(PSPplot_sppParams, fill = TRUE)
       PSPgis_sppParams <- geoCleanPSP(Locations = PSPplot_sppParams)
@@ -461,6 +461,6 @@ Save <- function(sim) {
       sim$PSPgis_sppParams <- PSPgis_sppParams
     }
   }
-  
+
   return(invisible(sim))
 }
