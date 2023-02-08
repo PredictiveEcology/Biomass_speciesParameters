@@ -52,7 +52,7 @@ defineModule(sim, list(
                                   "pairwise species, but using a focal species approach where all other species are ",
                                   "pooled into 'other' or do one species at a time. If 'all', all species will have",
                                   "identical species-level traits")),
-    defineParameter("sppEquivCol", "character", "default", NA, NA,
+    defineParameter("sppEquivCol", "character", "Boreal", NA, NA,
                     paste("The column in `sim$sppEquiv` data.table that defines individual species.",
                           "The names should match those in the species table.")),
     defineParameter("standAgesForFitting", "integer", c(0, 150), NA, NA,
@@ -312,32 +312,26 @@ Save <- function(sim) {
                                             useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
   }
 
+  if (!suppliedElsewhere("sppEquiv", sim)) {
+    #pass a default sppEquivalencies_CA for common species in western Canada
+    sppEquiv <- LandR::sppEquivalencies_CA
+    sim$sppEquiv <- sppEquiv[LandR %in% c(Pice_mar = "Pice_mar", Pice_gla = "Pice_gla",
+                                       Pinu_con = "Pinu_con", Popu_tre = "Popu_tre",
+                                       Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
+                                       Abie_bal = "Abie_bal",
+                                       Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar"),]
+  }
+  
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
     sim$speciesEcoregion <- data.table(
+      speciesCode = unique(sim$sppEquiv[, .SD, .SDcol = P(sim)$sppEquivCol]),
       ecoregionGroup = "x",
-      speciesCode = c("Abie_las", "Abie_bal", "Betu_pap", "Lari_lar", "Pice_eng",
-                      "Pice_gla", "Pice_mar", "Pinu_ban",
-                      "Pinu_con", "Pseu_men", "Popu_tre"),
       establishprob = 0.5,
       maxB = P(sim)$maxBInFactorial,
       maxANPP = P(sim)$maxBInFactorial/30,
       year = 0
     )
-  }
-
-  if (!suppliedElsewhere("sppEquiv", sim)) {
-    #pass a default sppEquivalencies_CA for common species in western Canada
-    sppEquivalencies_CA <-  LandR::sppEquivalencies_CA
-    sppEquivalencies_CA[, default := c(Pice_mar = "Pice_mar", Pice_gla = "Pice_gla",
-                                       Pinu_con = "Pinu_con", Popu_tre = "Popu_tre",
-                                       Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
-                                       Pseu_men = "Pseu_men", Abie_bal = "Abie_bal",
-                                       Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar")[LandR]]
-    sppEquivalencies_CA[LANDIS_traits == "ABIE.LAS"]$default <- "Abie_las"
-    sppEquivalencies_CA <- sppEquivalencies_CA[!LANDIS_traits == "PINU.CON.CON"]
-    sppEquivalencies_CA <- sppEquivalencies_CA[!is.na(default)]
-    sim$sppEquiv <- sppEquivalencies_CA
   }
 
   ## check parameter consistency across modules
