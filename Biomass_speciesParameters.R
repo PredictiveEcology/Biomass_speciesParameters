@@ -105,8 +105,8 @@ defineModule(sim, list(
                               "'species', 'Area', 'longevity', 'sexualmature', 'shadetolerance',",
                               "'firetolerance', 'seeddistance_eff', 'seeddistance_max', 'resproutprob',",
                               "'mortalityshape', 'growthcurve', 'resproutage_min', 'resproutage_max',",
-                              "'postfireregen', 'wooddecayrate', 'leaflongevity' 'leafLignin',",
-                              "'hardsoft'. Only 'growthcurve' and 'mortalityshape' are used in this module.",
+                              "'postfireregen', 'wooddecayrate', 'leaflongevity' 'leafLignin', and 'hardsoft'.",
+                              "Only 'growthcurve', 'hardsoft',  and 'mortalityshape' are used in this module.",
                               "Default is from Dominic Cyr and Yan Boulanger's applications of LANDIS-II"),
                  sourceURL = "https://raw.githubusercontent.com/dcyr/LANDIS-II_IA_generalUseFiles/master/speciesTraits.csv"),
     expectsInput(objectName = "speciesEcoregion", objectClass = "data.table",
@@ -211,7 +211,8 @@ Init <- function(sim) {
     tempMaxB <- sim$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
     #pair-wise species will be matched with traits, as the species code won't match
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
-
+    
+    gc()
     #prepare PSPdata
     speciesGAMMs <- Cache(makePSPgamms,
                           studyAreaANPP = sim$studyAreaANPP,
@@ -232,6 +233,7 @@ Init <- function(sim) {
                           userTags = c(currentModule(sim), "makePSPgamms"))
     sim$speciesGAMMs <- speciesGAMMs
 
+    gc()
     classes <- lapply(sim$speciesGAMMs, FUN = 'class')
 
     noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
