@@ -325,7 +325,7 @@ Save <- function(sim) {
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
     sim$speciesEcoregion <- data.table(
-      speciesCode = unique(sim$sppEquiv[, .SD, .SDcol = P(sim)$sppEquivCol]),
+      speciesCode = unique(sim$sppEquiv[[P(sim)$sppEquivCol]]),
       ecoregionGroup = "x",
       establishprob = 0.5,
       maxB = P(sim)$maxBInFactorial,
