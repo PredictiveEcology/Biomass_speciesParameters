@@ -18,7 +18,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
-                  "ianmseddy/PSPclean@development (>= 0.1.3.9001)"),
+                  "ianmseddy/PSPclean@development (>= 0.1.3.9002)"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
@@ -189,7 +189,7 @@ Init <- function(sim) {
 
   ## if no PSP data supplied, simList returned unchanged
 
-  if (!P(sim)$PSPdataTypes %in% "none") {
+  if (all(P(sim)$PSPdataTypes != "none")) {
     if (is.na(P(sim)$sppEquivCol)) {
       stop("Please supply 'sppEquivCol' in parameters of Biomass_speciesParameters.")
     }
@@ -375,7 +375,7 @@ Save <- function(sim) {
                                     overwrite = TRUE,
                                     destinationPath = dPath,
                                     fun = "readRDS")
-    } else if (!P(sim)$PSPdataTypes %in% "none") {
+    } else if (!any(P(sim)$PSPdataTypes %in% "none")) {
       if (!any(c("BC", "AB", "SK", "NFI", "ON", "all") %in% P(sim)$PSPdataTypes)) {
         stop("Please review P(sim)$dataTypes - incorrect value specified")
       }
@@ -445,8 +445,14 @@ Save <- function(sim) {
 
       PSPmeasure_sppParams <- rbindlist(PSPmeasure_sppParams, fill = TRUE)
       PSPplot_sppParams <- rbindlist(PSPplot_sppParams, fill = TRUE)
+      
       PSPgis_sppParams <- geoCleanPSP(Locations = PSPplot_sppParams)
-      PSPplot_sppParams[, c("Zone", "Datum", "Easting", "Northing", "Latitude", "Longitude") := NULL]
+      
+      #clean up
+      toRemove <- c("Zone", "Datum", "Easting", "Northing", "Latitude", "Longitude")
+      toRemove <- toRemove[toRemove %in% colnames(PSPplot_sppParams)]
+      set(PSPplot_sppParams, NULL, toRemove, NULL)
+      
       #keep only plots with valid coordinates
       PSPmeasure_sppParams <- PSPmeasure_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
       PSPplot_sppParams <- PSPplot_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
