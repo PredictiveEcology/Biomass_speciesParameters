@@ -12,12 +12,13 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
+  loadOrder = list(before = "Biomass_core", after = "Biomass_borealDataPrep"),
   reqdPkgs = list("crayon", "data.table", "fpCompare", "ggplot2", "gridExtra",
                   "magrittr", "mgcv", "nlme", "purrr", "robustbase", "sf",
                   "PredictiveEcology/LandR@development (>= 1.1.0.9009)",
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
-                  "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
+                  "PredictiveEcology/SpaDES.core@findObjects (>= 1.1.1.9005)",
                   "ianmseddy/PSPclean@development (>= 0.1.3.9001)"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
@@ -26,7 +27,7 @@ defineModule(sim, list(
                     desc = paste("Number of iterations for GAMMs.",
                                  "Note that the GAMMs are no longer used to fit species parameters.")),
     defineParameter("GAMMknots", "numeric", 3, NA, NA,
-                    desc = paste("The number of knots to use in the GAMM. Either 3 or 4 is recommended.", 
+                    desc = paste("The number of knots to use in the GAMM. Either 3 or 4 is recommended.",
                                  "Note that the GAMMs are no longer used to fit species parameters.")),
     defineParameter("maxBInFactorial", "integer", 5000L, NA, NA,
                     desc = paste("The arbitrary maximum biomass for the factorial simulations. This",
@@ -211,7 +212,7 @@ Init <- function(sim) {
     tempMaxB <- sim$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
     #pair-wise species will be matched with traits, as the species code won't match
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
-    
+
     gc()
     #prepare PSPdata
     speciesGAMMs <- Cache(makePSPgamms,
@@ -323,7 +324,7 @@ Save <- function(sim) {
                                        Abie_bal = "Abie_bal",
                                        Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar"),]
   }
-  
+
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
     sim$speciesEcoregion <- data.table(
