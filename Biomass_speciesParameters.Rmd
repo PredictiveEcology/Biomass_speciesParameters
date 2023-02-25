@@ -217,9 +217,10 @@ span several thousands of kilometres), or select the data based on a shapefile
 
 By default, the PSP data are obtained from the National Forest Inventory
 (NFI), the Alberta Ministry of Agriculture, the Saskatchewan Ministry of the
-Environment, and the British Columbia Ministry of Forests. These data were previously
-treated for errors and standardized into a single dataset with the exact location and identifying
-attributes anonymized.
+Environment, the Ontario Ministry of Forests and Natural Resources, and 
+the British Columbia Ministry of Forests. These data were previously treated for 
+errors and standardized into a single dataset with the exact location and 
+identifying attributes anonymized.
 
 The data include individual species, diameter at breast height (DBH), and
 sometimes tree height measurements for each tree in a plot, as well as stand

@@ -13,13 +13,13 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
   loadOrder = list(before = "Biomass_core", after = "Biomass_borealDataPrep"),
-  reqdPkgs = list("crayon", "data.table", "fpCompare", "ggplot2", "gridExtra",
-                  "magrittr", "mgcv", "nlme", "purrr", "robustbase", "sf",
+  reqdPkgs = list("crayon", "data.table", "disk.frame", "fpCompare", "ggplot2", "gridExtra",
+                  "magrittr", "mgcv", "nlme", "purrr", "robustbase", "sf", 
                   "PredictiveEcology/LandR@development (>= 1.1.0.9009)",
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "PredictiveEcology/SpaDES.core@findObjects (>= 1.1.1.9005)",
-                  "ianmseddy/PSPclean@development (>= 0.1.3.9001)"),
+                  "ianmseddy/PSPclean@development (>= 0.1.3.9002)"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
@@ -80,11 +80,13 @@ defineModule(sim, list(
   inputObjects = bindrows(
     expectsInput(objectName = "speciesTableFactorial", objectClass = "data.table",
                  desc = paste("A large species table (sensu Biomass_core) with all columns necessary for ",
-                              "running Biomass_core, e.g., longevity, growthcurve, mortalityshape, etc."),
+                              "running Biomass_core, e.g., longevity, growthcurve, mortalityshape, etc.",
+                              "It will be written to disk.frame following completion of the sim to preserve RAM."),
                  sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput(objectName = "cohortDataFactorial", objectClass = "data.table",
                  desc = paste("A large species table (sensu Biomass_core) with columns age, B, and speciesCode",
-                              "that joins with speciesTableFactorial"),
+                              "that joins with speciesTableFactorial. It will be written to disk.frame following",
+                                "completion of the sim, to preserve RAM"),
                  sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput(objectName = "PSPmeasure_sppParams", objectClass = "data.table",
                  desc = paste("Merged PSP and TSP individual tree measurements. Must include the following columns:",
@@ -120,6 +122,8 @@ defineModule(sim, list(
                  desc = "Study area used to crop PSP data before building growth curves")
   ),
   outputObjects = bindrows(
+    createsOutput(objectName = "cohortDataFactorial", objectClass = "disk.frame", 
+                  desc = "This object is converted to a disk.frame to save memory. Read using as.data.table"),
     createsOutput("species", "data.table",
                   desc = "The updated invariant species traits table (see description for this object in inputs)"),
     createsOutput(objectName = "speciesEcoregion", "data.table",
@@ -127,7 +131,9 @@ defineModule(sim, list(
                                "(see description for this object in inputs)")),
     createsOutput(objectName = "speciesGAMMs", objectClass = "list",
                   desc = paste("A list of mixed-effect general additive models (GAMMs) for each tree species",
-                               "modeling biomass as a function of age"))
+                               "modeling biomass as a function of age")),
+    createsOutput(objectName = "speciesTableFactorial", objectClass = "disk.frame",
+                  desc = "This object is converted to a disk.frame to save memory. Read using as.data.table")
   )
 ))
 
@@ -150,21 +156,20 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
       sim <- scheduleEvent(sim, P(sim)$.saveInitialTime, "Biomass_speciesParameters", "save")
       sim <- scheduleEvent(sim, start(sim), "Biomass_speciesParameters",
                            "updateSpeciesTables", eventPriority = 1)
+      sim <- scheduleEvent(sim, start(sim), "Biomass_speciesParameters",
+                           "writeFactorialToDisk", eventPriority = 2)
     },
 
     updateSpeciesTables = {
       sim <- updateSpeciesTables(sim)
     },
+    
+    writeFactorialToDisk = {
+      sim <- useDiskFrame(sim)
+    },
 
     plot = {
-      # lapply(names(sim$speciesGAMMs), FUN = function(spp, GAMMs = sim$speciesGAMMs){
-      #   if (!class(GAMMs[[spp]]) == "character"){
-      #     gam <- GAMMs[[spp]][["gam"]]
-      #     jpeg(filename = file.path(outputPath(sim), paste0(spp, "_gamm.jpg")))
-      #     plot(gam, xlab = "stand age", ylab = "biomass", main = spp)
-      #     dev.off()
-      #   }
-      # })
+     #plotting happens in Init - it could be moved if relevant objects are assigned to mod
     },
     save = {
       # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "Biomass_speciesParameters", "save")
@@ -190,7 +195,7 @@ Init <- function(sim) {
 
   ## if no PSP data supplied, simList returned unchanged
 
-  if (!P(sim)$PSPdataTypes %in% "none") {
+  if (all(P(sim)$PSPdataTypes != "none")) {
     if (is.na(P(sim)$sppEquivCol)) {
       stop("Please supply 'sppEquivCol' in parameters of Biomass_speciesParameters.")
     }
@@ -275,6 +280,22 @@ updateSpeciesTables <- function(sim) {
                                                               speciesTable = sim$species)
   sim$speciesEcoregion <- modifiedTables$newSpeciesEcoregion
   sim$species <- modifiedTables$newSpeciesTable
+  return(sim)
+}
+
+useDiskFrame <- function(sim){
+  
+  cdRows <- nrow(sim$cohortDataFactorial) 
+  # the rows of a factorial object will determine whether it is unique in 99.9% of cases
+  sim$cohortDataFactorial <- as.disk.frame(sim$cohortDataFactorial, overwrite = TRUE,
+                                           outdir = file.path(dataPath(sim), 
+                                                              paste0("cohortDataFactorial", cdRows)))
+  stRows <- nrow(sim$speciesTableFactorial)
+  sim$speciesTableFactorial <- as.disk.frame(sim$speciesTableFactorial, overwrite = TRUE,
+                                             outdir = file.path(dataPath(sim), 
+                                                                paste0("speciesTableFactorial", stRows)))
+  #disk.frame objects can be converted to data.table with as.data.table
+  gc()
   return(sim)
 }
 
@@ -376,7 +397,7 @@ Save <- function(sim) {
                                     overwrite = TRUE,
                                     destinationPath = dPath,
                                     fun = "readRDS")
-    } else if (!P(sim)$PSPdataTypes %in% "none") {
+    } else if (!any(P(sim)$PSPdataTypes %in% "none")) {
       if (!any(c("BC", "AB", "SK", "NFI", "ON", "all") %in% P(sim)$PSPdataTypes)) {
         stop("Please review P(sim)$dataTypes - incorrect value specified")
       }
@@ -446,8 +467,14 @@ Save <- function(sim) {
 
       PSPmeasure_sppParams <- rbindlist(PSPmeasure_sppParams, fill = TRUE)
       PSPplot_sppParams <- rbindlist(PSPplot_sppParams, fill = TRUE)
+      
       PSPgis_sppParams <- geoCleanPSP(Locations = PSPplot_sppParams)
-      PSPplot_sppParams[, c("Zone", "Datum", "Easting", "Northing", "Latitude", "Longitude") := NULL]
+      
+      #clean up
+      toRemove <- c("Zone", "Datum", "Easting", "Northing", "Latitude", "Longitude")
+      toRemove <- toRemove[toRemove %in% colnames(PSPplot_sppParams)]
+      set(PSPplot_sppParams, NULL, toRemove, NULL)
+      
       #keep only plots with valid coordinates
       PSPmeasure_sppParams <- PSPmeasure_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
       PSPplot_sppParams <- PSPplot_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
