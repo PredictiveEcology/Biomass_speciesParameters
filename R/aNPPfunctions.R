@@ -206,7 +206,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
 
   #join with inflationFactorKey - it's possible this data.table::copy is unnecessary
-  set(inflationFactorKey, NULL, "species", NULL)
+  suppressWarnings(set(inflationFactorKey, NULL, "species", NULL))
   tempTraits <- copy(factorialTraitsVarying)
   tempTraits <- inflationFactorKey[tempTraits, on = c("growthcurve", "mortalityshape", "longevity", "mANPPproportion")]
   tempTraits <- tempTraits[, .(speciesCode, inflationFactor)]
@@ -243,7 +243,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   # limit best traits to only those that are nearest to longevity provided in SpeciesTable
   # Take next higher longevity (the -Inf in the rolling joing, on the "last" join column i.e., longevity)
   # set(setDT(speciesTable), NULL, "longevityOrig", speciesTable$longevity)
-  set(setDT(newTraits), NULL, "longevityOrigFac", newTraits$longevity)
+  suppressWarnings(set(setDT(newTraits), NULL, "longevityOrigFac", newTraits$longevity))
 
   bt2 <- newTraits[speciesTable[, c("species", "longevity")],
                    #                 bt2 <- newTraits[speciesTable[, c("species", "longevity", "longevityOrig")],
