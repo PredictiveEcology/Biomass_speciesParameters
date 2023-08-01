@@ -563,7 +563,8 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   #with two species - the gamm might converge for one only
   #this structure is to catch try-errors in both pairwise and single
   if (class(gamm) == "try-error" | class(gamm) == "character") {
-    message("not estimating traits for ", name)
+    message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
+    message(paste(gamm))
     # return(list(bestTraits = traits, fullData = NULL, ll = NULL))
     return(NULL)
   } else {
@@ -572,7 +573,9 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     classesGAMM <- unlist(lapply(gamm$speciesGamm, class))
     #decided to allow non-converged gamms, if non-linear converged
     if (any("try-error" %in% c(classesNonLinear, classesGAMM))) {
-      message("not estimating traits for ", name)
+      message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
+      message(paste(gamm$NonLinearModel))
+      message(paste(gamm$speciesGamm))
       return(NULL)
     }
 
