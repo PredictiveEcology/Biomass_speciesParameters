@@ -115,7 +115,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                                        column = speciesCol, searchColumn = "PSP")]
   whNA <- is.na(spsp$speciesTemp)
   message(crayon::yellow("Removing ", paste(unique(spsp$newSpeciesName[whNA]), collapse = ", ")))
-  message(crayon::yellow("   ... because they are not the sppEquiv"))
+  message(crayon::yellow("   ... because they are not in sppEquiv"))
   spsp <- spsp[!whNA]
   spsp <- spsp[newSpeciesName %in% sppEquiv[["PSP"]]]
   freq <- spsp[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
@@ -317,7 +317,7 @@ modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable
 
     hardAverage <- averageOfEstimated[hardsoft == "hard"]
     softAverage <- averageOfEstimated[hardsoft == "soft"]
-    
+
     if (nrow(hardAverage) == 0){
       hardAverage <- softAverage
     }
