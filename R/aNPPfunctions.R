@@ -298,64 +298,65 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   return(list(best = bestWeighted, gg = gg))
 }
 
-modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
-
-  if (is.null(speciesTable[["mANPPproportion"]])) {
-    stop("please supply a species table with inflationFactor and mANPPproportion")
-  }
-
-  speciesTable[, growthCurveSource := 'estimated']
-  if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
-    missing <- speciesTable[is.na(inflationFactor)]$species
-    message("averaging traits for these species: ", paste(missing, collapse = ", "))
-    #note that inflationFactor is dependent on longevity, which is not adjusted
-    averageOfEstimated <- speciesTable[!is.na(inflationFactor),
-                                       .(growthcurve = round(mean(growthcurve), digits = 2),
-                                         mortalityshape = asInteger(mean(mortalityshape)),
-                                         mANPPproportion = round(mean(mANPPproportion), digits = 2),
-                                         inflationFactor = round(mean(inflationFactor), digits = 3)), .(hardsoft)]
-
-    hardAverage <- averageOfEstimated[hardsoft == "hard"]
-    softAverage <- averageOfEstimated[hardsoft == "soft"]
-
-    if (nrow(hardAverage) == 0){
-      hardAverage <- softAverage
-    }
-    if (nrow(softAverage) == 0){
-      softAverage <- hardAverage
-    }
-
-    speciesTable[is.na(inflationFactor) & hardsoft == "soft", `:=`(
-      growthcurve = softAverage$growthcurve,
-      mortalityshape = softAverage$mortalityshape,
-      mANPPproportion = softAverage$mANPPproportion,
-      inflationFactor = softAverage$inflationFactor,
-      growthCurveSource = "imputed"
-    )]
-
-    speciesTable[is.na(inflationFactor) & hardsoft == "hard", `:=`(
-      growthcurve = hardAverage$growthcurve,
-      mortalityshape = hardAverage$mortalityshape,
-      mANPPproportion = hardAverage$mANPPproportion,
-      inflationFactor = hardAverage$inflationFactor,
-      growthCurveSource = "imputed"
-    )]
-  }
-
-  message("modifying speciesEcoregion table based on newly estimated traits")
-
-  newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
-  newSpeciesEcoregion[!is.na(inflationFactor), maxB := asInteger(maxB * inflationFactor)]
-
-  newSpeciesEcoregion[, maxANPP := asInteger(maxB * mANPPproportion/100)]
-  cols <- names(speciesEcoregion)
-  newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
-  newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
-  newSpeciesEcoregion[, maxB := asInteger(maxB)]
-
-  return(list("newSpeciesEcoregion" = newSpeciesEcoregion,
-              "newSpeciesTable" = speciesTable))
-}
+## Moved to LandR: August 2nd 3023
+# modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
+#
+#   if (is.null(speciesTable[["mANPPproportion"]])) {
+#     stop("please supply a species table with inflationFactor and mANPPproportion")
+#   }
+#
+#   speciesTable[, growthCurveSource := 'estimated']
+#   if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
+#     missing <- speciesTable[is.na(inflationFactor)]$species
+#     message("averaging traits for these species: ", paste(missing, collapse = ", "))
+#     #note that inflationFactor is dependent on longevity, which is not adjusted
+#     averageOfEstimated <- speciesTable[!is.na(inflationFactor),
+#                                        .(growthcurve = round(mean(growthcurve), digits = 2),
+#                                          mortalityshape = asInteger(mean(mortalityshape)),
+#                                          mANPPproportion = round(mean(mANPPproportion), digits = 2),
+#                                          inflationFactor = round(mean(inflationFactor), digits = 3)), .(hardsoft)]
+#
+#     hardAverage <- averageOfEstimated[hardsoft == "hard"]
+#     softAverage <- averageOfEstimated[hardsoft == "soft"]
+#
+#     if (nrow(hardAverage) == 0){
+#       hardAverage <- softAverage
+#     }
+#     if (nrow(softAverage) == 0){
+#       softAverage <- hardAverage
+#     }
+#
+#     speciesTable[is.na(inflationFactor) & hardsoft == "soft", `:=`(
+#       growthcurve = softAverage$growthcurve,
+#       mortalityshape = softAverage$mortalityshape,
+#       mANPPproportion = softAverage$mANPPproportion,
+#       inflationFactor = softAverage$inflationFactor,
+#       growthCurveSource = "imputed"
+#     )]
+#
+#     speciesTable[is.na(inflationFactor) & hardsoft == "hard", `:=`(
+#       growthcurve = hardAverage$growthcurve,
+#       mortalityshape = hardAverage$mortalityshape,
+#       mANPPproportion = hardAverage$mANPPproportion,
+#       inflationFactor = hardAverage$inflationFactor,
+#       growthCurveSource = "imputed"
+#     )]
+#   }
+#
+#   message("modifying speciesEcoregion table based on newly estimated traits")
+#
+#   newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
+#   newSpeciesEcoregion[!is.na(inflationFactor), maxB := asInteger(maxB * inflationFactor)]
+#
+#   newSpeciesEcoregion[, maxANPP := asInteger(maxB * mANPPproportion/100)]
+#   cols <- names(speciesEcoregion)
+#   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
+#   newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
+#   newSpeciesEcoregion[, maxB := asInteger(maxB)]
+#
+#   return(list("newSpeciesEcoregion" = newSpeciesEcoregion,
+#               "newSpeciesTable" = speciesTable))
+# }
 
 makeGAMMdata <- function(species, psp, speciesEquiv,
                          sppCol, NoOfIters, K, minSize, q) {
