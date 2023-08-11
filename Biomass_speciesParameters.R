@@ -268,7 +268,7 @@ Init <- function(sim) {
                                                 standAgesForFitting = P(sim)$standAgesForFitting)
     gg <- modifiedSpeciesTables$gg
     Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
-          filename = paste("Pairwise species fits ", gsub(":", "_", sim$._startClockTime)))
+          filename = paste("LandR_VS_NLM_growthCurves"))
     sim$species <- modifiedSpeciesTables$best
   }
   return(sim)
