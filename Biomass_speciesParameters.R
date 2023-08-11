@@ -270,6 +270,8 @@ Init <- function(sim) {
     Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
           filename = paste("Pairwise species fits ", gsub(":", "_", sim$._startClockTime)))
     sim$species <- modifiedSpeciesTables$best
+  } else {
+    message("P(sim)$PSPdataTypes is 'none' -- bypassing species traits estimation from PSP data.")
   }
   return(sim)
 }
