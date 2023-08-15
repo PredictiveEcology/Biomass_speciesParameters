@@ -13,8 +13,8 @@ defineModule(sim, list(
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
   reqdPkgs = list("crayon", "data.table", "disk.frame", "fpCompare", "ggplot2", "gridExtra",
-                  "magrittr", "mgcv", "nlme", "purrr", "robustbase", "sf", 
-                  "PredictiveEcology/LandR@development (>= 1.1.0.9009)",
+                  "magrittr", "mgcv", "nlme", "purrr", "robustbase", "sf",
+                  "PredictiveEcology/LandR@development (>= 1.1.0.9054)",
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
@@ -26,7 +26,7 @@ defineModule(sim, list(
                     desc = paste("Number of iterations for GAMMs.",
                                  "Note that the GAMMs are no longer used to fit species parameters.")),
     defineParameter("GAMMknots", "numeric", 3, NA, NA,
-                    desc = paste("The number of knots to use in the GAMM. Either 3 or 4 is recommended.", 
+                    desc = paste("The number of knots to use in the GAMM. Either 3 or 4 is recommended.",
                                  "Note that the GAMMs are no longer used to fit species parameters.")),
     defineParameter("maxBInFactorial", "integer", 5000L, NA, NA,
                     desc = paste("The arbitrary maximum biomass for the factorial simulations. This",
@@ -121,7 +121,7 @@ defineModule(sim, list(
                  desc = "Study area used to crop PSP data before building growth curves")
   ),
   outputObjects = bindrows(
-    createsOutput(objectName = "cohortDataFactorial", objectClass = "disk.frame", 
+    createsOutput(objectName = "cohortDataFactorial", objectClass = "disk.frame",
                   desc = "This object is converted to a disk.frame to save memory. Read using as.data.table"),
     createsOutput("species", "data.table",
                   desc = "The updated invariant species traits table (see description for this object in inputs)"),
@@ -162,7 +162,7 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
     updateSpeciesTables = {
       sim <- updateSpeciesTables(sim)
     },
-    
+
     writeFactorialToDisk = {
       sim <- useDiskFrame(sim)
     },
@@ -216,7 +216,7 @@ Init <- function(sim) {
     tempMaxB <- sim$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
     #pair-wise species will be matched with traits, as the species code won't match
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
-    
+
     gc()
     #prepare PSPdata
     speciesGAMMs <- Cache(makePSPgamms,
@@ -270,6 +270,8 @@ Init <- function(sim) {
     Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
           filename = paste("Pairwise species fits ", gsub(":", "_", sim$._startClockTime)))
     sim$species <- modifiedSpeciesTables$best
+  } else {
+    message("P(sim)$PSPdataTypes is 'none' -- bypassing species traits estimation from PSP data.")
   }
   return(sim)
 }
@@ -283,15 +285,15 @@ updateSpeciesTables <- function(sim) {
 }
 
 useDiskFrame <- function(sim){
-  
-  cdRows <- nrow(sim$cohortDataFactorial) 
+
+  cdRows <- nrow(sim$cohortDataFactorial)
   # the rows of a factorial object will determine whether it is unique in 99.9% of cases
   sim$cohortDataFactorial <- as.disk.frame(sim$cohortDataFactorial, overwrite = TRUE,
-                                           outdir = file.path(dataPath(sim), 
+                                           outdir = file.path(dataPath(sim),
                                                               paste0("cohortDataFactorial", cdRows)))
   stRows <- nrow(sim$speciesTableFactorial)
   sim$speciesTableFactorial <- as.disk.frame(sim$speciesTableFactorial, overwrite = TRUE,
-                                             outdir = file.path(dataPath(sim), 
+                                             outdir = file.path(dataPath(sim),
                                                                 paste0("speciesTableFactorial", stRows)))
   #disk.frame objects can be converted to data.table with as.data.table
   gc()
@@ -344,7 +346,7 @@ Save <- function(sim) {
                                        Abie_bal = "Abie_bal",
                                        Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar"),]
   }
-  
+
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
     warning("generating dummy speciesEcoregion data - run Biomass_borealDataPrep for table with real speciesEcoregion attributes")
     sim$speciesEcoregion <- data.table(
@@ -466,14 +468,14 @@ Save <- function(sim) {
 
       PSPmeasure_sppParams <- rbindlist(PSPmeasure_sppParams, fill = TRUE)
       PSPplot_sppParams <- rbindlist(PSPplot_sppParams, fill = TRUE)
-      
+
       PSPgis_sppParams <- geoCleanPSP(Locations = PSPplot_sppParams)
-      
+
       #clean up
       toRemove <- c("Zone", "Datum", "Easting", "Northing", "Latitude", "Longitude")
       toRemove <- toRemove[toRemove %in% colnames(PSPplot_sppParams)]
       set(PSPplot_sppParams, NULL, toRemove, NULL)
-      
+
       #keep only plots with valid coordinates
       PSPmeasure_sppParams <- PSPmeasure_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
       PSPplot_sppParams <- PSPplot_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
