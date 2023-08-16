@@ -254,18 +254,20 @@ Init <- function(sim) {
     if (length(speciesWithoutNewlyEstimated))
       message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "),
                              "have insufficient data to estimate species parameters; using original user supplied"))
-    modifiedSpeciesTables <- modifySpeciesTable(gamms = sim$speciesGAMMs,
-                                                speciesTable = sim$species,
-                                                factorialTraits = setDT(sim$speciesTableFactorial),
-                                                # setDT to deal with reload from Cache (no effect otherwise)
-                                                factorialBiomass = setDT(sim$cohortDataFactorial),
-                                                # setDT to deal with reload from Cache (no effect otherwise)
-                                                sppEquiv = sim$sppEquiv,
-                                                approach = P(sim)$speciesFittingApproach,
-                                                sppEquivCol = P(sim)$sppEquivCol,
-                                                maxBInFactorial = P(sim)$maxBInFactorial,
-                                                inflationFactorKey = tempMaxB,
-                                                standAgesForFitting = P(sim)$standAgesForFitting)
+    modifiedSpeciesTables <- Cache(modifySpeciesTable,
+                                   gamms = sim$speciesGAMMs,
+                                   speciesTable = sim$species,
+                                   factorialTraits = setDT(sim$speciesTableFactorial),
+                                   # setDT to deal with reload from Cache (no effect otherwise)
+                                   factorialBiomass = setDT(sim$cohortDataFactorial),
+                                   # setDT to deal with reload from Cache (no effect otherwise)
+                                   sppEquiv = sim$sppEquiv,
+                                   approach = P(sim)$speciesFittingApproach,
+                                   sppEquivCol = P(sim)$sppEquivCol,
+                                   maxBInFactorial = P(sim)$maxBInFactorial,
+                                   inflationFactorKey = tempMaxB,
+                                   standAgesForFitting = P(sim)$standAgesForFitting,
+                                   userTags = c(currentModule(sim), "modifySpeciesTable"))
     gg <- modifiedSpeciesTables$gg
     Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
           filename = paste("Pairwise species fits ", gsub(":", "_", sim$._startClockTime)))
