@@ -521,6 +521,7 @@ pkgPath <- file.path(tempDir, "packages", version$platform,
 dir.create(pkgPath, recursive = TRUE)
 .libPaths(pkgPath, include.site = FALSE)
 
+install.packages("remotes")
 if (!require(Require, lib.loc = pkgPath)) {
   remotes::install_github(
     paste0("PredictiveEcology/",
@@ -535,7 +536,7 @@ setLinuxBinaryRepo()
 ### Get the module and module dependencies {#bsppparam-example-pkg-mods}
 
 ```{r getModule-Biomass-Biomass-speciesParameters, eval = FALSE}
-Require(pasteo("PredictiveEcology/",
+Require(paste0("PredictiveEcology/",
                "SpaDES.project@6d7de6ee12fc967c7c60de44f1aa3b04e6eeb5db"), 
         require = FALSE, upgrade = FALSE, standAlone = TRUE)
 

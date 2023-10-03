@@ -20,7 +20,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9004)",
-                  "ianmseddy/PSPclean@development (>= 0.1.3.9002)"),
+                  "ianmseddy/PSPclean@development (>= 0.1.3.9003)"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
