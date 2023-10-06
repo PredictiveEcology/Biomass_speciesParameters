@@ -1,6 +1,7 @@
 defineModule(sim, list(
   name = "Biomass_speciesParameters",
-  description = "For estimating LANDIS-II species traits from PSP-derived growth curves",
+  description = paste("For estimating LANDIS-II species traits based on growth curves derived",
+                      "from Permanent Sample Plot (PSP) and Temporary Sample Plot (TSP) data"),
   keywords = NA, # c("insert key words here"),
   authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = c("aut", "cre")),
               person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut")),
