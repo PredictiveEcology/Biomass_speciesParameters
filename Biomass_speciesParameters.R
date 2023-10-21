@@ -12,7 +12,7 @@ defineModule(sim, list(
   timeunit = "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
-  loadOrder = list(after = c("Biomass_borealDataPrep"),
+  loadOrder = list(after = c("Biomass_speciesFactorial", "Biomass_borealDataPrep"),
                    before = c("Biomass_core")),
   reqdPkgs = list("crayon", "data.table", "disk.frame", "fpCompare", "ggplot2", "gridExtra",
                   "magrittr", "mgcv", "nlme", "purrr", "robustbase", "sf",
