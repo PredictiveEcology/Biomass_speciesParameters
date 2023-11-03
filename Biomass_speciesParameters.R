@@ -57,7 +57,7 @@ defineModule(sim, list(
     defineParameter("sppEquivCol", "character", "Boreal", NA, NA,
                     paste("The column in `sim$sppEquiv` data.table that defines individual species.",
                           "The names should match those in the species table.")),
-    defineParameter("standAgesForFitting", "integer", c(0, 150), NA, NA,
+    defineParameter("standAgesForFitting", "integer", c(0L, 150L), NA, NA,
                     desc = paste("The minimum and maximum ages of the biomass-by-age curves used in fitting.",
                                  "It is generally recommended to keep this param under 200, given the low data",
                                  "availability of stands aged 200+, with some exceptions.")),
