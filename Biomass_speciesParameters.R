@@ -127,7 +127,7 @@ defineModule(sim, list(
   ),
   outputObjects = bindrows(
     createsOutput(objectName = "cohortDataFactorial", objectClass = "disk.frame",
-                  desc = "This object is converted to a disk.frame to save memory. Read using as.data.table"),
+                  desc = "This object is converted to a `disk.frame` to save memory. Read using `as.data.table()`."),
     createsOutput("species", "data.table",
                   desc = "The updated invariant species traits table (see description for this object in inputs)"),
     createsOutput(objectName = "speciesEcoregion", "data.table",
@@ -137,7 +137,7 @@ defineModule(sim, list(
                   desc = paste("A list of mixed-effect general additive models (GAMMs) for each tree species",
                                "modeling biomass as a function of age")),
     createsOutput(objectName = "speciesTableFactorial", objectClass = "disk.frame",
-                  desc = "This object is converted to a disk.frame to save memory. Read using as.data.table")
+                  desc = "This object is converted to a `disk.frame` to save memory. Read using `as.data.table()`.")
   )
 ))
 
@@ -173,7 +173,7 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
     },
 
     plot = {
-     #plotting happens in Init - it could be moved if relevant objects are assigned to mod
+      ## plotting happens in Init - it could be moved if relevant objects are assigned to mod
     },
     save = {
       # sim <- scheduleEvent(sim, time(sim) + P(sim)$.saveInterval, "Biomass_speciesParameters", "save")
@@ -221,9 +221,9 @@ Init <- function(sim) {
     tempMaxB <- sim$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
     #pair-wise species will be matched with traits, as the species code won't match
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
-
     gc()
-    #prepare PSPdata
+
+    ## prepare PSPdata
     speciesGAMMs <- Cache(makePSPgamms,
                           studyAreaANPP = sim$studyAreaANPP,
                           PSPperiod = P(sim)$PSPperiod,
@@ -244,7 +244,7 @@ Init <- function(sim) {
     sim$speciesGAMMs <- speciesGAMMs
 
     gc()
-    classes <- lapply(sim$speciesGAMMs, FUN = 'class')
+    classes <- lapply(sim$speciesGAMMs, FUN = "class")
 
     noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
       x == "insufficient data"
@@ -291,8 +291,7 @@ updateSpeciesTables <- function(sim) {
   return(sim)
 }
 
-useDiskFrame <- function(sim){
-
+useDiskFrame <- function(sim) {
   cdRows <- nrow(sim$cohortDataFactorial)
   # the rows of a factorial object will determine whether it is unique in 99.9% of cases
   sim$cohortDataFactorial <- as.disk.frame(sim$cohortDataFactorial, overwrite = TRUE,
@@ -302,7 +301,7 @@ useDiskFrame <- function(sim){
   sim$speciesTableFactorial <- as.disk.frame(sim$speciesTableFactorial, overwrite = TRUE,
                                              outdir = file.path(dataPath(sim),
                                                                 paste0("speciesTableFactorial", stRows)))
-  #disk.frame objects can be converted to data.table with as.data.table
+  ## NOTE: disk.frame objects can be converted to data.table with as.data.table
   gc()
   return(sim)
 }
@@ -348,10 +347,10 @@ Save <- function(sim) {
     #pass a default sppEquivalencies_CA for common species in western Canada
     sppEquiv <- LandR::sppEquivalencies_CA
     sim$sppEquiv <- sppEquiv[LandR %in% c(Pice_mar = "Pice_mar", Pice_gla = "Pice_gla",
-                                       Pinu_con = "Pinu_con", Popu_tre = "Popu_tre",
-                                       Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
-                                       Abie_bal = "Abie_bal",
-                                       Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar"),]
+                                          Pinu_con = "Pinu_con", Popu_tre = "Popu_tre",
+                                          Betu_pap = "Betu_pap", Pice_eng = "Pice_eng",
+                                          Abie_bal = "Abie_bal",
+                                          Pinu_ban = "Pinu_ban", Lari_lar = "Lari_lar"), ]
   }
 
   if (!suppliedElsewhere("speciesEcoregion", sim)) {

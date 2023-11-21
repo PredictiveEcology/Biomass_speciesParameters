@@ -95,7 +95,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                               minimumSampleSize, NoOfIterations, knots,
-                              speciesFittingApproach = "focal"){
+                              speciesFittingApproach = "focal") {
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   if (!isTRUE(speciesCol %in% colnames(sppEquiv))) {
     stop("sppEquivCol not in sppEquiv")
@@ -663,12 +663,12 @@ makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                          sppEquiv, NoOfIterations, knots, minimumSampleSize,
                          quantileAgeSubset, minDBH, speciesFittingApproach) {
 
-  #this function is just a wrapper around these functions, for caching purposess
+  ## this function is just a wrapper around these functions, for caching purposes
   psp <- prepPSPaNPP(studyAreaANPP = studyAreaANPP, PSPperiod = PSPperiod,
                      PSPgis = PSPgis, PSPmeasure = PSPmeasure, PSPplot = PSPplot,
                      useHeight = useHeight, biomassModel = biomassModel, minDBH = minDBH)
 
-  #Wrapper used to avoid caching psp object - too large
+  ## wrapper used to avoid caching PSP object - too large
   speciesGAMMs <- buildGrowthCurves(PSPdata = psp, speciesCol = speciesCol,
                                     sppEquiv = sppEquiv, NoOfIterations = NoOfIterations,
                                     knots = knots, minimumSampleSize = minimumSampleSize,
