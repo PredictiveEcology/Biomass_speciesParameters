@@ -46,8 +46,7 @@ defineModule(sim, list(
     defineParameter("quantileAgeSubset", "numeric", 95, 1, 100,
                     desc = paste("Quantile by which to subset PSP data. As older stands are sparsely represented, the oldest measurements",
                                  "become vastly more influential. This parameter accepts both a single value and a list of vectors",
-                                 "named according to sppEquivCol. The PSP stand ages can be examined via",
-                                 "`sim$speciesGAMMs$<species name>$originalData`.")),
+                                 "named according to sppEquivCol.")),
     defineParameter("speciesFittingApproach", "character", "focal", NA, NA,
                     desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
                                   "all species into one fit, do pairwise species (for multiple cohort situations), do",
@@ -122,8 +121,9 @@ defineModule(sim, list(
                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
     expectsInput(objectName = "sppEquiv", objectClass = "data.table",
                  desc = "Table of species equivalencies. See `?LandR::sppEquivalencies_CA`."),
-    expectsInput(objectName = "studyAreaANPP", objectClass = "SpatialPolygonsDataFrame",
-                 desc = "Study area used to crop PSP data before building growth curves")
+    expectsInput(objectName = "studyAreaANPP", objectClass = "sf",
+                 desc = paste("Optional study area used to crop PSP data before building growth curves.",
+                              "If supplied, an ecoregion-scale object is recommended, at a minimum."))
   ),
   outputObjects = bindrows(
     createsOutput(objectName = "cohortDataFactorial", objectClass = "disk.frame",
@@ -133,9 +133,6 @@ defineModule(sim, list(
     createsOutput(objectName = "speciesEcoregion", "data.table",
                   desc = paste("The updated spatially-varying species traits table",
                                "(see description for this object in inputs)")),
-    createsOutput(objectName = "speciesGAMMs", objectClass = "list",
-                  desc = paste("A list of mixed-effect general additive models (GAMMs) for each tree species",
-                               "modeling biomass as a function of age")),
     createsOutput(objectName = "speciesTableFactorial", objectClass = "disk.frame",
                   desc = "This object is converted to a `disk.frame` to save memory. Read using `as.data.table()`.")
   )
@@ -222,31 +219,31 @@ Init <- function(sim) {
     #pair-wise species will be matched with traits, as the species code won't match
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
     gc()
-
-    ## prepare PSPdata
-    speciesGAMMs <- Cache(makePSPgamms,
-                          studyAreaANPP = sim$studyAreaANPP,
-                          PSPperiod = P(sim)$PSPperiod,
-                          PSPgis = sim$PSPgis_sppParams,
-                          PSPmeasure = sim$PSPmeasure_sppParams,
-                          PSPplot = sim$PSPplot_sppParams,
-                          useHeight = P(sim)$useHeight,
-                          biomassModel = P(sim)$biomassModel,
-                          speciesCol = P(sim)$sppEquivCol,
-                          sppEquiv = sim$sppEquiv,
-                          NoOfIterations = P(sim)$GAMMiterations,
-                          knots = P(sim)$GAMMknots,
-                          minimumSampleSize = P(sim)$minimumPlotsPerGamm,
-                          quantileAgeSubset = P(sim)$quantileAgeSubset,
-                          minDBH = P(sim)$minDBH,
-                          speciesFittingApproach = P(sim)$speciesFittingApproach,
-                          userTags = c(currentModule(sim), "makePSPgamms"))
-    sim$speciesGAMMs <- speciesGAMMs
-
+    #prepare PSPdata
+    speciesGAMMs <- makePSPgamms(
+      studyAreaANPP = sim$studyAreaANPP,
+      PSPperiod = P(sim)$PSPperiod,
+      PSPgis = sim$PSPgis_sppParams,
+      PSPmeasure = sim$PSPmeasure_sppParams,
+      PSPplot = sim$PSPplot_sppParams,
+      useHeight = P(sim)$useHeight,
+      biomassModel = P(sim)$biomassModel,
+      speciesCol = P(sim)$sppEquivCol,
+      sppEquiv = sim$sppEquiv,
+      NoOfIterations = P(sim)$GAMMiterations,
+      knots = P(sim)$GAMMknots,
+      minimumSampleSize = P(sim)$minimumPlotsPerGamm,
+      quantileAgeSubset = P(sim)$quantileAgeSubset,
+      minDBH = P(sim)$minDBH,
+      speciesFittingApproach = P(sim)$speciesFittingApproach)
+     # userTags = c(currentModule(sim), "makePSPgamms"))
+    #TODO: write output
+    # speciesGAMMs <- speciesGAMMs
+    saveRDS(speciesGAMMs, file.path(outputPath(sim), "speciesGAMMs.rds"))
     gc()
-    classes <- lapply(sim$speciesGAMMs, FUN = "class")
+    classes <- lapply(speciesGAMMs, FUN = 'class')
 
-    noData <- vapply(sim$speciesGAMMs[classes == "character"], FUN = function(x) {
+    noData <- vapply(speciesGAMMs[classes == "character"], FUN = function(x) {
       x == "insufficient data"
     }, FUN.VALUE = logical(1))
 
@@ -254,25 +251,26 @@ Init <- function(sim) {
       message("The following species did not have sufficient data for model estimation: ")
       print(names(noData))
     }
-    speciesWithNewlyEstimated <- unique(unlist(strsplit(names(sim$speciesGAMMs), "__")))
+    speciesWithNewlyEstimated <- unique(unlist(strsplit(names(speciesGAMMs), "__")))
     speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
     if (length(speciesWithoutNewlyEstimated))
       message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "),
                              "have insufficient data to estimate species parameters; using original user supplied"))
-    modifiedSpeciesTables <- Cache(modifySpeciesTable,
-                                   gamms = sim$speciesGAMMs,
-                                   speciesTable = sim$species,
-                                   factorialTraits = setDT(sim$speciesTableFactorial),
-                                   # setDT to deal with reload from Cache (no effect otherwise)
-                                   factorialBiomass = setDT(sim$cohortDataFactorial),
-                                   # setDT to deal with reload from Cache (no effect otherwise)
-                                   sppEquiv = sim$sppEquiv,
-                                   approach = P(sim)$speciesFittingApproach,
-                                   sppEquivCol = P(sim)$sppEquivCol,
-                                   maxBInFactorial = P(sim)$maxBInFactorial,
-                                   inflationFactorKey = tempMaxB,
-                                   standAgesForFitting = P(sim)$standAgesForFitting,
-                                   userTags = c(currentModule(sim), "modifySpeciesTable"))
+    browser()
+    modifiedSpeciesTables <- modifySpeciesTable(
+      gamms = speciesGAMMs,
+      speciesTable = sim$species,
+      factorialTraits = setDT(sim$speciesTableFactorial),
+      # setDT to deal with reload from Cache (no effect otherwise)
+      factorialBiomass = setDT(sim$cohortDataFactorial),
+      # setDT to deal with reload from Cache (no effect otherwise)
+      sppEquiv = sim$sppEquiv,
+      approach = P(sim)$speciesFittingApproach,
+      sppEquivCol = P(sim)$sppEquivCol,
+      maxBInFactorial = P(sim)$maxBInFactorial,
+      inflationFactorKey = tempMaxB,
+      standAgesForFitting = P(sim)$standAgesForFitting)
+    
     gg <- modifiedSpeciesTables$gg
     Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
           filename = paste("LandR_VS_NLM_growthCurves"))
@@ -413,7 +411,7 @@ Save <- function(sim) {
       PSPplot_sppParams <- list()
 
       if ("BC" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        PSPbc <- Cache(prepInputsBCPSP, dPath = dPath, userTags = c(cacheTags, "BCPSP"))
+        PSPbc <- prepInputsBCPSP(dPath = dPath)
         PSPbc <- dataPurification_BCPSP(treeDataRaw = PSPbc$treeDataRaw,
                                         plotHeaderDataRaw = PSPbc$plotHeaderDataRaw,
                                         damageAgentCodes = PSPbc$pspBCdamageAgentCodes,
@@ -423,7 +421,7 @@ Save <- function(sim) {
       }
 
       if ("AB" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        PSPab <- Cache(prepInputsAlbertaPSP, dPath = dPath, userTags = c(cacheTags, "ABPSP"))
+        PSPab <- prepInputsAlbertaPSP, dPath = dPath)
         PSPab <- dataPurification_ABPSP(treeMeasure = PSPab$pspABtreeMeasure,
                                         plotMeasure = PSPab$pspABplotMeasure,
                                         tree = PSPab$pspABtree,
@@ -435,7 +433,7 @@ Save <- function(sim) {
       }
 
       if ("SK" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        PSPsk <- Cache(prepInputsSaskatchwanPSP, dPath = dPath, userTags = c(cacheTags, "SKPSP"))
+        PSPsk <- prepInputsSaskatchwanPSP(dPath = dPath)
         PSPsk <- dataPurification_SKPSP(SADataRaw = PSPsk$SADataRaw,
                                         plotHeaderRaw = PSPsk$plotHeaderRaw,
                                         measureHeaderRaw = PSPsk$measureHeaderRaw,
@@ -443,7 +441,7 @@ Save <- function(sim) {
         PSPmeasure_sppParams[["SK"]] <- PSPsk$treeData
         PSPplot_sppParams[["SK"]] <- PSPsk$plotHeaderData
 
-        TSPsk <- Cache(prepInputsSaskatchwanTSP, dPath = dPath, userTags = c(cacheTags, "SKTSP"))
+        TSPsk <- prepInputsSaskatchwanTSP(dPath = dPath)
         TSPsk <- dataPurification_SKTSP_Mistik(compiledPlotData = TSPsk$compiledPlotData,
                                                compiledTreeData = TSPsk$compiledTreeData)
         PSPmeasure_sppParams[["SKtsp"]] <- TSPsk$treeData
@@ -462,7 +460,7 @@ Save <- function(sim) {
 
       if ("NFI" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
 
-        PSPnfi <- Cache(prepInputsNFIPSP, dPath = dPath, userTags = c(cacheTags, "NFIPSP"))
+        PSPnfi <- prepInputsNFIPSP(dPath = dPath)
         PSPnfi <- dataPurification_NFIPSP(lgptreeRaw = PSPnfi$pspTreeMeasure,
                                           lgpHeaderRaw = PSPnfi$pspHeader,
                                           approxLocation = PSPnfi$pspLocation,
