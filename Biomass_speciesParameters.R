@@ -421,7 +421,7 @@ Save <- function(sim) {
       }
 
       if ("AB" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        PSPab <- prepInputsAlbertaPSP, dPath = dPath)
+        PSPab <- prepInputsAlbertaPSP(dPath = dPath)
         PSPab <- dataPurification_ABPSP(treeMeasure = PSPab$pspABtreeMeasure,
                                         plotMeasure = PSPab$pspABplotMeasure,
                                         tree = PSPab$pspABtree,
