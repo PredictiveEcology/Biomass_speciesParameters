@@ -14,7 +14,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
     PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
   }
 
-  #length(PSPclimData)/length(PSP_sa) should always yield a whole number.
   #Filter data by study period
   message(yellow("Filtering PSPs for ANPP by study period..."))
   PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) &
@@ -22,7 +21,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   PSPplot <- PSPplot[MeasureYear > min(PSPperiod) &
                        MeasureYear < max(PSPperiod),]
 
-  #Join data (should be small enough by now)
   PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear")]
 
   #Filter by > 30 trees at first measurement (P) to ensure forest.
@@ -71,7 +69,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   message(yellow("No PSP biomass estimate possible for these species: "))
   message(crayon::yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
 
-
   #clean up - added a catch for incorrect plotSize affecting stem density
   densities <- PSPmeasure[, .(.N, PlotSize = mean(PlotSize)), MeasureID]
   densities[, density := N/PlotSize]
@@ -105,7 +102,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
     gcSpecies <- unique(sppEquiv[[speciesCol]])
   }
   gcSpecies <- setNames(nm = gcSpecies)
-
+  
   spsp <- copy(PSPdata)
   spsp[, "areaAdjustedB" := biomass/PlotSize]
   spsp  <- spsp[, "plotBiomass" := sum(areaAdjustedB), .(MeasureID)]
@@ -150,7 +147,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   } else {
     spspList <- split(spsp, spsp$speciesTemp)
   }
-
+  
   speciesForCurves <- names(spspList) %>% setNames(nm = .)
   message(crayon::yellow("-----------------------------------------------"))
   message(crayon::yellow("building growth curves from PSP data: "))
@@ -158,7 +155,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                    MoreArgs = list(speciesEquiv = sppEquiv,
                                    sppCol = speciesCol, NoOfIters = NoOfIterations,
                                    K = knots, minSize = minimumSampleSize, q = quantileAgeSubset))
-
+  
   if (isTRUE("all" == speciesFittingApproach)) {
     outputGCs <- lapply(gcSpecies2, function(x) {
       matchingSpecies <- equivalentName(x, sppEquiv, column = "PSP")
@@ -167,7 +164,6 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
       #ogc$simData <- ogc$simData[species %in% matchingSpecies | is.na(species)]
       ogc
     })
-
   }
   return(outputGCs)
 }
@@ -304,20 +300,20 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   } else {
     # matchingSpecies <- unique(speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),])
   }
-
+  
   if (class(K) == "list") {
     K <- K[[species]]
   }
-
+  
   if (class(q) == "list") {
     q <- q[[species]]
   }
-
+  
   #subset the parameters that may be lists
   if (class(NoOfIters) == "list") {
     NoOfIters <- NoOfIters[[species]]
   }
-
+  
   # #Need to calculate stand dominance first - remove all stands < 50% dominance, and of wrong species
   # if (NROW(matchingSpecies) != 2) {
   #   browser()
@@ -333,7 +329,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
                        biomass = spPlotBiomass[1], spDom = spDom[1]),
                    by = .(speciesTemp, MeasureYear, OrigPlotID1)]
   # }
-
+  
   #test if there are sufficient plots to estimate traits
   if (nrow(standData) < minSize) {
     speciesGamm <- "insufficient data"
@@ -344,31 +340,31 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   standData <- standData[standAge < quantile(standData$standAge, probs = q/100),]
   simulatedData <- simulateYoungStands(cohortData = standData, N = 50)
   simData <- rbindlist(list(standData, simulatedData), fill = TRUE)
-
+  
   #This weights the real data by spDominance, without distorting the mean of fake data. Weights should center around 1 for gamm I think
   Realweights <- standData$spDom/mean(standData$spDom)
   Fakeweights <- rep(1, times = nrow(simulatedData))
   simData$Weights <- c(Realweights, Fakeweights)
-
+  
   species <- na.omit(unique(simData$speciesTemp))
-
+  
   # localEnv <- environment()
   localEnv <- new.env(parent = emptyenv())
-
+  
   # Spread out the 0s so they are in the first 10 years.
   simData2 <- copy(simData)
   len <- sum(simData2$standAge <= 10)
   simData2[standAge <= 10, standAge := sample(1:10, size = len, replace = TRUE)]
   len <- sum(simData2$biomass <= 100)
   simData2[biomass <= 100, biomass := sample(1:100, size = len, replace = TRUE)]
-
+  
   models <- list()
   models$CR <- list(
     eqn = "biomass ~ A * (1 - exp(-k * standAge))^p",
     plim = c(min = 1, max = 80),
     Alim = c(max(simData2$biomass) * c(min = 0.3, max = 0.9)),
     klim = c(min = 0.0001, max = 0.13))
-
+  
   # models$Weibull <- list(
   #   eqn = "biomass ~ A * (1 - exp(-k * standAge^p))",
   #   plim = c(min = 1, max = 80),
@@ -379,25 +375,25 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   #   plim = c(min = 0.01, max = 1),
   #   Alim = c(max(simData2$biomass) * c(min = 0.3, max = 0.9)),
   #   klim = c(min = 2, max = 20))
-
+  
   models$Gompertz <- list(
     eqn = "biomass ~ A * (exp(-k * exp(-p * standAge)))",
     plim = c(min = 0.01, max = 1),
     Alim = c(max(simData2$biomass) * c(min = 0.3, max = 0.9)),
     klim = c(min = 2, max = 20))
-
+  
   models$Logistic <- list(
     eqn = "biomass ~ A / (1 + k * exp(-p * standAge))",
     plim = c(min = 0.001, max = 1),
     Alim = c(max(simData2$biomass) * c(min = 0.3, max = 0.9)) )
   models$Logistic$klim <- c(min = 10, max = max(models$Logistic$Alim))
-
+  
   # models$Levakovic <- list(
   #   eqn = "biomass ~ A * (standAge ^ 2 / (k + standAge ^ 2)) ^ p",
   #   plim = c(min = 1, max = 6),
   #   Alim = c(max(simData2$biomass) * c(min = 0.3, max = 0.9)) )
   # models$Levakovic$klim <- c(min = 150, max = max(models$Levakovic$Alim) * 0.3)
-
+  
   nlsouts <- list()
   if (FALSE) {
     plot(simData2$standAge, simData2$biomass, pch = 19, cex = 0.5)
@@ -438,7 +434,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
         }, silent = TRUE
         )
         #})
-
+        
         if (!is(nlsoutInner[[model]], "try-error")) {
           break
         }
@@ -446,16 +442,16 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
     }
     nlsoutInner
   })
-
+  
   nlsout <- lapply(nlsouts, function(nlsIn) {
     nlsIn[[which.min(sapply(nlsIn, function(x) if (is(x, "try-error")) 1e12 else AIC(x)))]]
   })
-
+  
   #  if (is(nlsout, "try-error")) {
   message(crayon::yellow(paste(collapse = "", rep(" ", nchar(speciesForFitsMessage))), ": fitting gamm"))
   envOnGlobal <- new.env(parent = .GlobalEnv)
   envOnGlobal$K <- K
-  speciesGamm <- lapply(speciesForFits, function(sp)  {
+  speciesGamm <- lapply(speciesForFits, function(sp) {
     datForFit <- dataForFit(simData2, sp)
     suppressWarnings(try(expr = mgcv::gamm(data = datForFit,
                                            formula = as.formula(gammFormula, env = envOnGlobal),
@@ -466,8 +462,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
                          silent = TRUE))
   }
   )
-
-
+  
   #Append the true data to speciesGamm, so we don't have the 0s involved when we subset by age quantile
   if (!any(lengths(speciesGamm) == 1)) { #this means it was a try-error as converged gamm is length 2
     speciesGamm <- list(speciesGamm = speciesGamm,
@@ -475,8 +470,6 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
                         simData = simData,
                         NonLinearModel = nlsout)
   }
-
-
   return(speciesGamm)
 }
 
@@ -490,7 +483,6 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     names(name) <- name
   }
   message("Estimating fit for ", nameOrig)
-
 
   #Subset traits to PSP species, return unchanged if no gamm present
   traits <- traits[species %in% name]
@@ -512,10 +504,6 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
       message(paste(gamm$speciesGamm))
       return(NULL)
     }
-
-    # if (any("try-error" %in% classesGAMM)){
-    #   browser()
-    # }
   }
 
   maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
