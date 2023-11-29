@@ -253,10 +253,11 @@ Init <- function(sim) {
     }
     speciesWithNewlyEstimated <- unique(unlist(strsplit(names(speciesGAMMs), "__")))
     speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
-    if (length(speciesWithoutNewlyEstimated))
+    if (length(speciesWithoutNewlyEstimated)) {
       message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "),
                              "have insufficient data to estimate species parameters; using original user supplied"))
-    browser()
+    }
+
     modifiedSpeciesTables <- modifySpeciesTable(
       gamms = speciesGAMMs,
       speciesTable = sim$species,

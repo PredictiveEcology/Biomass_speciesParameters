@@ -204,7 +204,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   dig <- CacheDigest(list(factorialBiomass, factorialTraitsVarying,
                           gammsT$speciesGamm, gammsT$NonLinearModel, speciesTable))
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
-
+  gc()
   #join with inflationFactorKey - it's possible this data.table::copy is unnecessary
   suppressWarnings(set(inflationFactorKey, NULL, "species", NULL))
   tempTraits <- copy(factorialTraitsVarying)
@@ -218,28 +218,21 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
 
   message("Estimate species parameters; minimizing diff between statistical fit and Biomass_core experiment")
 
-  for (name in species) {
-    # use for loop to allow for Cache on each species
-    outputTraits[[name]] <- Cache(editSpeciesTraits, name = name, gamm = gamms[[name]],
-                                  traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
-                                  speciesEquiv = sppEquiv, sppCol = sppEquivCol,
-                                  standAgesForFitting = standAgesForFitting,
-                                  approach = approach,
-                                  maxBInFactorial = maxBInFactorial,
-                                  userTags = name, #debugCache = "quick",
-                                  .cacheExtra = dig$outputHash, omitArgs = c("fT", "fB", "gamm", "traits"))
-  }
-  # outputTraits <- lapply(species, FUN = editSpeciesTraits, gamm = gamms,
-  #                        traits = speciesTable, fT = factorialTraits, fB = factorialBiomass,
-  #                        speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
-  #                        growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints)
+  # use for loop to allow for Cache on each species
+  outputTraits <- Map(name = species, gamm = gamms, f = editSpeciesTraits, 
+                      MoreArgs = list(traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
+                                       speciesEquiv = sppEquiv, sppCol = sppEquivCol,
+                                       standAgesForFitting = standAgesForFitting,
+                                       approach = approach, maxBInFactorial = maxBInFactorial))
+  gc()
 
   outputTraitsT <- purrr::transpose(outputTraits)
   gammsList <- rbindlist(gammsT$originalData, idcol = "Pair")
   fullDataAll <- rbindlist(outputTraitsT$fullData, idcol = "Pair")
   newTraits <- rbindlist(outputTraitsT$bestTraits, idcol = "Pair")
   llAll <- rbindlist(outputTraitsT$ll, idcol = "Pair")
-
+  rm(gammsT, factorialBiomass, factorialTraits, factorialTraitsVarying)
+  gc()
   # limit best traits to only those that are nearest to longevity provided in SpeciesTable
   # Take next higher longevity (the -Inf in the rolling joing, on the "last" join column i.e., longevity)
   # set(setDT(speciesTable), NULL, "longevityOrig", speciesTable$longevity)
@@ -262,7 +255,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   ll2 <- fullDataAll[, list(BscaledNonLinear = mean(BscaledNonLinear),
                             predNonLinear = mean(predNonLinear)),
                      c("species", "standAge", "Pair")]
-
+  rm(fullDataAll)
   ymaxes <- max(ll2$BscaledNonLinear, ll2$predNonLinear)
   gg <- ggplot(ll2, aes(standAge, BscaledNonLinear, colour = species)) +
     geom_line(size = 2) +
@@ -653,9 +646,9 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   best <- fT[rr, on = c("speciesCode" = "speciesCode")]
   bestTraits <- SpMapping[best, on = "Sp"]
   candFB <- SpMapping[candFB, on = "Sp"]
-
-
-  return(list(bestTraits = bestTraits, fullData = candFB, ll = ll))
+  rm(rr,fT, SpMapping, deltaDiff, gamm, fB)
+  gc()
+  return(list(bestTraits = bestTraits, fullData = candFB, ll = ll)) 
 }
 
 makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
