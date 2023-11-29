@@ -241,7 +241,7 @@ Init <- function(sim) {
     # speciesGAMMs <- speciesGAMMs
     saveRDS(speciesGAMMs, file.path(outputPath(sim), "speciesGAMMs.rds"))
     gc()
-    classes <- lapply(speciesGAMMs, FUN = 'class')
+    classes <- lapply(speciesGAMMs, FUN = "class")
 
     noData <- vapply(speciesGAMMs[classes == "character"], FUN = function(x) {
       x == "insufficient data"
@@ -284,7 +284,7 @@ Init <- function(sim) {
 
 updateSpeciesTables <- function(sim) {
   modifiedTables <- modifySpeciesAndSpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
-                                                              speciesTable = sim$species)
+                                                          speciesTable = sim$species)
   sim$speciesEcoregion <- modifiedTables$newSpeciesEcoregion
   sim$species <- modifiedTables$newSpeciesTable
   return(sim)
