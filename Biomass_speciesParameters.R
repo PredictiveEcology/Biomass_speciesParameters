@@ -73,6 +73,9 @@ defineModule(sim, list(
                     desc = "This describes the simulation time at which the first save event should occur"),
     defineParameter(".saveInterval", "numeric", NA, NA, NA,
                     desc = "This describes the simulation time interval between save events"),
+    defineParameter(".studyAreaName", "character", NA, NA, NA,  
+                    desc = paste("Human-readable name for the growth curve filename.",
+                                 "If `NA`, a hash of sppEquiv[[sppEquivCol]] will be used.")),
     defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                                  "This is generally intended for data-type modules, where stochasticity and time are not relevant"))
@@ -237,9 +240,14 @@ Init <- function(sim) {
       minDBH = P(sim)$minDBH,
       speciesFittingApproach = P(sim)$speciesFittingApproach)
      # userTags = c(currentModule(sim), "makePSPgamms"))
-    #TODO: write output
-    # speciesGAMMs <- speciesGAMMs
-    saveRDS(speciesGAMMs, file.path(outputPath(sim), "speciesGAMMs.rds"))
+    
+    if (is.na(P(sim)$.studyAreaName)) {
+      studyAreaName <- reproducible::studyAreaName(sim$sppEquiv[[P(sim)$sppEquivCol]])
+    } else {
+      studyAreaName <- P(sim)$.studyAreaName
+    }
+
+    saveRDS(speciesGAMMs, file.path(outputPath(sim), paste0("speciesGAMMs_", studyAreaName, ".rds")))
     gc()
     classes <- lapply(speciesGAMMs, FUN = "class")
 
