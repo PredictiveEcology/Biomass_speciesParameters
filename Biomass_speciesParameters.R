@@ -24,15 +24,12 @@ defineModule(sim, list(
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
-    defineParameter("GAMMiterations", "numeric", 8, 1, NA,
-                    desc = paste("Number of iterations for GAMMs.",
-                                 "Note that the GAMMs are no longer used to fit species parameters.")),
+    defineParameter("GAMMiterations", "numeric", 8, 1, NA, desc = "Number of iterations for growth curves built with GAMM"),
     defineParameter("GAMMknots", "numeric", 3, NA, NA,
-                    desc = paste("The number of knots to use in the GAMM. Either 3 or 4 is recommended.",
-                                 "Note that the GAMMs are no longer used to fit species parameters.")),
+                    desc = "Number of knots to use for GAMM growth curves. Either 3 or 4 are recommended."),
     defineParameter("maxBInFactorial", "integer", 5000L, NA, NA,
-                    desc = paste("The arbitrary maximum biomass for the factorial simulations. This",
-                                 "is a per-species maximum within a pixel")),
+                    desc = paste("The arbitrary maximum biomass for the factorial simulations.",
+                                 "This is a per-species maximum within a pixel")),
     defineParameter("minimumPlotsPerGamm", "numeric", 50, 10, NA,
                     desc = paste("Minimum number of PSP plots before building GAMM")),
     defineParameter("minDBH", "integer", 0L, 0L, NA,
@@ -223,7 +220,7 @@ Init <- function(sim) {
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
     gc()
     #prepare PSPdata
-    speciesGAMMs <- makePSPgamms(
+    speciesGrowthCurves <- buildGrowthCurves_Wrapper(
       studyAreaANPP = sim$studyAreaANPP,
       PSPperiod = P(sim)$PSPperiod,
       PSPgis = sim$PSPgis_sppParams,
@@ -239,7 +236,7 @@ Init <- function(sim) {
       quantileAgeSubset = P(sim)$quantileAgeSubset,
       minDBH = P(sim)$minDBH,
       speciesFittingApproach = P(sim)$speciesFittingApproach)
-     # userTags = c(currentModule(sim), "makePSPgamms"))
+     # userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper"))
     
     if (is.na(P(sim)$.studyAreaName)) {
       studyAreaName <- reproducible::studyAreaName(sim$sppEquiv[[P(sim)$sppEquivCol]])
@@ -247,11 +244,11 @@ Init <- function(sim) {
       studyAreaName <- P(sim)$.studyAreaName
     }
 
-    saveRDS(speciesGAMMs, file.path(outputPath(sim), paste0("speciesGAMMs_", studyAreaName, ".rds")))
+    saveRDS(speciesGrowthCurves, file.path(outputPath(sim), paste0("speciesGrowthCurves_", studyAreaName, ".rds")))
     gc()
-    classes <- lapply(speciesGAMMs, FUN = "class")
+    classes <- lapply(speciesGrowthCurves, FUN = "class")
 
-    noData <- vapply(speciesGAMMs[classes == "character"], FUN = function(x) {
+    noData <- vapply(speciesGrowthCurves[classes == "character"], FUN = function(x) {
       x == "insufficient data"
     }, FUN.VALUE = logical(1))
 
@@ -259,7 +256,7 @@ Init <- function(sim) {
       message("The following species did not have sufficient data for model estimation: ")
       print(names(noData))
     }
-    speciesWithNewlyEstimated <- unique(unlist(strsplit(names(speciesGAMMs), "__")))
+    speciesWithNewlyEstimated <- unique(unlist(strsplit(names(speciesGrowthCurves), "__")))
     speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
     if (length(speciesWithoutNewlyEstimated)) {
       message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "),
@@ -267,7 +264,7 @@ Init <- function(sim) {
     }
 
     modifiedSpeciesTables <- modifySpeciesTable(
-      gamms = speciesGAMMs,
+      gcs = speciesGrowthCurves,
       speciesTable = sim$species,
       factorialTraits = setDT(sim$speciesTableFactorial),
       # setDT to deal with reload from Cache (no effect otherwise)

@@ -116,22 +116,22 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   spsp <- spsp[!whNA]
   spsp <- spsp[newSpeciesName %in% sppEquiv[["PSP"]]]
   freq <- spsp[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
-  if (isTRUE(gcSpecies == "pairwise") || isTRUE(gcSpecies == "focal"))
+  
+     # setorderv(freq, "speciesTemp")
+  if (isTRUE(speciesFittingApproach == "pairwise") || isTRUE(speciesFittingApproach == "focal")) {
+    #subset to species-of-interest using relative biomass (dominance)
     freq <- freq[spDom > 0.2] # minimum 20% dominance for pairwise or focal
-  else
-    spsp <- spsp[spDom > 0.5] # minimum 50% dominance
-  # setorderv(freq, "speciesTemp")
-  if (isTRUE(gcSpecies == "pairwise") || isTRUE(gcSpecies == "focal")) {
+    
     speciesComp <- freq[, .(numSp = .N, spComp = paste(speciesTemp, collapse = "__")), by = "MeasureID"]
     # Pick only 2 spcies plots when using "pairwise"
-    if (isTRUE(gcSpecies == "pairwise"))
+    if (isTRUE(speciesFittingApproach == "pairwise")) {
       speciesComp <- speciesComp[numSp == 2]
+    }
     speciesCompN <- speciesComp[, .N, by = "spComp"]
-    # speciesPairs <- speciesCompN[N > 100]
-    # speciesComp <- speciesComp[spComp %in% speciesPairs$spComp]
-    gcSpecies2 <- unique(sppEquiv[[speciesCol]]) %>% setNames(nm = .)
-    gcSpecies3 <- unique(speciesComp$spComp) %>% setNames(nm = .)
-    speciesForSplit <- if (isTRUE(gcSpecies == "pairwise")) gcSpecies3 else gcSpecies2
+
+    gcSpecies1 <- unique(sppEquiv[[speciesCol]]) %>% setNames(nm = .)
+    gcSpecies2 <- unique(speciesComp$spComp) %>% setNames(nm = .)
+    speciesForSplit <- if (isTRUE(speciesFittingApproach == "pairwise")) gcSpecies2 else gcSpecies1
     speciesCompListAll <- split(speciesComp, speciesComp$spComp)
     speciesCompList <- lapply(speciesForSplit, function(spName) {
       rbindlist(speciesCompListAll[grepl(spName, names(speciesCompListAll))])
@@ -139,25 +139,27 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
     spspList <- lapply(speciesCompList, function(speciesCompInner) {
       spsp[MeasureID %in% speciesCompInner$MeasureID][spDom > 0.2]
     })
-    if (isTRUE(gcSpecies == "focal")) {
+    if (isTRUE(speciesFittingApproach == "focal")) {
       spspList <- Map(psp = spspList, spName = names(spspList), function(psp, spName) {
         psp[speciesTemp != spName, speciesTemp := "Other"]
       })
     }
   } else {
+    #subset to species-of-interest using relative biomass (dominance)
+    spsp <- spsp[spDom > 0.5] # minimum 50% dominance for single 
     spspList <- split(spsp, spsp$speciesTemp)
   }
   
   speciesForCurves <- names(spspList) %>% setNames(nm = .)
   message(crayon::yellow("-----------------------------------------------"))
   message(crayon::yellow("building growth curves from PSP data: "))
-  outputGCs <- Map(species = speciesForCurves, makeGAMMdata, psp = spspList,
+  outputGCs <- Map(species = speciesForCurves, buildModels, psp = spspList,
                    MoreArgs = list(speciesEquiv = sppEquiv,
                                    sppCol = speciesCol, NoOfIters = NoOfIterations,
                                    K = knots, minSize = minimumSampleSize, q = quantileAgeSubset))
   
   if (isTRUE("all" == speciesFittingApproach)) {
-    outputGCs <- lapply(gcSpecies2, function(x) {
+    outputGCs <- lapply(gcSpecies1, function(x) {
       matchingSpecies <- equivalentName(x, sppEquiv, column = "PSP")
       ogc <- Copy(outputGCs[[1]])
       #ogc$originalData <- ogc$originalData[species %in% matchingSpecies]
@@ -168,7 +170,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   return(outputGCs)
 }
 
-modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
+modifySpeciesTable <- function(gcs, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
                                sppEquivCol, inflationFactorKey, standAgesForFitting,
                                approach, maxBInFactorial) {
 
@@ -287,19 +289,13 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   return(list(best = bestWeighted, gg = gg))
 }
 
-makeGAMMdata <- function(species, psp, speciesEquiv,
-                         sppCol, NoOfIters, K, minSize, q) {
-  # psp already contains all the correct species -- next chunk is now obsolete & commented
+buildModels <- function(species, psp, speciesEquiv,
+                       sppCol, NoOfIters, K, minSize, q) {
+
   if (identical(species, "all")) {
-    #matchingSpecies <- unique(speciesEquiv[, .(PSP),])
     K <- mean(unlist(K))
     q <- mean(unlist(q))
-  } else if (grepl(".+__.+", species)) { # this is pairwise
-    #species2 <- strsplit(species, split = "__")[[1]]
-    # matchingSpecies <- unique(speciesEquiv[speciesEquiv[[sppCol]] %in% species2, .(PSP),])
-  } else {
-    # matchingSpecies <- unique(speciesEquiv[speciesEquiv[[sppCol]] == species, .(PSP),])
-  }
+  } 
   
   if (class(K) == "list") {
     K <- K[[species]]
@@ -314,21 +310,9 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
     NoOfIters <- NoOfIters[[species]]
   }
   
-  # #Need to calculate stand dominance first - remove all stands < 50% dominance, and of wrong species
-  # if (NROW(matchingSpecies) != 2) {
-  #   browser()
-  #   spDominant <- matchingSpecies[psp, nomatch = 0, on = "PSP==newSpeciesName"]  ## filter species first
-  #   spDominant[, length(unique(PSP)), by = "MeasureID"]
-  #   spDominant <- spDominant[spDom > 0.5]
-  #   standData <- spDominant[, .(PlotSize = mean(PlotSize), standAge = mean(standAge),
-  #                               biomass = mean(plotBiomass), spDom = mean(spDom),
-  #                               species = unique(PSP)),
-  #                           by = .(MeasureYear, OrigPlotID1)]
-  # } else {
   standData <- psp[, .(PlotSize = PlotSize[1], standAge = standAge[1],
                        biomass = spPlotBiomass[1], spDom = spDom[1]),
                    by = .(speciesTemp, MeasureYear, OrigPlotID1)]
-  # }
   
   #test if there are sufficient plots to estimate traits
   if (nrow(standData) < minSize) {
@@ -410,8 +394,9 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   message(crayon::yellow(
     speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
   ))
-  nlsouts <- lapply(speciesForFits, function(sp) {
-    datForFit <- dataForFit(simData2, sp)
+  nlsouts <- lapply(speciesForFits, function(sp, spFitData = simData2) {
+    browser()
+    datForFit <- spFitData[is.na(spFitData$speciesTemp) | spFitData$speciesTemp %in% sp]
     nlsoutInner <- list()
     for (model in names(models)) {
       eqnChar <- models[[model]]$eqn
@@ -451,26 +436,15 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   message(crayon::yellow(paste(collapse = "", rep(" ", nchar(speciesForFitsMessage))), ": fitting gamm"))
   envOnGlobal <- new.env(parent = .GlobalEnv)
   envOnGlobal$K <- K
-  speciesGamm <- lapply(speciesForFits, function(sp) {
-    datForFit <- dataForFit(simData2, sp)
-    suppressWarnings(try(expr = mgcv::gamm(data = datForFit,
-                                           formula = as.formula(gammFormula, env = envOnGlobal),
-                                           random = list(MeasureYear = eval(randomFormula, envir = baseenv()),
-                                                         OrigPlotID1 = eval(randomFormula, envir = baseenv())),
-                                           weights = nlme::varFunc(~Weights), verbosePQL = FALSE,
-                                           niterPQL = NoOfIters),
-                         silent = TRUE))
-  }
-  )
+  speciesGamm <- lapply(speciesForFits, tryGAMM)
   
   #Append the true data to speciesGamm, so we don't have the 0s involved when we subset by age quantile
-  if (!any(lengths(speciesGamm) == 1)) { #this means it was a try-error as converged gamm is length 2
-    speciesGamm <- list(speciesGamm = speciesGamm,
-                        originalData = standData,
-                        simData = simData,
-                        NonLinearModel = nlsout)
-  }
-  return(speciesGamm)
+  sppGrowthCurves <- list(speciesGamm = speciesGamm,
+                      originalData = standData,
+                      simData = simData,
+                      NonLinearModel = nlsout)
+  
+  return(sppGrowthCurves)
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
@@ -579,7 +553,7 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   return(list(bestTraits = bestTraits, fullData = candFB, ll = ll)) 
 }
 
-makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
+buildGrowthCurves_Wrapper <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                          PSPplot, useHeight, biomassModel, speciesCol,
                          sppEquiv, NoOfIterations, knots, minimumSampleSize,
                          quantileAgeSubset, minDBH, speciesFittingApproach) {
@@ -601,6 +575,16 @@ makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
 gammFormula <- quote(biomass ~ s(standAge, k = K, pc = 0))
 randomFormula <- quote(~1)
 
-dataForFit <- function(simDat2, sp) {
-  simDat2[is.na(simDat2$speciesTemp) | simDat2$speciesTemp %in% sp]
+
+tryGAMM <- function(sp, gammFormula = gammFormula, 
+                    randomFormula = randomFormula, 
+                    gammData = gammData, iters = noOfIters) {
+  datForFit <- dataForFit(gammData, species = sp)
+  suppressWarnings(try(expr = mgcv::gamm(data = datForFit,
+                                         formula = as.formula(gammFormula, env = envOnGlobal),
+                                         random = list(MeasureYear = eval(randomFormula, envir = baseenv()),
+                                                       OrigPlotID1 = eval(randomFormula, envir = baseenv())),
+                                         weights = nlme::varFunc(~Weights), verbosePQL = FALSE,
+                                         niterPQL = iters),
+                       silent = TRUE))
 }
