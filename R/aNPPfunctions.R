@@ -180,8 +180,8 @@ modifySpeciesTable <- function(gcs, speciesTable, factorialTraits, factorialBiom
 
   #for each species (ie Gamm), find best fit
   #first subset by speices that had data
-  gamms <- gamms[sapply(gamms, function(x) class(x) == "list")]
-  species <- names(gamms)
+  gcs <- gcs[sapply(gcs, function(x) class(x) == "list")]
+  species <- names(gcs)
   names(species) <- species
   outputTraits <- list()
 
@@ -195,7 +195,7 @@ modifySpeciesTable <- function(gcs, speciesTable, factorialTraits, factorialBiom
   factorialTraitsThatVary <- names(factorialTraitsThatVary)[factorialTraitsThatVary]
   factorialTraitsVarying <- factorialTraits[, ..factorialTraitsThatVary]
 
-  gammsT <- purrr::transpose(gamms)
+  gammsT <- purrr::transpose(gcs)
   message("starting digest")
   # digFB <- CacheDigest(list(factorialBiomass))
   # digFT <- CacheDigest(list(factorialTraitsVarying))
@@ -217,7 +217,7 @@ modifySpeciesTable <- function(gcs, speciesTable, factorialTraits, factorialBiom
   message("Estimate species parameters; minimizing diff between statistical fit and Biomass_core experiment")
 
   # use for loop to allow for Cache on each species
-  outputTraits <- Map(name = species, gamm = gamms, f = editSpeciesTraits, 
+  outputTraits <- Map(name = species, gamm = gcs, f = editSpeciesTraits, 
                       MoreArgs = list(traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
                                        speciesEquiv = sppEquiv, sppCol = sppEquivCol,
                                        standAgesForFitting = standAgesForFitting,
@@ -379,15 +379,14 @@ buildModels <- function(species, psp, speciesEquiv,
   # models$Levakovic$klim <- c(min = 150, max = max(models$Levakovic$Alim) * 0.3)
   
   nlsouts <- list()
-  if (FALSE) {
-    plot(simData2$standAge, simData2$biomass, pch = 19, cex = 0.5)
-    model <- "Korf"
-    standAge <- 1:200;
-    A <- 23500
-    k <- 4
-    p <- 0.3
-    points(col = "green", standAge, eval(parse(text = models[[model]])[[1]][[3]]), pch = 19, cex = 0.5)
-  }
+ 
+  #   plot(simData2$standAge, simData2$biomass, pch = 19, cex = 0.5)
+  #   model <- "Korf"
+  #   standAge <- 1:200;
+  #   A <- 23500
+  #   k <- 4
+  #   p <- 0.3
+  #   points(col = "green", standAge, eval(parse(text = models[[model]])[[1]][[3]]), pch = 19, cex = 0.5)
   species <- as.character(species) %>% setNames(nm = .)
   speciesForFits <- setdiff(species, "Other") %>% setNames(nm = .)
   speciesForFitsMessage <- paste(speciesForFits, collapse = ", ")
@@ -395,7 +394,7 @@ buildModels <- function(species, psp, speciesEquiv,
     speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
   ))
   nlsouts <- lapply(speciesForFits, function(sp, spFitData = simData2) {
-    browser()
+    
     datForFit <- spFitData[is.na(spFitData$speciesTemp) | spFitData$speciesTemp %in% sp]
     nlsoutInner <- list()
     for (model in names(models)) {
@@ -436,7 +435,9 @@ buildModels <- function(species, psp, speciesEquiv,
   message(crayon::yellow(paste(collapse = "", rep(" ", nchar(speciesForFitsMessage))), ": fitting gamm"))
   envOnGlobal <- new.env(parent = .GlobalEnv)
   envOnGlobal$K <- K
-  speciesGamm <- lapply(speciesForFits, tryGAMM)
+  speciesGamm <- lapply(speciesForFits, tryGAMM, gammData = simData2, envir = envOnGlobal,
+                        randomFormula = randomFormula, gammFormula = gammFormula
+                        )
   
   #Append the true data to speciesGamm, so we don't have the 0s involved when we subset by age quantile
   sppGrowthCurves <- list(speciesGamm = speciesGamm,
@@ -576,12 +577,11 @@ gammFormula <- quote(biomass ~ s(standAge, k = K, pc = 0))
 randomFormula <- quote(~1)
 
 
-tryGAMM <- function(sp, gammFormula = gammFormula, 
-                    randomFormula = randomFormula, 
-                    gammData = gammData, iters = noOfIters) {
-  datForFit <- dataForFit(gammData, species = sp)
+tryGAMM <- function(sp, gammFormula, randomFormula, 
+                    gammData, iters = noOfIters, envir) {
+  datForFit <- gammData[is.na(gammData$speciesTemp) | gammData$speciesTemp %in% sp]
   suppressWarnings(try(expr = mgcv::gamm(data = datForFit,
-                                         formula = as.formula(gammFormula, env = envOnGlobal),
+                                         formula = as.formula(gammFormula, env = envir),
                                          random = list(MeasureYear = eval(randomFormula, envir = baseenv()),
                                                        OrigPlotID1 = eval(randomFormula, envir = baseenv())),
                                          weights = nlme::varFunc(~Weights), verbosePQL = FALSE,
