@@ -259,7 +259,7 @@ Init <- function(sim) {
     }
 
     modifiedSpeciesTables <- modifySpeciesTable(
-      gcs = speciesGrowthCurves,
+      GCs = speciesGrowthCurves,
       speciesTable = sim$species,
       factorialTraits = setDT(sim$speciesTableFactorial),
       # setDT to deal with reload from Cache (no effect otherwise)

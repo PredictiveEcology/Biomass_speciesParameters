@@ -285,21 +285,12 @@ buildModels <- function(species, psp, speciesEquiv,
                        sppCol, minSize, q) {
 
   if (identical(species, "all")) {
-    K <- mean(unlist(K))
     q <- mean(unlist(q))
   } 
   
-  if (class(K) == "list") {
-    K <- K[[species]]
-  }
   
   if (class(q) == "list") {
     q <- q[[species]]
-  }
-  
-  #subset the parameters that may be lists
-  if (class(NoOfIters) == "list") {
-    NoOfIters <- NoOfIters[[species]]
   }
   
   standData <- psp[, .(PlotSize = PlotSize[1], standAge = standAge[1],
@@ -308,9 +299,9 @@ buildModels <- function(species, psp, speciesEquiv,
   
   #test if there are sufficient plots to estimate traits
   if (nrow(standData) < minSize) {
-    spGrowthCurves <- "insufficient data"
-    names(spGrowthCurves) <- species
-    return(spGrowthCurves)
+    GC <- "insufficient data"
+    names(GC) <- species
+    return(GC)
   }
   #By default removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
   standData <- standData[standAge < quantile(standData$standAge, probs = q/100),]
@@ -323,9 +314,6 @@ buildModels <- function(species, psp, speciesEquiv,
   simData$Weights <- c(Realweights, Fakeweights)
   
   species <- na.omit(unique(simData$speciesTemp))
-  
-  # localEnv <- environment()
-  localEnv <- new.env(parent = emptyenv())
   
   # Spread out the 0s so they are in the first 10 years.
   simData2 <- copy(simData)
@@ -423,10 +411,7 @@ buildModels <- function(species, psp, speciesEquiv,
     nlsIn[[which.min(sapply(nlsIn, function(x) if (is(x, "try-error")) 1e12 else AIC(x)))]]
   })
   
-  #  if (is(nlsout, "try-error")) {
-  message(crayon::yellow(paste(collapse = "", rep(" ", nchar(speciesForFitsMessage))), ": fitting gamm"))
-
-  #Append the true data to speciesGamm, so we don't have the 0s involved when we subset by age quantile
+  #Append the true data so we don't have the 0s involved when we subset by age quantile
   sppGrowthCurves <- list(originalData = standData,
                           simData = simData,
                           NonLinearModel = nlsout)
@@ -434,12 +419,9 @@ buildModels <- function(species, psp, speciesEquiv,
   return(sppGrowthCurves)
 }
 
-# editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
-#                               standAgesForFitting = c(0, 150), approach, inflationFactorKey) {
 editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
                               standAgesForFitting = c(0, 150), approach, inflationFactorKey) {
 
-  # Gamm <- GC[[name]]
   nameOrig <- name
   if (grepl("__", name)) {
     name <- strsplit(name, "__")[[1]]
@@ -447,42 +429,38 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   }
   message("Estimating fit for ", nameOrig)
 
-  #Subset traits to PSP species, return unchanged if no spGrowthCurves present
+  #Subset traits to PSP species, return unchanged if no GC present
   traits <- traits[species %in% name]
-  #with two species - the spGrowthCurves might converge for one only
+  #with two species - the gc might converge for one only
   #this structure is to catch try-errors in both pairwise and single
-  if (class(spGrowthCurves) == "try-error" | class(spGrowthCurves) == "character") {
+  if (class(GC) == "try-error" | class(GC) == "character") {
     message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
-    message(paste(spGrowthCurves))
-    # return(list(bestTraits = traits, fullData = NULL, ll = NULL))
+    message(paste(GC))
     return(NULL)
   } else {
     #catch when not all models converged
-    classesNonLinear <- unlist(lapply(spGrowthCurves$NonLinearModel, class))
-    classesGAMM <- unlist(lapply(spGrowthCurves$speciesGamm, class))
-    #decided to allow non-converged spGrowthCurvess, if non-linear converged
-    if (any("try-error" %in% c(classesNonLinear, classesGAMM))) {
+    classesNonLinear <- unlist(lapply(GC$NonLinearModel, class))
+    #decided to allow non-converged GCs, if non-linear converged
+    if (any("try-error" %in% c(classesNonLinear))) {
       message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
-      message(paste(spGrowthCurves$NonLinearModel))
-      message(paste(spGrowthCurves$speciesGamm))
+      message(paste(GC$NonLinearModel))
       return(NULL)
     }
   }
-
-  maxBiomass <- spGrowthCurves$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
+  browser()
+  maxBiomass <- GC$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
   set(maxBiomass, NULL, "Sp", paste0("Sp", 1:nrow(maxBiomass)))
-  SpNames <- maxBiomass$Sp[match(names(spGrowthCurves$NonLinearModel), maxBiomass$speciesTemp)]
+  SpNames <- maxBiomass$Sp[match(names(GC$NonLinearModel), maxBiomass$speciesTemp)]
   SpMapping <- data.table(Sp = SpNames, species = name)
-  names(spGrowthCurves$NonLinearModel) <- SpNames
-  names(spGrowthCurves$speciesGamm) <- SpNames
+  names(GC$NonLinearModel) <- SpNames
   standAge <- unique(fB$standAge)
   standAge <- standAge[standAge <= max(standAgesForFitting) & standAge >= min(standAgesForFitting)]
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
 
   # Predict from statistical fits to data
   predGrid[, `:=`(
-    predNonLinear = predict(spGrowthCurves$NonLinearModel[[unlist(.BY)]], .SD),
+    predNonLinear = predict(GC$NonLinearModel[[unlist(.BY)]], .SD),
   ), by = "Sp", .SDcols = "standAge"]
  
   # misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
