@@ -175,7 +175,6 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   species <- names(GCs)
   names(species) <- species
   outputTraits <- list()
-
   # This next try is because the factorial traits may have recovered from a memoised state 
   #it will subsequently fail this test:
   #TODO: is this necessary?
@@ -188,8 +187,8 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   factorialTraitsThatVary <- names(factorialTraitsThatVary)[factorialTraitsThatVary]
   factorialTraitsVarying <- factorialTraits[, ..factorialTraitsThatVary]
 
-  GCtrans <- purrr::transpose(GCs$originalData)
-  originalData <- rbindlist(GCtrans, idcol = "Pair")
+  GCtrans <- purrr::transpose(GCs)
+  originalData <- rbindlist(GCtrans$originalData, idcol = "Pair")
   
   message("starting digest")
   # digFB <- CacheDigest(list(factorialBiomass))
