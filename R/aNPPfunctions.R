@@ -188,12 +188,14 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   factorialTraitsThatVary <- names(factorialTraitsThatVary)[factorialTraitsThatVary]
   factorialTraitsVarying <- factorialTraits[, ..factorialTraitsThatVary]
 
-  gammsT <- purrr::transpose(GCs)
+  GCtrans <- purrr::transpose(GCs$originalData)
+  originalData <- rbindlist(GCtrans, idcol = "Pair")
+  
   message("starting digest")
   # digFB <- CacheDigest(list(factorialBiomass))
   # digFT <- CacheDigest(list(factorialTraitsVarying))
   dig <- CacheDigest(list(factorialBiomass, factorialTraitsVarying,
-                          gammsT$NonLinearModel, speciesTable))
+                          GCtrans$NonLinearModel, speciesTable))
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
   gc()
   #join with inflationFactorKey - it's possible this data.table::copy is unnecessary
@@ -221,7 +223,7 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   fullDataAll <- rbindlist(outputTraitsT$fullData, idcol = "Pair")
   newTraits <- rbindlist(outputTraitsT$bestTraits, idcol = "Pair")
   llAll <- rbindlist(outputTraitsT$ll, idcol = "Pair")
-  rm(gammsT, factorialBiomass, factorialTraits, factorialTraitsVarying)
+  rm(GCtrans, factorialBiomass, factorialTraits, factorialTraitsVarying)
   gc()
   # limit best traits to only those that are nearest to longevity provided in SpeciesTable
   # Take next higher longevity (the -Inf in the rolling joing, on the "last" join column i.e., longevity)
@@ -249,7 +251,7 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   ymaxes <- max(ll2$BscaledNonLinear, ll2$predNonLinear)
   gg <- ggplot(ll2, aes(standAge, BscaledNonLinear, colour = species)) +
     geom_line(size = 2) +
-    geom_point(data = gammsList, aes(standAge, biomass, colour = speciesTemp), size = 0.25, alpha = 0.3) +
+    geom_point(data = originalData, aes(standAge, biomass, colour = speciesTemp), size = 0.25, alpha = 0.3) +
     geom_line(size = 2, aes(standAge, predNonLinear, col = species), lty = "dashed") +
     facet_wrap(~ Pair, nrow = ceiling(sqrt(length(outputTraits))), scales = "fixed") +
     xlim(c(0, max(ll2$standAge))) + # ggplot2::scale_y_log() +
