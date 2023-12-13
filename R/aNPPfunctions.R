@@ -460,7 +460,7 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
 
   # Predict from statistical fits to data
   predGrid[, `:=`(
-    predNonLinear = predict(GC$NonLinearModel[[unlist(.BY)]], .SD),
+    predNonLinear = predict(GC$NonLinearModel[[unlist(.BY)]], .SD)
   ), by = "Sp", .SDcols = "standAge"]
  
   # misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
