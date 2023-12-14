@@ -37,6 +37,10 @@ defineModule(sim, list(
                                  "'BC', 'AB', 'SK', 'ON', 'NFI', and 'dummy'. 'dummy' should be used for unauthorized users.")),
     defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA,
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
+    defineParameter("quantileAgeSubset", "numeric", 95, 1, 100,
+                    desc = paste("Quantile by which to subset PSP data. As older stands are sparsely represented, the oldest measurements",
+                                 "become vastly more influential. This parameter accepts both a single value and a list of vectors",
+                                 "named according to sppEquivCol.")),
     defineParameter("speciesFittingApproach", "character", "focal", NA, NA,
                     desc =  paste("Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool ",
                                   "all species into one fit, do pairwise species (for multiple cohort situations), do",
@@ -224,6 +228,7 @@ Init <- function(sim) {
       speciesCol = P(sim)$sppEquivCol,
       sppEquiv = sim$sppEquiv,
       minimumSampleSize = P(sim)$minimumPlots,
+      quantileAgeSubset = P(sim)$quantileAgeSubset,
       minDBH = P(sim)$minDBH,
       speciesFittingApproach = P(sim)$speciesFittingApproach)
      # userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper"))

@@ -90,8 +90,8 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   return(PSPmeasure)
 }
 
-buildGrowthCurves <- function(PSPdata, speciesCol, minimumSampleSize,
-                              sppEquiv, speciesFittingApproach = "focal") {
+buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
+                              minimumSampleSize, speciesFittingApproach = "focal") {
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   if (!isTRUE(speciesCol %in% colnames(sppEquiv))) {
     stop("sppEquivCol not in sppEquiv")
@@ -154,7 +154,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, minimumSampleSize,
   message(crayon::yellow("building growth curves from PSP data: "))
   outputGCs <- Map(species = speciesForCurves, buildModels, psp = SpPSPList,
                    MoreArgs = list(speciesEquiv = sppEquiv, sppCol = speciesCol, 
-                                   minSize = minimumSampleSize))
+                                   minSize = minimumSampleSize, q = quantileAgeSubset))
   
   if (isTRUE("all" == speciesFittingApproach)) {
     outputGCs <- lapply(gcSpecies1, function(x) {
@@ -509,7 +509,7 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
 buildGrowthCurves_Wrapper <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                                       PSPplot, useHeight, biomassModel, speciesCol,
                                       sppEquiv, minimumSampleSize, minDBH,
-                                      speciesFittingApproach) {
+                                      quantileAgeSubset, speciesFittingApproach) {
   
   ## this function is just a wrapper around these functions, for caching purposes
   psp <- prepPSPaNPP(studyAreaANPP = studyAreaANPP, PSPperiod = PSPperiod,
@@ -518,6 +518,7 @@ buildGrowthCurves_Wrapper <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasu
 
   sppGCs <- buildGrowthCurves(PSPdata = psp, speciesCol = speciesCol, sppEquiv = sppEquiv, 
                               minimumSampleSize = minimumSampleSize,
+                              quantileAgeSubset = quantileAgeSubset,
                               speciesFittingApproach = speciesFittingApproach)
   return(sppGCs)
 }
