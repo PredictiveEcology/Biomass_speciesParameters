@@ -495,7 +495,8 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   varsToInteger <- c("BscaledNonLinear", "predNonLinear")
   set(candFB, NULL, varsToInteger, lapply(varsToInteger, function(v) asInteger(candFB[[v]])))
 
-  rr <- candFB[standAge == 1][, c("speciesCode", "llNonLinDelta", "inflationFactor")]
+  
+  rr <- candFB[standAge == min(standAge)][, c("speciesCode", "llNonLinDelta", "inflationFactor")]
 
   # Take the average of the best
   best <- fT[rr, on = c("speciesCode" = "speciesCode")]

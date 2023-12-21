@@ -50,7 +50,7 @@ defineModule(sim, list(
     defineParameter("sppEquivCol", "character", "Boreal", NA, NA,
                     paste("The column in `sim$sppEquiv` data.table that defines individual species.",
                           "The names should match those in the species table.")),
-    defineParameter("standAgesForFitting", "integer", c(0L, 150L), NA, NA,
+    defineParameter("standAgesForFitting", "integer", c(20L, 90L), NA, NA,
                     desc = paste("The minimum and maximum ages of the biomass-by-age curves used in fitting.",
                                  "It is generally recommended to keep this param under 200, given the low data",
                                  "availability of stands aged 200+, with some exceptions.")),
@@ -130,6 +130,8 @@ defineModule(sim, list(
     createsOutput(objectName = "speciesEcoregion", "data.table",
                   desc = paste("The updated spatially-varying species traits table",
                                "(see description for this object in inputs)")),
+    createsOutput(objectName = "speciesGrowthCurves", "list", 
+                  desc = "list containing each species non-linear model, model data, and the unfiltered PSP data"),
     createsOutput(objectName = "speciesTableFactorial", objectClass = "disk.frame",
                   desc = "This object is converted to a `disk.frame` to save memory. Read using `as.data.table()`.")
   )
@@ -190,17 +192,17 @@ Init <- function(sim) {
     data.table::setDTthreads(4)
   }
   on.exit(data.table::setDTthreads(origDTthreads))
-
+  
   ## if no PSP data supplied, simList returned unchanged
-
+  
   if (all(P(sim)$PSPdataTypes != "none")) {
     if (is.na(P(sim)$sppEquivCol)) {
       stop("Please supply 'sppEquivCol' in parameters of Biomass_speciesParameters.")
     }
-
+    
     paramCheckOtherMods(sim, "maxBInFactorial")
     paramCheckOtherMods(sim, paramToCheck = "sppEquivCol", ifSetButDifferent = "error")
-
+    
     #find the max biomass achieved by each species when growing with no competition
     tempMaxB <- sim$cohortDataFactorial[age == 1, .N, .(pixelGroup)]
     #take the pixelGroups with only 1 species at start of factorial
@@ -217,7 +219,8 @@ Init <- function(sim) {
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
     gc()
     #prepare PSPdata
-    speciesGrowthCurves <- buildGrowthCurves_Wrapper(
+    sim$speciesGrowthCurves <- Cache(
+      buildGrowthCurves_Wrapper,
       studyAreaANPP = sim$studyAreaANPP,
       PSPperiod = P(sim)$PSPperiod,
       PSPgis = sim$PSPgis_sppParams,
@@ -230,28 +233,20 @@ Init <- function(sim) {
       minimumSampleSize = P(sim)$minimumPlots,
       quantileAgeSubset = P(sim)$quantileAgeSubset,
       minDBH = P(sim)$minDBH,
-      speciesFittingApproach = P(sim)$speciesFittingApproach)
-     # userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper"))
+      speciesFittingApproach = P(sim)$speciesFittingApproach,
+      userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper"))
     
-    if (is.na(P(sim)$.studyAreaName)) {
-      studyAreaName <- reproducible::studyAreaName(sim$sppEquiv[[P(sim)$sppEquivCol]])
-    } else {
-      studyAreaName <- P(sim)$.studyAreaName
-    }
-
-    saveRDS(speciesGrowthCurves, file.path(outputPath(sim), paste0("speciesGrowthCurves_", studyAreaName, ".rds")))
-    gc()
-    classes <- lapply(speciesGrowthCurves, FUN = "class")
-
-    noData <- vapply(speciesGrowthCurves[classes == "character"], FUN = function(x) {
+    classes <- lapply(sim$speciesGrowthCurves, FUN = "class")
+    
+    noData <- vapply(sim$speciesGrowthCurves[classes == "character"], FUN = function(x) {
       x == "insufficient data"
     }, FUN.VALUE = logical(1))
-
+    
     if (any(noData)) {
       message("The following species did not have sufficient data for model estimation: ")
       print(names(noData))
     }
-    speciesWithNewlyEstimated <- unique(unlist(strsplit(names(speciesGrowthCurves), "__")))
+    speciesWithNewlyEstimated <- unique(unlist(strsplit(names(sim$speciesGrowthCurves), "__")))
     speciesWithoutNewlyEstimated <- setdiff(sim$sppEquiv[[Par$sppEquivCol]], speciesWithNewlyEstimated)
     if (length(speciesWithoutNewlyEstimated)) {
       message(crayon::yellow(paste(speciesWithoutNewlyEstimated, collapse = ", "),
@@ -259,7 +254,7 @@ Init <- function(sim) {
     }
 
     modifiedSpeciesTables <- modifySpeciesTable(
-      GCs = speciesGrowthCurves,
+      GCs = sim$speciesGrowthCurves,
       speciesTable = sim$species,
       factorialTraits = setDT(sim$speciesTableFactorial),
       # setDT to deal with reload from Cache (no effect otherwise)
