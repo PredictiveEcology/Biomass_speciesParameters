@@ -20,7 +20,7 @@ defineModule(sim, list(
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9004)",
-                  "ianmseddy/PSPclean@development (>= 0.1.3.9003)"),
+                  "ianmseddy/PSPclean@development (>= 0.1.4.9002)"),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
@@ -375,114 +375,15 @@ Save <- function(sim) {
       !suppliedElsewhere("PSPgis_sppParams", sim)) {
     message("one or more PSP objects not supplied. Generating PSP data...")
 
-    if ("dummy" %in% P(sim)$PSPdataTypes) {
-      message("generating randomized PSP data")
-      sim$PSPmeasure_sppParams <- Cache(prepInputs,
-                                        targetFile = "randomizedPSPmeasure_sppParams.rds",
-                                        archive = "randomized_LandR_speciesParameters_Inputs.zip",
-                                        url =  extractURL("PSPmeasure_sppParams", sim),
-                                        destinationPath = dPath,
-                                        fun = "readRDS")
-
-      sim$PSPplot_sppParams <- Cache(prepInputs,
-                                     targetFile = "randomizedPSPplot_sppParams.rds",
-                                     archive = "randomized_LandR_speciesParameters_Inputs.zip",
-                                     url = extractURL("PSPplot_sppParams", sim),
-                                     destinationPath = dPath,
-                                     fun = "readRDS")
-
-      sim$PSPgis_sppParams <- Cache(prepInputs,
-                                    targetFile = "randomizedPSPgis_sppParams.rds",
-                                    archive = "randomized_LandR_speciesParameters_Inputs.zip",
-                                    url = extractURL("PSPgis_sppParams", sim),
-                                    overwrite = TRUE,
-                                    destinationPath = dPath,
-                                    fun = "readRDS")
-    } else if (!any(P(sim)$PSPdataTypes %in% "none")) {
-      if (!any(c("BC", "AB", "SK", "NFI", "ON", "all") %in% P(sim)$PSPdataTypes)) {
-        stop("Please review P(sim)$dataTypes - incorrect value specified")
-      }
-
-      PSPmeasure_sppParams <- list()
-      PSPplot_sppParams <- list()
-
-      if ("BC" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        PSPbc <- prepInputsBCPSP(dPath = dPath)
-        PSPbc <- dataPurification_BCPSP(treeDataRaw = PSPbc$treeDataRaw,
-                                        plotHeaderDataRaw = PSPbc$plotHeaderDataRaw,
-                                        damageAgentCodes = PSPbc$pspBCdamageAgentCodes,
-                                        codesToExclude = NULL)
-        PSPmeasure_sppParams[["BC"]] <- PSPbc$treeData
-        PSPplot_sppParams[["BC"]] <- PSPbc$plotHeaderData
-      }
-
-      if ("AB" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        PSPab <- prepInputsAlbertaPSP(dPath = dPath)
-        PSPab <- dataPurification_ABPSP(treeMeasure = PSPab$pspABtreeMeasure,
-                                        plotMeasure = PSPab$pspABplotMeasure,
-                                        tree = PSPab$pspABtree,
-                                        plot = PSPab$pspABplot,
-                                        codesToExclude = NULL)
-        #TODO: confirm if they really didn't record species on 11K trees
-        PSPmeasure_sppParams[["AB"]] <- PSPab$treeData
-        PSPplot_sppParams[["AB"]] <- PSPab$plotHeaderData
-      }
-
-      if ("SK" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        PSPsk <- prepInputsSaskatchwanPSP(dPath = dPath)
-        PSPsk <- dataPurification_SKPSP(SADataRaw = PSPsk$SADataRaw,
-                                        plotHeaderRaw = PSPsk$plotHeaderRaw,
-                                        measureHeaderRaw = PSPsk$measureHeaderRaw,
-                                        treeDataRaw = PSPsk$treeDataRaw)
-        PSPmeasure_sppParams[["SK"]] <- PSPsk$treeData
-        PSPplot_sppParams[["SK"]] <- PSPsk$plotHeaderData
-
-        TSPsk <- prepInputsSaskatchwanTSP(dPath = dPath)
-        TSPsk <- dataPurification_SKTSP_Mistik(compiledPlotData = TSPsk$compiledPlotData,
-                                               compiledTreeData = TSPsk$compiledTreeData)
-        PSPmeasure_sppParams[["SKtsp"]] <- TSPsk$treeData
-        PSPplot_sppParams[["SKtsp"]] <- TSPsk$plotHeaderData
-      }
-
-      if ("ON" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-        PSPon <- prepInputsOntarioPSP(dPath = dPath)
-        #sppEquiv should not be subset to species of interest the way LandR requires
-        #the latin is used to translate species into common names for the biomass equations
-        sppEquivForON <- LandR::sppEquivalencies_CA #make sure this is fresh from the package
-        PSPon <- dataPurification_ONPSP(PSPon, sppEquiv = sppEquivForON)
-        PSPmeasure_sppParams[["ON"]] <- PSPon$treeData
-        PSPplot_sppParams[["ON"]] <- PSPon$plotHeaderData
-      }
-
-      if ("NFI" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-
-        PSPnfi <- prepInputsNFIPSP(dPath = dPath)
-        PSPnfi <- dataPurification_NFIPSP(lgptreeRaw = PSPnfi$pspTreeMeasure,
-                                          lgpHeaderRaw = PSPnfi$pspHeader,
-                                          approxLocation = PSPnfi$pspLocation,
-                                          treeDamage = PSPnfi$pspTreeDamage,
-                                          codesToExclude = NULL)
-        PSPmeasure_sppParams[["NFI"]] <- PSPnfi$treeData
-        PSPplot_sppParams[["NFI"]] <- PSPnfi$plotHeaderData
-      }
-
-      PSPmeasure_sppParams <- rbindlist(PSPmeasure_sppParams, fill = TRUE)
-      PSPplot_sppParams <- rbindlist(PSPplot_sppParams, fill = TRUE)
-
-      PSPgis_sppParams <- geoCleanPSP(Locations = PSPplot_sppParams)
-
-      #clean up
-      toRemove <- c("Zone", "Datum", "Easting", "Northing", "Latitude", "Longitude")
-      toRemove <- toRemove[toRemove %in% colnames(PSPplot_sppParams)]
-      set(PSPplot_sppParams, NULL, toRemove, NULL)
-
-      #keep only plots with valid coordinates
-      PSPmeasure_sppParams <- PSPmeasure_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
-      PSPplot_sppParams <- PSPplot_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
-      sim$PSPmeasure_sppParams <- PSPmeasure_sppParams
-      sim$PSPplot_sppParams <- PSPplot_sppParams
-      sim$PSPgis_sppParams <- PSPgis_sppParams
-    }
+    PSPdata <- Cache(getPSP, 
+                     PSPdataTypes = P(sim)$PSPdataTypes, 
+                     destinationPath = dPath, 
+                     forGMCS = FALSE, 
+                     userTags = c(cacheTags, P(sim)$PSPdataTypes))
+    
+    sim$PSPmeasure_sppParams <- PSPdata$PSPmeasure
+    sim$PSPplot_sppParams <- PSPdata$PSPplot
+    sim$PSPgis_sppParams <- PSPdata$PSPgis
   }
 
   return(invisible(sim))
