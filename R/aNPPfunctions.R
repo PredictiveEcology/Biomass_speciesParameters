@@ -259,7 +259,7 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
     xlab(label = "stand age") +
     ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
     theme_bw()
-
+  
   #Collapse new traits and replace old traits
   # newTraits <- rbindlist(outputTraitsT$bestTraits, fill = TRUE, idcol = "Pair")
   # newTraits <- na.omit(newTraits)
