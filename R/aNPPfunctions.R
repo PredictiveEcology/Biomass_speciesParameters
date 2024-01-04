@@ -171,7 +171,10 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
                                approach, maxBInFactorial) {
 
   #first subset by species that had data (ie aren't try-errors)
-  GCs <- GCs[sapply(GCs, function(x) class(x) == "list")]
+  whichGood <- sapply(GCs, function(x){class(x$NonLinearModel[[1]])})
+  whichGood <- grep("try-error", whichGood, invert = TRUE) 
+  GCs <- GCs[whichGood]
+  
   species <- names(GCs)
   names(species) <- species
   outputTraits <- list()

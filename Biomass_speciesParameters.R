@@ -16,7 +16,7 @@ defineModule(sim, list(
                    before = c("Biomass_core")),
   reqdPkgs = list("crayon", "data.table", "disk.frame", "fpCompare", "ggplot2", "gridExtra",
                   "magrittr", "mgcv", "nlme", "purrr", "robustbase", "sf",
-                  "PredictiveEcology/LandR@development (>= 1.1.0.9054)",
+                  "PredictiveEcology/LandR@development (>= 1.1.0.9077)",
                   "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
                   "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
                   "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9004)",
