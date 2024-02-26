@@ -16,3 +16,12 @@ outputs/
 #this is to hide all 700 years of cohortData in Ian's local repo
 temp
 *.pdf
+
+inputs/
+
+## these are downloaded automatically, no point in caching
+figures/*Badge.png
+
+## html cache/files
+*_cache/
+*_files/

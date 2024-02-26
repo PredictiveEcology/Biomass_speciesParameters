@@ -24,7 +24,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
   #Join data (should be small enough by now)
   PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear")]
-  PSPmeasure[, c("Longitude", "Latitude", "Easting", "Northing", "Zone") := NULL]
 
   #Filter by > 30 trees at first measurement (P) to ensure forest.
   forestPlots <- PSPmeasure[, .(measures = .N), OrigPlotID1] %>%
@@ -96,7 +95,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                               minimumSampleSize, NoOfIterations, knots,
-                              speciesFittingApproach = "focal"){
+                              speciesFittingApproach = "focal") {
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   if (!isTRUE(speciesCol %in% colnames(sppEquiv))) {
     stop("sppEquivCol not in sppEquiv")
@@ -116,7 +115,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                                        column = speciesCol, searchColumn = "PSP")]
   whNA <- is.na(spsp$speciesTemp)
   message(crayon::yellow("Removing ", paste(unique(spsp$newSpeciesName[whNA]), collapse = ", ")))
-  message(crayon::yellow("   ... because they are not the sppEquiv"))
+  message(crayon::yellow("   ... because they are not in sppEquiv"))
   spsp <- spsp[!whNA]
   spsp <- spsp[newSpeciesName %in% sppEquiv[["PSP"]]]
   freq <- spsp[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
@@ -174,8 +173,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 }
 
 modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBiomass, sppEquiv,
-                               sppEquivCol, inflationFactorKey, mortConstraints, growthConstraints,
-                               mANPPconstraints, standAgesForFitting, approach, maxBInFactorial) {
+                               sppEquivCol, inflationFactorKey, standAgesForFitting,
+                               approach, maxBInFactorial) {
 
   #set(factorialBiomass, NULL, "speciesCode", factorialBiomass$speciesCode)
   #setkey(factorialTraits, species)
@@ -207,7 +206,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
 
   #join with inflationFactorKey - it's possible this data.table::copy is unnecessary
-  set(inflationFactorKey, NULL, "species", NULL)
+  suppressWarnings(set(inflationFactorKey, NULL, "species", NULL))
   tempTraits <- copy(factorialTraitsVarying)
   tempTraits <- inflationFactorKey[tempTraits, on = c("growthcurve", "mortalityshape", "longevity", "mANPPproportion")]
   tempTraits <- tempTraits[, .(speciesCode, inflationFactor)]
@@ -223,8 +222,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
     # use for loop to allow for Cache on each species
     outputTraits[[name]] <- Cache(editSpeciesTraits, name = name, gamm = gamms[[name]],
                                   traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
-                                  speciesEquiv = sppEquiv, sppCol = sppEquivCol, mortConstraints = mortConstraints,
-                                  growthConstraints = growthConstraints, mANPPconstraints = mANPPconstraints,
+                                  speciesEquiv = sppEquiv, sppCol = sppEquivCol,
                                   standAgesForFitting = standAgesForFitting,
                                   approach = approach,
                                   maxBInFactorial = maxBInFactorial,
@@ -245,7 +243,7 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   # limit best traits to only those that are nearest to longevity provided in SpeciesTable
   # Take next higher longevity (the -Inf in the rolling joing, on the "last" join column i.e., longevity)
   # set(setDT(speciesTable), NULL, "longevityOrig", speciesTable$longevity)
-  set(setDT(newTraits), NULL, "longevityOrigFac", newTraits$longevity)
+  suppressWarnings(set(setDT(newTraits), NULL, "longevityOrigFac", newTraits$longevity))
 
   bt2 <- newTraits[speciesTable[, c("species", "longevity")],
                    #                 bt2 <- newTraits[speciesTable[, c("species", "longevity", "longevityOrig")],
@@ -262,18 +260,19 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
 
   # Take next lower longevity (the Inf in the rolling joing, on the "last" join column i.e., longevity)
   ll2 <- fullDataAll[, list(BscaledNonLinear = mean(BscaledNonLinear),
-                            predNonLinear = mean(predNonLinear)#,
-                            #Pair = Pair[1]
-                            #mortalityshape = mean(mortalityshape),
-                            #mANPPproportion = mean(mANPPproportion)
-  ), c("species", "standAge", "Pair")]
+                            predNonLinear = mean(predNonLinear)),
+                     c("species", "standAge", "Pair")]
+
+  ymaxes <- max(ll2$BscaledNonLinear, ll2$predNonLinear)
   gg <- ggplot(ll2, aes(standAge, BscaledNonLinear, colour = species)) +
     geom_line(size = 2) +
     geom_point(data = gammsList, aes(standAge, biomass, colour = speciesTemp), size = 0.25, alpha = 0.3) +
     geom_line(size = 2, aes(standAge, predNonLinear, col = species), lty = "dashed") +
     facet_wrap(~ Pair, nrow = ceiling(sqrt(length(outputTraits))), scales = "fixed") +
-    xlim(c(0, 150)) + # ggplot2::scale_y_log() +
-    ylim(c(0, 30000)) +
+    xlim(c(0, max(ll2$standAge))) + # ggplot2::scale_y_log() +
+    ylim(c(0, ymaxes)) +
+    ylab(label = "biomass") +
+    xlab(label = "stand age") +
     ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
     theme_bw()
 
@@ -290,32 +289,8 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
                                 mANPPproportion = round(sum(AICWeightsStd * mANPPproportion), 3),
                                 inflationFactor = round(sum(AICWeightsStd * inflationFactor), 3)),
                             by = "species"]
-  # numSp <- length(unique(newTraits$species))
-  # best <- newTraits[, .(growthcurve = round(sum(AICWeightsStd * growthcurve)/numSp, 2)
-  #                       #, mortalityshape = round(sum(AICWeightsStd * mortalityshape)/numSp, 0)
-  #                       #, mANPPproportion = round(sum(AICWeightsStd * mANPPproportion)/numSp, 3)
-  #                       #, inflationFactor = round(sum(AICWeightsStd * inflationFactor)/numSp, 3)
-  # )]
-  # pick best
-  # newTraits <- newTraits[, whmin := .I[which.min(llNonLinDelta)], by = "speciesCode"][unique(whmin)]
 
-  # update growthcurve so all are same
-  # newTraits[ , c(names(best)) := best]
 
-  # Find associated "species" in factorial --> remove existing inflationFactor and
-  #  replace with the equivalent inflationFactor from the factorial
-  # newTraits <- updateInflationFactor(best, factorialTraits, factorialBiomass)
-
-  # Remove the loglikelihood and AIC columns
-  # set(newTraits, NULL, grep("^ll|^AIC", colnames(newTraits), value = TRUE), NULL)
-  #
-  #
-  #
-  # if (!is.null(newTraits$mANPPproportion)) {
-  #   newTraits[is.na(mANPPproportion), c("mANPPproportion", "inflationFactor") := .(3.33, 1)] #default mANPP
-  # } else {
-  # }
-  # Update speciesTable with bestWeighted
   speciesTable <- copy(speciesTable) # This is needed to allow the Cache on editSpeciesTraits to work because of pass-by-reference
   bestWeighted <- speciesTable[match(bestWeighted$species, species),
                                c(names(bestWeighted)) := bestWeighted]
@@ -323,37 +298,65 @@ modifySpeciesTable <- function(gamms, speciesTable, factorialTraits, factorialBi
   return(list(best = bestWeighted, gg = gg))
 }
 
-modifySpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
-
-  if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
-    missing <- speciesTable[is.na(inflationFactor)]$species
-    message("averaging traits for these species: ", missing)
-    #
-    averageOfEstimated <- speciesTable[!is.na(inflationFactor),
-                                       .(growthcurve = mean(growthcurve),
-                                         mortalityshape = asInteger(mean(mortalityshape)),
-                                         mANPPproportion = mean(mANPPproportion))]
-    #I don't think inflationFactor should be averaged if longevity isn't..
-    speciesTable[is.na(inflationFactor), `:=`(
-      growthcurve = averageOfEstimated$growthcurve,
-      mortalityshape = averageOfEstimated$mortalityshape,
-      mANPPproportion = averageOfEstimated$mANPPproportion
-    )]
-  }
-
-  message("modifying speciesEcoregion table based on newly estimated traits")
-  #modify things by species
-
-  newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
-  newSpeciesEcoregion[!is.na(inflationFactor), maxB := asInteger(maxB * inflationFactor)]
-
-  newSpeciesEcoregion[, maxANPP := asInteger(maxB * mANPPproportion/100)]
-  cols <- names(speciesEcoregion)
-  newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
-  newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
-  newSpeciesEcoregion[, maxB := asInteger(maxB)]
-  return(newSpeciesEcoregion)
-}
+## Moved to LandR: August 2nd 3023
+# modifySpeciesAndSpeciesEcoregionTable <- function(speciesEcoregion, speciesTable) {
+#
+#   if (is.null(speciesTable[["mANPPproportion"]])) {
+#     stop("please supply a species table with inflationFactor and mANPPproportion")
+#   }
+#
+#   speciesTable[, growthCurveSource := 'estimated']
+#   if (nrow(speciesTable[is.na(inflationFactor),]) > 0) {
+#     missing <- speciesTable[is.na(inflationFactor)]$species
+#     message("averaging traits for these species: ", paste(missing, collapse = ", "))
+#     #note that inflationFactor is dependent on longevity, which is not adjusted
+#     averageOfEstimated <- speciesTable[!is.na(inflationFactor),
+#                                        .(growthcurve = round(mean(growthcurve), digits = 2),
+#                                          mortalityshape = asInteger(mean(mortalityshape)),
+#                                          mANPPproportion = round(mean(mANPPproportion), digits = 2),
+#                                          inflationFactor = round(mean(inflationFactor), digits = 3)), .(hardsoft)]
+#
+#     hardAverage <- averageOfEstimated[hardsoft == "hard"]
+#     softAverage <- averageOfEstimated[hardsoft == "soft"]
+#
+#     if (nrow(hardAverage) == 0){
+#       hardAverage <- softAverage
+#     }
+#     if (nrow(softAverage) == 0){
+#       softAverage <- hardAverage
+#     }
+#
+#     speciesTable[is.na(inflationFactor) & hardsoft == "soft", `:=`(
+#       growthcurve = softAverage$growthcurve,
+#       mortalityshape = softAverage$mortalityshape,
+#       mANPPproportion = softAverage$mANPPproportion,
+#       inflationFactor = softAverage$inflationFactor,
+#       growthCurveSource = "imputed"
+#     )]
+#
+#     speciesTable[is.na(inflationFactor) & hardsoft == "hard", `:=`(
+#       growthcurve = hardAverage$growthcurve,
+#       mortalityshape = hardAverage$mortalityshape,
+#       mANPPproportion = hardAverage$mANPPproportion,
+#       inflationFactor = hardAverage$inflationFactor,
+#       growthCurveSource = "imputed"
+#     )]
+#   }
+#
+#   message("modifying speciesEcoregion table based on newly estimated traits")
+#
+#   newSpeciesEcoregion <- speciesEcoregion[speciesTable, on = c("speciesCode" = "species")]
+#   newSpeciesEcoregion[!is.na(inflationFactor), maxB := asInteger(maxB * inflationFactor)]
+#
+#   newSpeciesEcoregion[, maxANPP := asInteger(maxB * mANPPproportion/100)]
+#   cols <- names(speciesEcoregion)
+#   newSpeciesEcoregion <- newSpeciesEcoregion[, .SD, .SDcols = cols]
+#   newSpeciesEcoregion[, speciesCode := as.factor(speciesCode)]
+#   newSpeciesEcoregion[, maxB := asInteger(maxB)]
+#
+#   return(list("newSpeciesEcoregion" = newSpeciesEcoregion,
+#               "newSpeciesTable" = speciesTable))
+# }
 
 makeGAMMdata <- function(species, psp, speciesEquiv,
                          sppCol, NoOfIters, K, minSize, q) {
@@ -475,7 +478,9 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   species <- as.character(species) %>% setNames(nm = .)
   speciesForFits <- setdiff(species, "Other") %>% setNames(nm = .)
   speciesForFitsMessage <- paste(speciesForFits, collapse = ", ")
-  message(crayon::yellow(speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gomopertz)"))
+  message(crayon::yellow(
+    speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
+  ))
   nlsouts <- lapply(speciesForFits, function(sp) {
     datForFit <- dataForFit(simData2, sp)
     nlsoutInner <- list()
@@ -529,18 +534,6 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
   }
   )
 
-  if (FALSE) {
-    #this exists for manually debugging whether the encompassing environment will be cached
-    object_size(speciesGamm)
-    # 838 kB  # Same as above
-    tf <- tempfile(); system.time(saveRDS(speciesGamm, file = tf))
-    #check time elapsed
-    e1 <- new.env(parent = emptyenv())
-    e1$manualVers <- readRDS(tf)
-    object_size(e1$manualVers)
-    # This should be comparable to above (+/- 50%)
-    rm(e1, tf)
-  }
 
   #Append the true data to speciesGamm, so we don't have the 0s involved when we subset by age quantile
   if (!any(lengths(speciesGamm) == 1)) { #this means it was a try-error as converged gamm is length 2
@@ -555,8 +548,7 @@ makeGAMMdata <- function(species, psp, speciesEquiv,
 }
 
 editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
-                              standAgesForFitting = c(0, 150), approach, inflationFactorKey,
-                              mortConstraints, growthConstraints, mANPPconstraints) {
+                              standAgesForFitting = c(0, 150), approach, inflationFactorKey) {
 
   # Gamm <- gamm[[name]]
   nameOrig <- name
@@ -572,7 +564,8 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
   #with two species - the gamm might converge for one only
   #this structure is to catch try-errors in both pairwise and single
   if (class(gamm) == "try-error" | class(gamm) == "character") {
-    message("not estimating traits for ", name)
+    message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
+    message(paste(gamm))
     # return(list(bestTraits = traits, fullData = NULL, ll = NULL))
     return(NULL)
   } else {
@@ -581,7 +574,9 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
     classesGAMM <- unlist(lapply(gamm$speciesGamm, class))
     #decided to allow non-converged gamms, if non-linear converged
     if (any("try-error" %in% c(classesNonLinear, classesGAMM))) {
-      message("not estimating traits for ", name)
+      message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
+      message(paste(gamm$NonLinearModel))
+      message(paste(gamm$speciesGamm))
       return(NULL)
     }
 
@@ -592,24 +587,27 @@ editSpeciesTraits <- function(name, gamm, traits, fT, fB, speciesEquiv, sppCol, 
 
   maxBiomass <- gamm$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
-  set(maxBiomass, NULL, "Sp", paste0("Sp", 1:2))
+  set(maxBiomass, NULL, "Sp", paste0("Sp", 1:nrow(maxBiomass)))
   SpNames <- maxBiomass$Sp[match(names(gamm$NonLinearModel), maxBiomass$speciesTemp)]
   SpMapping <- data.table(Sp = SpNames, species = name)
   names(gamm$NonLinearModel) <- SpNames
   names(gamm$speciesGamm) <- SpNames
-  constraints <- list(growthcurve = growthConstraints,
-                      mortalityshape = mortConstraints,
-                      #longevityConstraints,
-                      mANPPproportion = mANPPconstraints)
   standAge <- unique(fB$standAge)
   standAge <- standAge[standAge <= max(standAgesForFitting) & standAge >= min(standAgesForFitting)]
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
 
   # Predict from statistical fits to data
-  predGrid[, `:=`(
-    predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
-    predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]], .SD, , se.fit = FALSE))
-  ), "Sp", .SDcols = "standAge"]
+  if (all(names(gamm$speciesGamm[[1]]) == c("lme", "gam"))) {# means from gamm (ie. mixed effect, not gam)
+    predGrid[, `:=`(
+      predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
+      predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]][["gam"]], .SD, se.fit = FALSE))
+    ), by = "Sp", .SDcols = "standAge"]
+  } else {
+    predGrid[, `:=`(
+      predNonLinear = predict(gamm$NonLinearModel[[unlist(.BY)]], .SD),
+      predGamm = as.vector(predict(gamm$speciesGamm[[unlist(.BY)]], .SD, se.fit = FALSE))
+    ), by = "Sp", .SDcols = "standAge"]
+  }
   # misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
   dt <- as.data.table(expand.grid(speciesCode = unique(fB$speciesCode), standAge = unique(predGrid$standAge)))
   set(dt, NULL, "Sp", gsub(".+_", "", dt$speciesCode))
@@ -665,12 +663,12 @@ makePSPgamms <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
                          sppEquiv, NoOfIterations, knots, minimumSampleSize,
                          quantileAgeSubset, minDBH, speciesFittingApproach) {
 
-  #this function is just a wrapper around these functions, for caching purposess
+  ## this function is just a wrapper around these functions, for caching purposes
   psp <- prepPSPaNPP(studyAreaANPP = studyAreaANPP, PSPperiod = PSPperiod,
                      PSPgis = PSPgis, PSPmeasure = PSPmeasure, PSPplot = PSPplot,
                      useHeight = useHeight, biomassModel = biomassModel, minDBH = minDBH)
 
-  #Wrapper used to avoid caching psp object - too large
+  ## wrapper used to avoid caching PSP object - too large
   speciesGAMMs <- buildGrowthCurves(PSPdata = psp, speciesCol = speciesCol,
                                     sppEquiv = sppEquiv, NoOfIterations = NoOfIterations,
                                     knots = knots, minimumSampleSize = minimumSampleSize,
