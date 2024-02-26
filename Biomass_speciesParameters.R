@@ -318,13 +318,13 @@ Save <- function(sim) {
 
 .inputObjects <- function(sim) {
   origDTthreads <- data.table::getDTthreads()
-  if (getDTthreads() > 4) {
+  if (origDTthreads > 4) {
     data.table::setDTthreads(4)
   }
   on.exit(data.table::setDTthreads(origDTthreads))
 
   cacheTags <- c(currentModule(sim), "OtherFunction:.inputObjects") ## uncomment this if Cache is being used
-  dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
+  dPath <- asPath(inputPath(sim), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   if (!suppliedElsewhere("cohortDataFactorial", sim)) {
@@ -360,7 +360,7 @@ Save <- function(sim) {
       ecoregionGroup = "x",
       establishprob = 0.5,
       maxB = P(sim)$maxBInFactorial,
-      maxANPP = P(sim)$maxBInFactorial/30,
+      maxANPP = P(sim)$maxBInFactorial / 30,
       year = 0
     )
   }
@@ -381,6 +381,7 @@ Save <- function(sim) {
       !suppliedElsewhere("PSPgis_sppParams", sim)) {
     message("one or more PSP objects not supplied. Generating PSP data...")
 
+    ## TODO: replace this block with PSPclean::getPSP() to simplify code maintenance
     if ("dummy" %in% P(sim)$PSPdataTypes) {
       message("generating randomized PSP data")
       sim$PSPmeasure_sppParams <- Cache(prepInputs,
@@ -412,7 +413,7 @@ Save <- function(sim) {
       PSPmeasure_sppParams <- list()
       PSPplot_sppParams <- list()
 
-      if ("BC" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
+      if (any(c("BC", "all") %in% P(sim)$PSPdataTypes)) {
         PSPbc <- Cache(prepInputsBCPSP, dPath = dPath, userTags = c(cacheTags, "BCPSP"))
         PSPbc <- dataPurification_BCPSP(treeDataRaw = PSPbc$treeDataRaw,
                                         plotHeaderDataRaw = PSPbc$plotHeaderDataRaw,
@@ -422,19 +423,19 @@ Save <- function(sim) {
         PSPplot_sppParams[["BC"]] <- PSPbc$plotHeaderData
       }
 
-      if ("AB" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
+      if (any(c("AB", "all") %in% P(sim)$PSPdataTypes)) {
         PSPab <- Cache(prepInputsAlbertaPSP, dPath = dPath, userTags = c(cacheTags, "ABPSP"))
         PSPab <- dataPurification_ABPSP(treeMeasure = PSPab$pspABtreeMeasure,
                                         plotMeasure = PSPab$pspABplotMeasure,
                                         tree = PSPab$pspABtree,
                                         plot = PSPab$pspABplot,
                                         codesToExclude = NULL)
-        #TODO: confirm if they really didn't record species on 11K trees
+        ## TODO: confirm if they really didn't record species on 11K trees
         PSPmeasure_sppParams[["AB"]] <- PSPab$treeData
         PSPplot_sppParams[["AB"]] <- PSPab$plotHeaderData
       }
 
-      if ("SK" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
+      if (any(c("SK", "all") %in% P(sim)$PSPdataTypes)) {
         PSPsk <- Cache(prepInputsSaskatchwanPSP, dPath = dPath, userTags = c(cacheTags, "SKPSP"))
         PSPsk <- dataPurification_SKPSP(SADataRaw = PSPsk$SADataRaw,
                                         plotHeaderRaw = PSPsk$plotHeaderRaw,
@@ -450,7 +451,7 @@ Save <- function(sim) {
         PSPplot_sppParams[["SKtsp"]] <- TSPsk$plotHeaderData
       }
 
-      if ("ON" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
+      if (any(c("ON", "all") %in% P(sim)$PSPdataTypes)) {
         PSPon <- prepInputsOntarioPSP(dPath = dPath)
         #sppEquiv should not be subset to species of interest the way LandR requires
         #the latin is used to translate species into common names for the biomass equations
@@ -460,8 +461,7 @@ Save <- function(sim) {
         PSPplot_sppParams[["ON"]] <- PSPon$plotHeaderData
       }
 
-      if ("NFI" %in% P(sim)$PSPdataTypes | "all" %in% P(sim)$PSPdataTypes) {
-
+      if (any(c("NFI", "all") %in% P(sim)$PSPdataTypes)) {
         PSPnfi <- Cache(prepInputsNFIPSP, dPath = dPath, userTags = c(cacheTags, "NFIPSP"))
         PSPnfi <- dataPurification_NFIPSP(lgptreeRaw = PSPnfi$pspTreeMeasure,
                                           lgpHeaderRaw = PSPnfi$pspHeader,
@@ -477,12 +477,12 @@ Save <- function(sim) {
 
       PSPgis_sppParams <- geoCleanPSP(Locations = PSPplot_sppParams)
 
-      #clean up
+      ## clean up
       toRemove <- c("Zone", "Datum", "Easting", "Northing", "Latitude", "Longitude")
       toRemove <- toRemove[toRemove %in% colnames(PSPplot_sppParams)]
       set(PSPplot_sppParams, NULL, toRemove, NULL)
 
-      #keep only plots with valid coordinates
+      ## keep only plots with valid coordinates
       PSPmeasure_sppParams <- PSPmeasure_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
       PSPplot_sppParams <- PSPplot_sppParams[OrigPlotID1 %in% PSPgis_sppParams$OrigPlotID1,]
       sim$PSPmeasure_sppParams <- PSPmeasure_sppParams
