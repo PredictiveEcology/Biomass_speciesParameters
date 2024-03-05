@@ -323,7 +323,7 @@ Save <- function(sim) {
   }
   on.exit(data.table::setDTthreads(origDTthreads))
 
-  cacheTags <- c(currentModule(sim), "OtherFunction:.inputObjects") ## uncomment this if Cache is being used
+  cacheTags <- c(currentModule(sim), "OtherFunction:.inputObjects")
   dPath <- asPath(inputPath(sim), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
