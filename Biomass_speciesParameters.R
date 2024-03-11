@@ -313,13 +313,13 @@ Save <- function(sim) {
 
 .inputObjects <- function(sim) {
   origDTthreads <- data.table::getDTthreads()
-  if (getDTthreads() > 4) {
+  if (origDTthreads > 4) {
     data.table::setDTthreads(4)
   }
   on.exit(data.table::setDTthreads(origDTthreads))
 
-  cacheTags <- c(currentModule(sim), "OtherFunction:.inputObjects") ## uncomment this if Cache is being used
-  dPath <- asPath(getOption("reproducible.destinationPath", dataPath(sim)), 1)
+  cacheTags <- c(currentModule(sim), "OtherFunction:.inputObjects")
+  dPath <- asPath(inputPath(sim), 1)
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   if (!suppliedElsewhere("cohortDataFactorial", sim)) {
@@ -355,7 +355,7 @@ Save <- function(sim) {
       ecoregionGroup = "x",
       establishprob = 0.5,
       maxB = P(sim)$maxBInFactorial,
-      maxANPP = P(sim)$maxBInFactorial/30,
+      maxANPP = P(sim)$maxBInFactorial / 30,
       year = 0
     )
   }
