@@ -463,11 +463,7 @@ Save <- function(sim) {
 
       if (any(c("NFI", "all") %in% P(sim)$PSPdataTypes)) {
         PSPnfi <- Cache(prepInputsNFIPSP, dPath = dPath, userTags = c(cacheTags, "NFIPSP"))
-        PSPnfi <- dataPurification_NFIPSP(lgptreeRaw = PSPnfi$pspTreeMeasure,
-                                          lgpHeaderRaw = PSPnfi$pspHeader,
-                                          approxLocation = PSPnfi$pspLocation,
-                                          treeDamage = PSPnfi$pspTreeDamage,
-                                          codesToExclude = NULL)
+        PSPnfi <- dataPurification_NFIPSP(PSPnfi, codesToExclude = NULL)
         PSPmeasure_sppParams[["NFI"]] <- PSPnfi$treeData
         PSPplot_sppParams[["NFI"]] <- PSPnfi$plotHeaderData
       }
