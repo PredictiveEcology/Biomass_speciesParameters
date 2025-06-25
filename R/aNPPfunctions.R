@@ -8,7 +8,10 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
     PSP_sa <- PSPgis[studyAreaANPP,] %>%
       setkey(., OrigPlotID1)
     message(yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
-
+    if (nrow(PSP_sa) == 0) {
+      stop("subsetting PSPs to those within studyAreaANPP appears to ",
+      "have removed all of them...please review")
+    }
     #Filter other PSP datasets to those in study Area
     PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
     PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
