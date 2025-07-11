@@ -39,7 +39,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
   #Calculate biomass
   #Height must be calculated separately if there are NA heights -
-  if (useHeight) {
+  if (useHeight & !is.null(PSPmeasure$Height)) {
     PSPmeasureNoHeight <- PSPmeasure[is.na(Height)]
     PSPmeasureHeight <- PSPmeasure[!is.na(Height)]
     tempOut <- biomassCalculation(species = PSPmeasureHeight$newSpeciesName,
