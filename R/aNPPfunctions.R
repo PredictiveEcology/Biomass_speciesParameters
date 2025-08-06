@@ -284,7 +284,7 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   #                        predNonLinear = mean(predNonLinear)),
   #                    c("species", "standAge", "Pair")]
   # rm(fullDataAll)
-  ymaxes <- max(bestIndCurves$BscaledNonLinear, bestIndCurves$predNonLinear)
+  ymaxes <- max(bestIndCurves$BscaledNonLinear, bestIndCurves$predNonLinear) * 1.05
 
   gg <- ggplot(bestIndCurves, aes(standAge, BscaledNonLinear, colour = species)) +
     geom_line(size = 2) +

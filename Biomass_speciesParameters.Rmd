@@ -63,7 +63,7 @@ download.file(url = paste0("https://img.shields.io/badge/Biomass_speciesParamete
               mode = 'wb')
 ```
 
-``` {r moduleBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
+```{r moduleBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
 ## try to automatically get the commit URL and the path to the badge image
 modulePath <- if (grepl("Biomass_speciesParameters$", normPath("."))) {
   normPath(".")
@@ -92,14 +92,13 @@ badgePath <- normPath("figures/moduleVersionBadge.png")
 cat(paste0("[![module-version-Badge](", badgePath, ")](", badgeURL, ")"))
 ```
 
-``` {r issuesBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
+```{r issuesBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
 badgeURL <- "https://github.com/PredictiveEcology/Biomass_speciesParameters/issues"
 badgePath <- normPath("figures/issuesBadge.png")
 
 ## make string of markdown code to be executed as-is
 cat(paste0("[![Issues-badge](", badgePath, ")](", badgeURL,")"))
 ```
-
 
 <!-- if knitting to pdf remember to add the pandoc_args: ["--extract-media", "."] option to yml in order to get the badge images -->
 
