@@ -39,7 +39,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
   #Calculate biomass
   #Height must be calculated separately if there are NA heights -
-  if (useHeight) {
+  if (useHeight & !is.null(PSPmeasure$Height)) {
     PSPmeasureNoHeight <- PSPmeasure[is.na(Height)]
     PSPmeasureHeight <- PSPmeasure[!is.na(Height)]
     tempOut <- biomassCalculation(species = PSPmeasureHeight$newSpeciesName,
@@ -72,7 +72,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   message(yellow("No PSP biomass estimate possible for these species: "))
   message(crayon::yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
 
-  #TODO: is this still necessary? which plot?
+  #TODO: review if this is still necessary
   #clean up - added a catch for incorrect plotSize affecting stem density
   densities <- PSPmeasure[, .(.N, PlotSize = mean(PlotSize)), MeasureID]
   densities[, density := N/PlotSize]
@@ -100,6 +100,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   if (!isTRUE(speciesCol %in% colnames(sppEquiv))) {
     stop("sppEquivCol not in sppEquiv")
   }
+
   gcSpecies <- speciesFittingApproach
   if (identical(speciesFittingApproach, "single")) {
     gcSpecies <- unique(sppEquiv[[speciesCol]])
@@ -188,8 +189,13 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   rm(factorialTraits)
   GCtrans <- purrr::transpose(GCs)
   originalData <- rbindlist(GCtrans$originalData, idcol = "Pair")
-
-  factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
+ 
+  startsWithLetter <- ifelse(approach == "single", "A", "Sp")
+  #Sp beginning with A are numbered A1-AN, where N = the factorial of species traits
+  #these were not grown with competition, unlike the "Sp1/Sp2" paired groups
+  
+  factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, startsWithLetter)]
+  if (startsWithLetter == "A") {factorialBiomass[, Sp := "Sp1"]}
   gc() #these objects can be enormous - recommend gc
 
   ## join with inflationFactorKey
@@ -201,12 +207,13 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   tempTraits <- tempTraits[, .(speciesCode, inflationFactor)]
   factorialBiomass <- tempTraits[factorialBiomass, on = "speciesCode"]
 
-  ## Take only 2-cohort pixels -- they will start with Sp
+  ## Take only 2-cohort pixels -- they will start with Sp -- unless fitting single
   factorialTraitsVarying <- factorialTraitsVarying[startsWith(
-    factorialTraitsVarying$Sp, "Sp")]
-
+    factorialTraitsVarying$Sp, startsWithLetter)]
+  if (startsWithLetter == "A") {factorialTraitsVarying[, Sp := "Sp1"]}
+  
   setnames(factorialBiomass, "age", "standAge")
-
+  
   message("Estimate species parameters; minimizing diff between statistical fit and Biomass_core experiment")
   gc()
 
@@ -219,12 +226,13 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   }
   fbAges <- seq(1, max(factorialTraitsVarying$longevity), fbAgeSample[2] - fbAgeSample[1])
   rm(fbAgeSample)
-
+  browser() #overwrite cache
   outputTraits <- Map(name = species, GC = GCs, f = editSpeciesTraits,
                       MoreArgs = list(traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
                                        speciesEquiv = sppEquiv, sppCol = sppEquivCol, standAge = fbAges,
                                        standAgesForFitting = standAgesForFitting,
                                        approach = approach, maxBInFactorial = maxBInFactorial))
+  browser()
 
   outputTraits <- outputTraits[!sapply(outputTraits, is.null)] #remove bad fits
   outputTraitsT <- purrr::transpose(outputTraits)
@@ -463,6 +471,7 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
 
   maxBiomass <- GC$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
+
   set(maxBiomass, NULL, "Sp", paste0("Sp", 1:nrow(maxBiomass)))
   SpNames <- maxBiomass$Sp[match(names(GC$NonLinearModel), maxBiomass$speciesTemp)]
   SpMapping <- data.table(Sp = SpNames, species = name)
@@ -478,8 +487,16 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   ), by = "Sp", .SDcols = "standAge"]
 
   ## misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
+  
+  ###Ian remove this explanation after
+  # predGrid is all Sp1 for Sp, but dt has A1-AN for both speciesCode and Sp, due to fB. 
+  # however, all the fB Sp shoud be Sp1 as they have nothing different. 
+  # if you do this, you lose the information in candFB
+  
+  ###
   dt <- as.data.table(expand.grid(speciesCode = unique(fB$speciesCode), standAge = unique(predGrid$standAge)))
   set(dt, NULL, "Sp", gsub(".+_", "", dt$speciesCode))
+
   dt <- dt[predGrid, on = c("standAge", "Sp")]
   candFB <- fB[dt, on = c("standAge", "speciesCode", "Sp")] # misses points past longevity
   whNA <- which(is.na(candFB$B))
@@ -502,6 +519,7 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   ll[, c("llNonLinDelta") := list(abs(llNonLinear - max(llNonLinear)))]
   set(ll, NULL, "llNonLinear", NULL)
 
+  #TODO: where does deltaDiff 2 come from?
   deltaDiff <- 2
   ll <- ll[llNonLinDelta < deltaDiff]
   candFB <- candFB[ll, on = "pixelGroup"]
@@ -515,6 +533,7 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   bestTraits <- SpMapping[best, on = "Sp"]
   candFB <- SpMapping[candFB, on = "Sp"]
   rm(rr,fT, SpMapping, deltaDiff, fB)
+
   gc()
   return(list(bestTraits = bestTraits, fullData = candFB, ll = ll))
 }

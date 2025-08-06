@@ -37,7 +37,7 @@ defineModule(sim, list(
                                  "'dummy' should be used for unauthorized users.")),
     defineParameter("PSPperiod", "numeric", c(1920, 2019), NA, NA,
                     desc = paste("The years by which to subset sample plot data, if desired. Must be a vector of length 2")),
-    defineParameter("quantileAgeSubset", "numeric", 95, 1, 100,
+    defineParameter("quantileAgeSubset", "numeric", 99, 1, 100,
                     desc = paste("Quantile by which to subset PSP data. As older stands are sparsely represented",
                                  "the oldest measurements become vastly more influential. This parameter accepts",
                                  "both a single value and a list of vectors, named according to `sppEquivCol`.")),
@@ -71,7 +71,7 @@ defineModule(sim, list(
     defineParameter(".studyAreaName", "character", NA, NA, NA,
                     desc = paste("Human-readable name for the growth curve filename.",
                                  "If `NA`, a hash of sppEquiv[[sppEquivCol]] will be used.")),
-    defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
+    defineParameter(".useCache", "character", c(".inputObjects"), NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                                  "This is generally intended for data-type modules, where stochasticity and time are not relevant"))
   ),
@@ -194,24 +194,39 @@ Init <- function(sim) {
     ## pair-wise species will be matched with traits, as the species code won't match
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
     gc()
-    ## prepare PSPdata
-    sim$speciesGrowthCurves <- Cache(
-      buildGrowthCurves_Wrapper,
-      studyAreaANPP = sim$studyAreaANPP,
-      PSPperiod = P(sim)$PSPperiod,
-      PSPgis = sim$PSPgis_sppParams,
-      PSPmeasure = sim$PSPmeasure_sppParams,
-      PSPplot = sim$PSPplot_sppParams,
-      useHeight = P(sim)$useHeight,
-      biomassModel = P(sim)$biomassModel,
-      speciesCol = P(sim)$sppEquivCol,
-      sppEquiv = sim$sppEquiv,
-      minimumSampleSize = P(sim)$minimumPlots,
-      quantileAgeSubset = P(sim)$quantileAgeSubset,
-      minDBH = P(sim)$minDBH,
-      speciesFittingApproach = P(sim)$speciesFittingApproach,
-      userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper"))
 
+    # ## prepare PSPdata
+    # sim$speciesGrowthCurves <- Cache(
+    #   buildGrowthCurves_Wrapper,
+    #   studyAreaANPP = sim$studyAreaANPP,
+    #   PSPperiod = P(sim)$PSPperiod,
+    #   PSPgis = sim$PSPgis_sppParams,
+    #   PSPmeasure = sim$PSPmeasure_sppParams,
+    #   PSPplot = sim$PSPplot_sppParams,
+    #   useHeight = P(sim)$useHeight,
+    #   biomassModel = P(sim)$biomassModel,
+    #   speciesCol = P(sim)$sppEquivCol,
+    #   sppEquiv = sim$sppEquiv,
+    #   minimumSampleSize = P(sim)$minimumPlots,
+    #   quantileAgeSubset = P(sim)$quantileAgeSubset,
+    #   minDBH = P(sim)$minDBH,
+    #   speciesFittingApproach = P(sim)$speciesFittingApproach,
+    #   userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper"))
+    psp <- Cache(prepPSPaNPP, 
+                 studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
+                 PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
+                 PSPplot = sim$PSPplot_sppParams, useHeight = P(sim)$useHeight, 
+                 biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH, 
+                 userTags = c(currentModule(sim), "prepPSPaNPP"))
+    
+    sim$speciesGrowthCurves <-  Cache(buildGrowthCurves, PSPdata = psp, 
+                                      speciesCol =  P(sim)$sppEquivCol, 
+                                      sppEquiv = sim$sppEquiv,
+                                      minimumSampleSize = P(sim)$minimumPlots,
+                                      quantileAgeSubset = P(sim)$quantileAgeSubset,
+                                      speciesFittingApproach = P(sim)$speciesFittingApproach, 
+                                      userTags = c(currentModule(sim), "buildGrowthCurves"))
+    
     classes <- lapply(sim$speciesGrowthCurves, FUN = "class")
 
     noDataSpp <- vapply(sim$speciesGrowthCurves[classes == "character"], FUN = function(x) {
@@ -229,6 +244,7 @@ Init <- function(sim) {
       setDT(sim$speciesTableFactorial),
       setDT(sim$cohortDataFactorial)
       ))
+
     modifiedSpeciesTables <- Cache(
       modifySpeciesTable,
       GCs = sim$speciesGrowthCurves[!names(sim$speciesGrowthCurves) %in% names(noDataSpp)],
