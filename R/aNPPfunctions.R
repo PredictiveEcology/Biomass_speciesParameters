@@ -527,7 +527,7 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   set(ll, NULL, "llNonLinear", NULL)
 
   #TODO: where does deltaDiff 2 come from?
-  deltaDiff <- 2
+  deltaDiff <- quantile(ll$llNonLinDelta, 0.25)
   ll <- ll[llNonLinDelta < deltaDiff]
   candFB <- candFB[ll, on = "pixelGroup"]
   varsToInteger <- c("BscaledNonLinear", "predNonLinear")
