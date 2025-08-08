@@ -189,11 +189,11 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   rm(factorialTraits)
   GCtrans <- purrr::transpose(GCs)
   originalData <- rbindlist(GCtrans$originalData, idcol = "Pair")
- 
+
   startsWithLetter <- ifelse(approach == "single", "A", "Sp")
   #Sp beginning with A are numbered A1-AN, where N = the factorial of species traits
   #these were not grown with competition, unlike the "Sp1/Sp2" paired groups
-  
+
   factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, startsWithLetter)]
   if (startsWithLetter == "A") {factorialBiomass[, Sp := "Sp1"]}
   gc() #these objects can be enormous - recommend gc
@@ -211,9 +211,9 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   factorialTraitsVarying <- factorialTraitsVarying[startsWith(
     factorialTraitsVarying$Sp, startsWithLetter)]
   if (startsWithLetter == "A") {factorialTraitsVarying[, Sp := "Sp1"]}
-  
+
   setnames(factorialBiomass, "age", "standAge")
-  
+
   message("Estimate species parameters; minimizing diff between statistical fit and Biomass_core experiment")
   gc()
 
@@ -484,6 +484,7 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
 
   ## Predict from statistical fits to data
+  #TODO: confirm that this should only predict for species of interest, even under focal and pairwise
   predGrid[, `:=`(
     predNonLinear = predict(GC$NonLinearModel[[unlist(.BY)]], .SD)
   ), by = "Sp", .SDcols = "standAge"]
