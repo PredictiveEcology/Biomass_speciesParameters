@@ -493,7 +493,7 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
 
   dt <- as.data.table(expand.grid(speciesCode = unique(fB$speciesCode), standAge = unique(predGrid$standAge)))
   #make Sp column with whether species is Sp1 or Sp2 - under single, it is only Sp1
-  if (approach == single) {
+  if (approach == "single") {
     dt[, Sp := "Sp1"]
   } else {
     set(dt, NULL, "Sp", gsub(".+_", "", dt$speciesCode))
