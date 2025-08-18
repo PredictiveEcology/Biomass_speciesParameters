@@ -195,23 +195,6 @@ Init <- function(sim) {
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
     gc()
 
-    # ## prepare PSPdata
-    # sim$speciesGrowthCurves <- Cache(
-    #   buildGrowthCurves_Wrapper,
-    #   studyAreaANPP = sim$studyAreaANPP,
-    #   PSPperiod = P(sim)$PSPperiod,
-    #   PSPgis = sim$PSPgis_sppParams,
-    #   PSPmeasure = sim$PSPmeasure_sppParams,
-    #   PSPplot = sim$PSPplot_sppParams,
-    #   useHeight = P(sim)$useHeight,
-    #   biomassModel = P(sim)$biomassModel,
-    #   speciesCol = P(sim)$sppEquivCol,
-    #   sppEquiv = sim$sppEquiv,
-    #   minimumSampleSize = P(sim)$minimumPlots,
-    #   quantileAgeSubset = P(sim)$quantileAgeSubset,
-    #   minDBH = P(sim)$minDBH,
-    #   speciesFittingApproach = P(sim)$speciesFittingApproach,
-    #   userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper"))
     psp <- Cache(prepPSPaNPP, 
                  studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
                  PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
@@ -219,6 +202,7 @@ Init <- function(sim) {
                  biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH, 
                  userTags = c(currentModule(sim), "prepPSPaNPP"))
     
+
     sim$speciesGrowthCurves <-  Cache(buildGrowthCurves, PSPdata = psp, 
                                       speciesCol =  P(sim)$sppEquivCol, 
                                       sppEquiv = sim$sppEquiv,

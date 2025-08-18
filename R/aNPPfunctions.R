@@ -96,6 +96,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                               minimumSampleSize, speciesFittingApproach = "focal") {
+
   #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   if (!isTRUE(speciesCol %in% colnames(sppEquiv))) {
     stop("sppEquivCol not in sppEquiv")
@@ -543,21 +544,4 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
 
   gc()
   return(list(bestTraits = bestTraits, fullData = candFB, ll = ll))
-}
-
-buildGrowthCurves_Wrapper <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
-                                      PSPplot, useHeight, biomassModel, speciesCol,
-                                      sppEquiv, minimumSampleSize, minDBH,
-                                      quantileAgeSubset, speciesFittingApproach) {
-
-  ## this function is just a wrapper around these functions, for caching purposes
-  psp <- prepPSPaNPP(studyAreaANPP = studyAreaANPP, PSPperiod = PSPperiod,
-                     PSPgis = PSPgis, PSPmeasure = PSPmeasure, PSPplot = PSPplot,
-                     useHeight = useHeight, biomassModel = biomassModel, minDBH = minDBH)
-
-  sppGCs <- buildGrowthCurves(PSPdata = psp, speciesCol = speciesCol, sppEquiv = sppEquiv,
-                              minimumSampleSize = minimumSampleSize,
-                              quantileAgeSubset = quantileAgeSubset,
-                              speciesFittingApproach = speciesFittingApproach)
-  return(sppGCs)
 }
