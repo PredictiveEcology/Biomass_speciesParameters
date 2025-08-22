@@ -194,7 +194,7 @@ Init <- function(sim) {
     ## pair-wise species will be matched with traits, as the species code won't match
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
     gc()
-
+    message("preparing PSPs for growth curves")
     psp <- Cache(prepPSPaNPP, 
                  studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
                  PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
@@ -202,27 +202,27 @@ Init <- function(sim) {
                  biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH, 
                  userTags = c(currentModule(sim), "prepPSPaNPP"))
     
+    message("building growth curves") # this cache call takes several minutes to process..
+    sim$speciesGrowthCurves <-  buildGrowthCurves(PSPdata = psp, 
+                                                  speciesCol =  P(sim)$sppEquivCol, 
+                                                  sppEquiv = sim$sppEquiv,
+                                                  minimumSampleSize = P(sim)$minimumPlots,
+                                                  quantileAgeSubset = P(sim)$quantileAgeSubset,
+                                                  speciesFittingApproach = P(sim)$speciesFittingApproach) |>
+    Cache(userTags = c(currentModule(sim), "buildGrowthCurves"))
 
-    sim$speciesGrowthCurves <-  Cache(buildGrowthCurves, PSPdata = psp, 
-                                      speciesCol =  P(sim)$sppEquivCol, 
-                                      sppEquiv = sim$sppEquiv,
-                                      minimumSampleSize = P(sim)$minimumPlots,
-                                      quantileAgeSubset = P(sim)$quantileAgeSubset,
-                                      speciesFittingApproach = P(sim)$speciesFittingApproach, 
-                                      userTags = c(currentModule(sim), "buildGrowthCurves"))
-    
     classes <- lapply(sim$speciesGrowthCurves, FUN = "class")
-
+    
     noDataSpp <- vapply(sim$speciesGrowthCurves[classes == "character"], FUN = function(x) {
       x == "insufficient data"
     }, FUN.VALUE = logical(1))
-
+    
     if (any(noDataSpp)) {
       message(crayon::yellow("Insufficient data to estimate species parameters for",
                              paste(names(noDataSpp), collapse = ", "),
                              "- will keep original user-supplied parameters"))
     }
-
+    
     cacheExtra <- .robustDigest(list(
       sim$speciesGrowthCurves[!names(sim$speciesGrowthCurves) %in% names(noDataSpp)],
       setDT(sim$speciesTableFactorial),
