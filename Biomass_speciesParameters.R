@@ -3,9 +3,11 @@ defineModule(sim, list(
   description = paste("For estimating LANDIS-II species traits based on growth curves derived",
                       "from Permanent Sample Plot (PSP) and Temporary Sample Plot (TSP) data"),
   keywords = NA, # c("insert key words here"),
-  authors = c(person(c("Ian"), "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = c("aut", "cre")),
-              person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut")),
-              person(c("Ceres"), "Barros", email = "ceres.barros@ubc.ca", role = c("ctb"))),
+  authors = c(
+    person(c("Ian"), "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = c("aut", "cre")),
+    person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut")),
+    person(c("Ceres"), "Barros", email = "ceres.barros@ubc.ca", role = c("ctb"))
+  ),
   childModules = character(0),
   version = list(Biomass_speciesParameters = "2.0.2"),
   timeframe = as.POSIXlt(c(NA, NA)),
@@ -14,12 +16,14 @@ defineModule(sim, list(
   documentation = list("README.txt", "Biomass_speciesParameters.Rmd"),
   loadOrder = list(after = c("Biomass_speciesFactorial", "Biomass_borealDataPrep"),
                    before = c("Biomass_core")),
-  reqdPkgs = list("crayon", "data.table", "disk.frame", "fpCompare", "ggplot2", "gridExtra",
-                  "magrittr", "mgcv", "nlme", "purrr", "robustbase", "sf",
-                  "reproducible (>= 2.1.0)", "SpaDES.core (>= 2.1.4)",
-                  "PredictiveEcology/LandR (>= 1.1.0.9077)",
-                  "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
-                  "ianmseddy/PSPclean@development (>= 0.1.4.9005)"),
+  reqdPkgs = list(
+    "crayon", "data.table", "disk.frame", "fpCompare", "ggplot2", "gridExtra",
+    "mgcv", "nlme", "purrr", "robustbase", "sf",
+    "reproducible (>= 2.1.0)", "SpaDES.core (>= 2.1.4)",
+    "PredictiveEcology/LandR (>= 1.1.0.9077)",
+    "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
+    "ianmseddy/PSPclean@development (>= 0.1.4.9005)"
+  ),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
