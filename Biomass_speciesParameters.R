@@ -17,7 +17,7 @@ defineModule(sim, list(
   loadOrder = list(after = c("Biomass_speciesFactorial", "Biomass_borealDataPrep"),
                    before = c("Biomass_core")),
   reqdPkgs = list(
-    "crayon", "data.table", "disk.frame", "fpCompare", "ggplot2", "gridExtra",
+    "cli", "data.table", "disk.frame", "fpCompare", "ggplot2", "gridExtra",
     "mgcv", "nlme", "purrr", "robustbase", "sf",
     "reproducible (>= 2.1.0)", "SpaDES.core (>= 2.1.4)",
     "PredictiveEcology/LandR (>= 1.1.0.9077)",
@@ -223,9 +223,9 @@ Init <- function(sim) {
     }, FUN.VALUE = logical(1))
 
     if (any(noDataSpp)) {
-      message(crayon::yellow("Insufficient data to estimate species parameters for",
-                             paste(names(noDataSpp), collapse = ", "),
-                             "- will keep original user-supplied parameters"))
+      message(cli::col_yellow("Insufficient data to estimate species parameters for",
+                              paste(names(noDataSpp), collapse = ", "),
+                              "- will keep original user-supplied parameters"))
     }
 
     cacheExtra <- .robustDigest(list(
