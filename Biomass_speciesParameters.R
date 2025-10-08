@@ -191,7 +191,8 @@ Init <- function(sim) {
                                         .(inflationFactor = P(sim)$maxBInFactorial/max(B)),
                                         , .(pixelGroup, speciesCode)]
     ## in some cases the speciesTableFactorial doesn't have "species" column; just "speciesCode"
-    if (!("species" %in% colnames(sim$speciesTableFactorial))) { # TODO this is a work around -- the speciesTableFactorial should be stable
+    if (!("species" %in% colnames(sim$speciesTableFactorial))) {
+      ## TODO this is a work around -- the speciesTableFactorial should be stable
       setnames(sim$speciesTableFactorial, old = "speciesCode", new = "species")
     }
     tempMaxB <- sim$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
@@ -199,8 +200,7 @@ Init <- function(sim) {
     tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
     gc()
     ## prepare PSPdata
-    sim$speciesGrowthCurves <- Cache(
-      buildGrowthCurves_Wrapper,
+    sim$speciesGrowthCurves <- buildGrowthCurves_Wrapper(
       studyAreaANPP = sim$studyAreaANPP,
       PSPperiod = P(sim)$PSPperiod,
       PSPgis = sim$PSPgis_sppParams,
@@ -213,8 +213,11 @@ Init <- function(sim) {
       minimumSampleSize = P(sim)$minimumPlots,
       quantileAgeSubset = P(sim)$quantileAgeSubset,
       minDBH = P(sim)$minDBH,
-      speciesFittingApproach = P(sim)$speciesFittingApproach,
-      userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper"))
+      speciesFittingApproach = P(sim)$speciesFittingApproach
+    ) |>
+      Cache(
+        userTags = c(currentModule(sim), "buildGrowthCurves_Wrapper")
+      )
 
     classes <- lapply(sim$speciesGrowthCurves, FUN = "class")
 
@@ -263,8 +266,10 @@ Init <- function(sim) {
 }
 
 updateSpeciesTables <- function(sim) {
-  modifiedTables <- modifySpeciesAndSpeciesEcoregionTable(speciesEcoregion = sim$speciesEcoregion,
-                                                          speciesTable = sim$species)
+  modifiedTables <- modifySpeciesAndSpeciesEcoregionTable(
+    speciesEcoregion = sim$speciesEcoregion,
+    speciesTable = sim$species
+  )
   sim$speciesEcoregion <- modifiedTables$newSpeciesEcoregion
   sim$species <- modifiedTables$newSpeciesTable
   return(sim)
@@ -311,19 +316,27 @@ Save <- function(sim) {
   message(currentModule(sim), ": using dataPath '", dPath, "'.")
 
   if (!suppliedElsewhere("cohortDataFactorial", sim)) {
-    sim$cohortDataFactorial <- prepInputs(targetFile = "cohortDataFactorial_medium.rds",
-                                          destinationPath = dPath,
-                                          fun = "readRDS", overwrite = TRUE,
-                                          url = extractURL("cohortDataFactorial", sim),
-                                          useCache = TRUE, userTags = c(cacheTags, "factorialCohort"))
+    sim$cohortDataFactorial <- prepInputs(
+      targetFile = "cohortDataFactorial_medium.rds",
+      destinationPath = dPath,
+      fun = "readRDS",
+      overwrite = TRUE,
+      url = extractURL("cohortDataFactorial", sim),
+      useCache = TRUE,
+      userTags = c(cacheTags, "factorialCohort")
+    )
   }
 
   if (!suppliedElsewhere("speciesTableFactorial", sim)) {
-    sim$speciesTableFactorial <- prepInputs(targetFile = "speciesTableFactorial_medium.rds",
-                                            destinationPath = dPath,
-                                            url = extractURL("speciesTableFactorial", sim),
-                                            fun = "readRDS", overwrite = TRUE,
-                                            useCache = TRUE, userTags = c(cacheTags, "factorialSpecies"))
+    sim$speciesTableFactorial <- prepInputs(
+      targetFile = "speciesTableFactorial_medium.rds",
+      destinationPath = dPath,
+      url = extractURL("speciesTableFactorial", sim),
+      fun = "readRDS",
+      overwrite = TRUE,
+      useCache = TRUE,
+      userTags = c(cacheTags, "factorialSpecies")
+    )
   }
 
   if (!suppliedElsewhere("sppEquiv", sim)) {
@@ -353,21 +366,24 @@ Save <- function(sim) {
   if (!suppliedElsewhere("species", sim)) {
     message("generating dummy species data - run Biomass_borealDataPrep for table with real species attributes")
     speciesTable <- getSpeciesTable()
-    sim$species <- prepSpeciesTable(speciesTable,
-                                    sppEquiv = sim$sppEquiv,
-                                    sppEquivCol = P(sim)$sppEquivCol)
+    sim$species <- prepSpeciesTable(
+      speciesTable,
+      sppEquiv = sim$sppEquiv,
+      sppEquivCol = P(sim)$sppEquivCol
+    )
   }
 
-  if (!suppliedElsewhere("PSPmeasure_sppParams", sim) |
-      !suppliedElsewhere("PSPplot_sppParams", sim) |
+  if (!suppliedElsewhere("PSPmeasure_sppParams", sim) ||
+      !suppliedElsewhere("PSPplot_sppParams", sim) ||
       !suppliedElsewhere("PSPgis_sppParams", sim)) {
     message("one or more PSP objects not supplied. Generating PSP data...")
 
-    PSPdata <- Cache(getPSP,
-                     PSPdataTypes = P(sim)$PSPdataTypes,
-                     destinationPath = dPath,
-                     forGMCS = FALSE,
-                     userTags = c(cacheTags, P(sim)$PSPdataTypes))
+    PSPdata <- getPSP(
+      PSPdataTypes = P(sim)$PSPdataTypes,
+      destinationPath = dPath,
+      forGMCS = FALSE
+    ) |>
+      Cache(userTags = c(cacheTags, P(sim)$PSPdataTypes))
 
     sim$PSPmeasure_sppParams <- PSPdata$PSPmeasure
     sim$PSPplot_sppParams <- PSPdata$PSPplot
