@@ -180,16 +180,40 @@ Init <- function(sim) {
     data.table::setDTthreads(P(sim)$.useParallel)
   }
   on.exit(data.table::setDTthreads(origDTthreads))
+  ## load factorial tables -------------------------------------------------------------------------
 
-  ## connect to factorial data tables (arrow datasets) if not using defaults from .inputObjects
   stopifnot(moduleVersion("Biomass_speciesFactorial", modulePath(sim)) >= "1.0.0")
   fmt <- "feather" ## faster for small-med data compared to parquet
 
-  if (is.null(sim$cohortDataFactorial_path)) {
+  if (tools::file_ext(sim$cohortDataFactorial_path == "rds")) {
+    ## using rds default from .inputObjects
+    mod$cohortDataFactorial <- prepInputs(
+      targetFile = basename(sim$cohortDataFactorial_path),
+      destinationPath = dPath,
+      fun = "readRDS",
+      overwrite = TRUE,
+      url = extractURL("cohortDataFactorial_path", sim),
+      useCache = TRUE,
+      userTags = c(cacheTags, "factorialCohort")
+    )
+  } else {
+    ## connect to arrow dataset
     mod$cohortDataFactorial <- arrow::open_dataset(sim$cohortDataFactorial_path, format = fmt)
   }
 
-  if (is.null(sim$speciesTableFactorial_path)) {
+  if (tools::file_ext(sim$speciesTableFactorial_path == "rds")) {
+    ## using rds default from .inputObjects
+    mod$speciesTableFactorial <- prepInputs(
+      targetFile = basename(sim$speciesTableFactorial_path),
+      destinationPath = dPath,
+      url = extractURL("sim$speciesTableFactorial_path", sim),
+      fun = "readRDS",
+      overwrite = TRUE,
+      useCache = TRUE,
+      userTags = c(cacheTags, "factorialSpecies")
+    )
+  } else {
+    ## connect to arrow dataset
     mod$speciesTableFactorial <- arrow::open_dataset(sim$speciesTableFactorial_path, format = fmt)
   }
 
@@ -239,7 +263,7 @@ Init <- function(sim) {
 
     ## NOTE: disk.frame doesn't support right_join, so need to rework as left_join below
     # tempMaxB <- mod$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
-    tempMaxB <- tempMaxB |>
+    tempMaxB <- arrow_table(tempMaxB) |>
       dplyr::rename(species = speciesCode) |>
       dplyr::left_join(mod$speciesTableFactorial, by = c("species", "pixelGroup")) |>
       dplyr::collect()
@@ -248,11 +272,11 @@ Init <- function(sim) {
     # tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
     tempMaxB <- tempMaxB |>
       dplyr::select(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor) |>
-      dplyr::collect()
+      setDT()
 
     ## bring tables to RAM for use below
-    mod$cohortDataFactorial <- dplyr::collect(mod$cohortDataFactorial)
-    mod$speciesTableFactorial <- dplyr::collect(mod$speciesTableFactorial)
+    mod$cohortDataFactorial <- dplyr::collect(mod$cohortDataFactorial) |> setDT()
+    mod$speciesTableFactorial <- dplyr::collect(mod$speciesTableFactorial) |> setDT()
 
     gc()
 
@@ -354,30 +378,10 @@ Save <- function(sim) {
 
   if (!suppliedElsewhere("cohortDataFactorial_path", sim)) {
     sim$cohortDataFactorial_path <- file.path(dPath, "cohortDataFactorial_medium.rds")
-
-    mod$cohortDataFactorial <- prepInputs(
-      targetFile = basename(sim$cohortDataFactorial_path),
-      destinationPath = dPath,
-      fun = "readRDS",
-      overwrite = TRUE,
-      url = extractURL("cohortDataFactorial_path", sim),
-      useCache = TRUE,
-      userTags = c(cacheTags, "factorialCohort")
-    )
   }
 
   if (!suppliedElsewhere("speciesTableFactorial_path", sim)) {
     sim$speciesTableFactorial_path <- file.path(dPath, "speciesTableFactorial_medium.rds")
-
-    mod$speciesTableFactorial <- prepInputs(
-      targetFile = basename(sim$speciesTableFactorial_path),
-      destinationPath = dPath,
-      url = extractURL("sim$speciesTableFactorial_path", sim),
-      fun = "readRDS",
-      overwrite = TRUE,
-      useCache = TRUE,
-      userTags = c(cacheTags, "factorialSpecies")
-    )
   }
 
   if (!suppliedElsewhere("sppEquiv", sim)) {
