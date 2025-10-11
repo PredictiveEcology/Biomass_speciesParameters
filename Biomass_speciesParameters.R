@@ -19,9 +19,10 @@ defineModule(sim, list(
   loadOrder = list(after = c("Biomass_speciesFactorial", "Biomass_borealDataPrep"),
                    before = c("Biomass_core")),
   reqdPkgs = list(
-    "arrow", "cli", "data.table", "fpCompare", "ggplot2", "gridExtra",
+    "arrow", "cli", "data.table", "fpCompare", "fs", "ggplot2", "gridExtra",
     "mgcv", "nlme", "purrr", "robustbase", "sf",
-    "reproducible (>= 2.1.0)", "SpaDES.core (>= 2.1.4)",
+    "reproducible (>= 2.1.0)",
+    "SpaDES.core (>= 2.1.4)",
     "PredictiveEcology/LandR (>= 1.1.0.9077)",
     "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
     "ianmseddy/PSPclean@development (>= 0.1.4.9005)"
@@ -86,7 +87,7 @@ defineModule(sim, list(
                                  "passed to `data.table::setDTthreads` and should be <= 4."))
   ),
   inputObjects = bindrows(
-    expectsInput("cohortDataFactorial_path", "character",
+    expectsInput("cohortDataFactorial_path", "fs_path",
                  desc = paste(
                    "Path where the `cohortDataFactorial` object is saved as an `arrow` dataset.",
                    "A large `cohortData` table (**sensu** `Biomass_core`) with columns `age`, `B`,",
@@ -122,7 +123,7 @@ defineModule(sim, list(
                  desc = paste("Table of spatially-varying species traits ('maxB', 'maxANPP',",
                               "'establishprob'), defined by species and 'ecoregionGroup')",
                               "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
-    expectsInput("speciesTableFactorial_path", "character",
+    expectsInput("speciesTableFactorial_path", "fs_path",
                  desc = paste(
                    "Path where the `speciesTableFactorial` object is saved as an `arrow` dataset.",
                    "A large species table (**sensu** `Biomass_core`) with all columns used by",
