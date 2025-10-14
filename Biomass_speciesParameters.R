@@ -309,7 +309,7 @@ Init <- function(sim) {
 
     if (any(noDataSpp)) {
       message(cli::col_yellow(
-        "Insufficient data to estimate species parameters for",
+        "Insufficient data to estimate species parameters for ",
         paste(names(noDataSpp), collapse = ", "),
         "- will keep original user-supplied parameters"
       ))
