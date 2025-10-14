@@ -4,10 +4,10 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   if (!is.null(studyAreaANPP)) {
     studyAreaANPP <- st_as_sf(studyAreaANPP) # in case SPDF
     studyAreaANPP <- st_transform(x = studyAreaANPP, crs = st_crs(PSPgis))
-    message(yellow("Filtering PSPs for ANPP to study Area..."))
+    message(cli::col_yellow("Filtering PSPs for ANPP to study Area..."))
     PSP_sa <- PSPgis[studyAreaANPP,] %>%
       setkey(., OrigPlotID1)
-    message(yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
+    message(cli::col_yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
     if (nrow(PSP_sa) == 0) {
       stop("subsetting PSPs to those within studyAreaANPP appears to ",
       "have removed all of them...please review")
@@ -18,13 +18,13 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   }
 
   #Filter data by study period
-  message(yellow("Filtering PSPs for ANPP by study period..."))
+  message(cli::col_yellow("Filtering PSPs for ANPP by study period..."))
   PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) &
                              MeasureYear < max(PSPperiod),]
   PSPplot <- PSPplot[MeasureYear > min(PSPperiod) &
                        MeasureYear < max(PSPperiod),]
   PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear", "source")]
-  
+
   #TODO: this should be parameterized - besides its tree density
   #Filter by > 30 trees at first measurement (P) to ensure forest.
   forestPlots <- PSPmeasure[MeasureYear == baseYear, .(measures = .N), OrigPlotID1] %>%
@@ -69,8 +69,8 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                                   equationSource = biomassModel)
     PSPmeasure$biomass <- tempOut$biomass
   }
-  message(yellow("No PSP biomass estimate possible for these species: "))
-  message(crayon::yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
+  message(cli::col_yellow("No PSP biomass estimate possible for these species: "))
+  message(cli::col_yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
 
   #TODO: is this still necessary? which plot?
   #clean up - added a catch for incorrect plotSize affecting stem density
@@ -114,8 +114,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   SpPSP[, speciesTemp := equivalentName(value = newSpeciesName, df = sppEquiv,
                                        column = speciesCol, searchColumn = "PSP")]
   whNA <- is.na(SpPSP$speciesTemp)
-  message(crayon::yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
-  message(crayon::yellow("   ... because they are not in sppEquiv"))
+  message(cli::col_yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
+  message(cli::col_yellow("   ... because they are not in sppEquiv"))
   SpPSP <- SpPSP[!whNA]
   SpPSP <- SpPSP[newSpeciesName %in% sppEquiv[["PSP"]]]
   freq <- SpPSP[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
@@ -153,8 +153,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   }
 
   speciesForCurves <- names(SpPSPList) %>% setNames(nm = .)
-  message(crayon::yellow("-----------------------------------------------"))
-  message(crayon::yellow("building growth curves from PSP data: "))
+  message(cli::col_yellow("-----------------------------------------------"))
+  message(cli::col_yellow("building growth curves from PSP data: "))
   outputGCs <- Map(species = speciesForCurves, buildModels, psp = SpPSPList,
                    MoreArgs = list(speciesEquiv = sppEquiv, sppCol = speciesCol,
                                    minSize = minimumSampleSize, q = quantileAgeSubset))
@@ -318,7 +318,7 @@ buildModels <- function(species, psp, speciesEquiv,
   simulatedData <- simulateYoungStands(cohortData = standData, N = 50)
   simData <- rbindlist(list(standData, simulatedData), fill = TRUE)
 
-  ## This weights the real data by spDominance, without distorting the mean of fake data. 
+  ## This weights the real data by spDominance, without distorting the mean of fake data.
   Realweights <- standData$spDom/mean(standData$spDom)
   Fakeweights <- rep(1, times = nrow(simulatedData))
   simData$Weights <- c(Realweights, Fakeweights)
@@ -380,7 +380,7 @@ buildModels <- function(species, psp, speciesEquiv,
   species <- as.character(species) %>% setNames(nm = .)
   speciesForFits <- setdiff(species, "Other") %>% setNames(nm = .)
   speciesForFitsMessage <- paste(speciesForFits, collapse = ", ")
-  message(crayon::yellow(
+  message(cli::col_yellow(
     speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
   ))
   nlsouts <- lapply(speciesForFits, function(sp, spFitData = simData2) {
