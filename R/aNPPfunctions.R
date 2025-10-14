@@ -121,18 +121,18 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   freq <- SpPSP[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
 
   if (isTRUE(speciesFittingApproach == "pairwise") || isTRUE(speciesFittingApproach == "focal")) {
-    #subset to species-of-interest using relative biomass (dominance)
+    ## subset to species-of-interest using relative biomass (dominance)
     freq <- freq[spDom > 0.2] # minimum 20% dominance for pairwise or focal
 
     speciesComp <- freq[, .(numSp = .N, spComp = paste(speciesTemp, collapse = "__")), by = "MeasureID"]
-    # Pick only 2 species plots when using "pairwise"
+    ## Pick only 2 species plots when using "pairwise"
     if (isTRUE(speciesFittingApproach == "pairwise")) {
       speciesComp <- speciesComp[numSp == 2]
     }
     speciesCompN <- speciesComp[, .N, by = "spComp"]
 
-    gcSpecies1 <- unique(sppEquiv[[speciesCol]]) %>% setNames(nm = .)
-    gcSpecies2 <- unique(speciesComp$spComp) %>% setNames(nm = .)
+    gcSpecies1 <- unique(sppEquiv[[speciesCol]]) |> setNames(nm = _)
+    gcSpecies2 <- unique(speciesComp$spComp) |> setNames(nm = _)
     speciesForSplit <- if (isTRUE(speciesFittingApproach == "pairwise")) gcSpecies2 else gcSpecies1
     speciesCompListAll <- split(speciesComp, speciesComp$spComp)
     speciesCompList <- lapply(speciesForSplit, function(spName) {
@@ -147,12 +147,12 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
       })
     }
   } else {
-    #subset to species-of-interest using relative biomass (dominance)
+    ## subset to species-of-interest using relative biomass (dominance)
     SpPSP <- SpPSP[spDom > 0.5] # minimum 50% dominance for single
     SpPSPList <- split(SpPSP, SpPSP$speciesTemp)
   }
 
-  speciesForCurves <- names(SpPSPList) %>% setNames(nm = .)
+  speciesForCurves <- names(SpPSPList) |> setNames(nm = _)
   message(cli::col_yellow("-----------------------------------------------"))
   message(cli::col_yellow("building growth curves from PSP data: "))
   outputGCs <- Map(species = speciesForCurves, buildModels, psp = SpPSPList,
