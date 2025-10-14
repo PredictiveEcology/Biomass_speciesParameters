@@ -186,7 +186,7 @@ Init <- function(sim) {
   stopifnot(moduleVersion("Biomass_speciesFactorial", modulePath(sim)) >= "1.0.0")
   fmt <- "feather" ## faster for small-med data compared to parquet
 
-  if (tools::file_ext(sim$cohortDataFactorial_path == "rds")) {
+  if (tools::file_ext(sim$cohortDataFactorial_path) == "rds") {
     ## using rds default from .inputObjects
     mod$cohortDataFactorial <- prepInputs(
       targetFile = basename(sim$cohortDataFactorial_path),
@@ -202,7 +202,7 @@ Init <- function(sim) {
     mod$cohortDataFactorial <- arrow::open_dataset(sim$cohortDataFactorial_path, format = fmt)
   }
 
-  if (tools::file_ext(sim$speciesTableFactorial_path == "rds")) {
+  if (tools::file_ext(sim$speciesTableFactorial_path) == "rds") {
     ## using rds default from .inputObjects
     mod$speciesTableFactorial <- prepInputs(
       targetFile = basename(sim$speciesTableFactorial_path),
