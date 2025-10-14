@@ -134,7 +134,7 @@ defineModule(sim, list(
                  sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput("sppEquiv", "data.table",
                  desc = "Table of species equivalencies. See `?LandR::sppEquivalencies_CA`."),
-    expectsInput("studyAreaANPP", "sf",
+    expectsInput("studyArea_biomassParam", "SpatVector",
                  desc = paste("Optional study area used to crop PSP data before building growth curves.",
                               "If supplied, an ecoregion-scale object is recommended, at a minimum."))
   ),
@@ -283,7 +283,7 @@ Init <- function(sim) {
 
     ## prepare PSPdata
     sim$speciesGrowthCurves <- buildGrowthCurves_Wrapper(
-      studyAreaANPP = sim$studyAreaANPP,
+      studyAreaANPP = sim$studyArea_biomassParam,
       PSPperiod = P(sim)$PSPperiod,
       PSPgis = sim$PSPgis_sppParams,
       PSPmeasure = sim$PSPmeasure_sppParams,
