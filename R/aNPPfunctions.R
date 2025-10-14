@@ -70,7 +70,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
     PSPmeasure$biomass <- tempOut$biomass
   }
   message(cli::col_yellow("No PSP biomass estimate possible for these species: "))
-  message(yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
+  message(cli::col_yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
 
   #TODO: is this still necessary? which plot?
   #clean up - added a catch for incorrect plotSize affecting stem density
@@ -114,8 +114,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   SpPSP[, speciesTemp := equivalentName(value = newSpeciesName, df = sppEquiv,
                                        column = speciesCol, searchColumn = "PSP")]
   whNA <- is.na(SpPSP$speciesTemp)
-  message(crayon::yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
-  message(crayon::yellow("   ... because they are not in sppEquiv"))
+  message(cli::col_yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
+  message(cli::col_yellow("   ... because they are not in sppEquiv"))
   SpPSP <- SpPSP[!whNA]
   SpPSP <- SpPSP[newSpeciesName %in% sppEquiv[["PSP"]]]
   freq <- SpPSP[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
@@ -153,8 +153,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   }
 
   speciesForCurves <- names(SpPSPList) %>% setNames(nm = .)
-  message(crayon::yellow("-----------------------------------------------"))
-  message(crayon::yellow("building growth curves from PSP data: "))
+  message(cli::col_yellow("-----------------------------------------------"))
+  message(cli::col_yellow("building growth curves from PSP data: "))
   outputGCs <- Map(species = speciesForCurves, buildModels, psp = SpPSPList,
                    MoreArgs = list(speciesEquiv = sppEquiv, sppCol = speciesCol,
                                    minSize = minimumSampleSize, q = quantileAgeSubset))
@@ -380,7 +380,7 @@ buildModels <- function(species, psp, speciesEquiv,
   species <- as.character(species) %>% setNames(nm = .)
   speciesForFits <- setdiff(species, "Other") %>% setNames(nm = .)
   speciesForFitsMessage <- paste(speciesForFits, collapse = ", ")
-  message(crayon::yellow(
+  message(cli::col_yellow(
     speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
   ))
   nlsouts <- lapply(speciesForFits, function(sp, spFitData = simData2) {
