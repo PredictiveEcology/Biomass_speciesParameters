@@ -122,9 +122,10 @@ defineModule(sim, list(
                               "Default is from Dominic Cyr and Yan Boulanger's applications of LANDIS-II"),
                  sourceURL = "https://raw.githubusercontent.com/dcyr/LANDIS-II_IA_generalUseFiles/master/speciesTraits.csv"),
     expectsInput("speciesEcoregion", "data.table",
-                 desc = paste("Table of spatially-varying species traits ('maxB', 'maxANPP',",
-                              "'establishprob'), defined by species and 'ecoregionGroup')",
-                              "Defaults to a dummy table based on dummy data os biomass, age, ecoregion and land cover class")),
+                 desc = paste("Table of spatially-varying species traits (`maxB`, `maxANPP`,",
+                              "`establishprob`), defined by species and `ecoregionGroup`).",
+                              "Defaults to a dummy table based on dummy data of biomass, age,",
+                              "ecoregion and land cover class.")),
     expectsInput("speciesTableFactorial_path", "fs_path",
                  desc = paste(
                    "Path where the `speciesTableFactorial` object is saved as an `arrow` dataset.",
