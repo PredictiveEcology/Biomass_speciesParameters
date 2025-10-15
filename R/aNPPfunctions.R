@@ -154,9 +154,17 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   speciesForCurves <- names(SpPSPList) |> setNames(nm = _)
   message(cli::col_yellow("-----------------------------------------------"))
   message(cli::col_yellow("building growth curves from PSP data: "))
-  outputGCs <- Map(species = speciesForCurves, buildModels, psp = SpPSPList,
-                   MoreArgs = list(speciesEquiv = sppEquiv, sppCol = speciesCol,
-                                   minSize = minimumSampleSize, q = quantileAgeSubset))
+  outputGCs <- Map(
+    f = buildModels,
+    species = speciesForCurves,
+    psp = SpPSPList,
+    MoreArgs = list(
+      speciesEquiv = sppEquiv,
+      sppCol = speciesCol,
+      minSize = minimumSampleSize,
+      q = quantileAgeSubset
+    )
+  )
 
   if (isTRUE("all" == speciesFittingApproach)) {
     outputGCs <- lapply(gcSpecies1, function(x) {
@@ -292,8 +300,7 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   return(list(best = bestWeighted, gg = gg))
 }
 
-buildModels <- function(species, psp, speciesEquiv,
-                       sppCol, minSize, q) {
+buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
   if (identical(species, "all")) {
     q <- mean(unlist(q))
   }
@@ -310,8 +317,13 @@ buildModels <- function(species, psp, speciesEquiv,
   if (nrow(standData) < minSize) {
     GC <- "insufficient data"
     names(GC) <- species
+
+    warning("insufficient PSP data to estimate traits:\n",
+            "(have ", nrow(standData), " rows; requested minimum ", minSize, " rows)")
+
     return(GC)
   }
+
   ## By default removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
   standData <- standData[standAge < quantile(standData$standAge, probs = q/100),]
   simulatedData <- simulateYoungStands(cohortData = standData, N = 50)
