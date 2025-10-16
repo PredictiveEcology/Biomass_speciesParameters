@@ -4,7 +4,7 @@ defineModule(sim, list(
     "For estimating LANDIS-II species traits based on growth curves derived",
     "from Permanent Sample Plot (PSP) and Temporary Sample Plot (TSP) data"
   ),
-  keywords = NA, # c("insert key words here"),
+  keywords = NA, # TODO: add keywords
   authors = c(
     person(c("Ian"), "Eddy", email = "ian.eddy@nrcan-rncan.gc.ca", role = c("aut", "cre")),
     person(c("Eliot"), "McIntire", email = "eliot.mcintire@nrcan-rncan.gc.ca", role = c("aut")),
@@ -198,7 +198,7 @@ Init <- function(sim) {
     )
   } else {
     ## connect to arrow dataset
-    #TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
+    ## TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
     mod$cohortDataFactorial <- arrow::open_dataset(sim$cohortDataFactorial_path, format = fmt)
   }
 
@@ -213,7 +213,7 @@ Init <- function(sim) {
     )
   } else {
     ## connect to arrow dataset
-    #TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
+    ## TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
     mod$speciesTableFactorial <- arrow::open_dataset(sim$speciesTableFactorial_path, format = fmt)
   }
 
