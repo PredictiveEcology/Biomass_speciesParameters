@@ -185,23 +185,20 @@ Init <- function(sim) {
   }
   on.exit(data.table::setDTthreads(origDTthreads))
   ## load factorial tables -------------------------------------------------------------------------
-
-  stopifnot(moduleVersion("Biomass_speciesFactorial", modulePath(sim)) >= "1.0.0")
   fmt <- "feather" ## faster for small-med data compared to parquet
 
   if (tools::file_ext(sim$cohortDataFactorial_path) == "rds") {
     ## using rds default from .inputObjects
     mod$cohortDataFactorial <- prepInputs(
       targetFile = basename(sim$cohortDataFactorial_path),
-      destinationPath = dPath,
+      destinationPath = inputPath(sim),
       fun = "readRDS",
       overwrite = TRUE,
-      url = extractURL("cohortDataFactorial_path", sim),
-      useCache = TRUE,
-      userTags = c(cacheTags, "factorialCohort")
+      url = extractURL("cohortDataFactorial_path", sim)
     )
   } else {
     ## connect to arrow dataset
+    #TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
     mod$cohortDataFactorial <- arrow::open_dataset(sim$cohortDataFactorial_path, format = fmt)
   }
 
@@ -209,15 +206,14 @@ Init <- function(sim) {
     ## using rds default from .inputObjects
     mod$speciesTableFactorial <- prepInputs(
       targetFile = basename(sim$speciesTableFactorial_path),
-      destinationPath = dPath,
-      url = extractURL("sim$speciesTableFactorial_path", sim),
+      destinationPath = inputPath(sim),
+      url = extractURL("speciesTableFactorial_path", sim),
       fun = "readRDS",
-      overwrite = TRUE,
-      useCache = TRUE,
-      userTags = c(cacheTags, "factorialSpecies")
+      overwrite = TRUE
     )
   } else {
     ## connect to arrow dataset
+    #TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
     mod$speciesTableFactorial <- arrow::open_dataset(sim$speciesTableFactorial_path, format = fmt)
   }
 
