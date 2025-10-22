@@ -72,13 +72,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   message(yellow("No PSP biomass estimate possible for these species: "))
   message(crayon::yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
 
-  #TODO: is this still necessary? which plot?
-  #This will be fixed with PSPclean >= 0.1.5.9005
-  densities <- PSPmeasure[, .(.N, PlotSize = mean(PlotSize)), MeasureID]
-  densities[, density := N/PlotSize]
-  junkPlots <- densities[density > 4000]$MeasureID
-  PSPmeasure <- PSPmeasure[!MeasureID %in% junkPlots]
-
   #bad biomass estimate
   PSPmeasure <- PSPmeasure[biomass != 0]
   PSPmeasure$newSpeciesName <- as.factor(PSPmeasure$newSpeciesName)
