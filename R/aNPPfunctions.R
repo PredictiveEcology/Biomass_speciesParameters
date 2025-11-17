@@ -1,41 +1,39 @@
 prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                         useHeight, biomassModel, PSPperiod, minDBH) {
-  #Crop points to studyArea
+  ## crop points to studyArea
   if (!is.null(studyAreaANPP)) {
     studyAreaANPP <- st_as_sf(studyAreaANPP) # in case SPDF
     studyAreaANPP <- st_transform(x = studyAreaANPP, crs = st_crs(PSPgis))
-    message(yellow("Filtering PSPs for ANPP to study Area..."))
-    PSP_sa <- PSPgis[studyAreaANPP,] %>%
-      setkey(., OrigPlotID1)
-    message(yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
+    message(cli::col_yellow("Filtering PSPs for ANPP to study Area..."))
+    PSP_sa <- PSPgis[studyAreaANPP,] |>
+      setkey(OrigPlotID1)
+    message(cli::col_yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
     if (nrow(PSP_sa) == 0) {
       stop("subsetting PSPs to those within studyAreaANPP appears to ",
       "have removed all of them...please review")
     }
-    #Filter other PSP datasets to those in study Area
-    PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
-    PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
+    ## filter other PSP datasets to those in study Area
+    PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1, ]
+    PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1, ]
   }
 
-  #Filter data by study period
-  message(yellow("Filtering PSPs for ANPP by study period..."))
-  PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) &
-                             MeasureYear < max(PSPperiod),]
-  PSPplot <- PSPplot[MeasureYear > min(PSPperiod) &
-                       MeasureYear < max(PSPperiod),]
+  ## filter data by study period
+  message(cli::col_yellow("Filtering PSPs for ANPP by study period..."))
+  PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) & MeasureYear < max(PSPperiod), ]
+  PSPplot <- PSPplot[MeasureYear > min(PSPperiod) & MeasureYear < max(PSPperiod), ]
   PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear", "source")]
 
-  #TODO: this should be parameterized - besides its tree density
-  #Filter by > 30 trees at first measurement (P) to ensure forest.
+  ## TODO: this should be parameterized - besides its tree density
+  ## filter by > 30 trees at first measurement (P) to ensure forest.
   forestPlots <- PSPmeasure[MeasureYear == baseYear, .(measures = .N), OrigPlotID1] %>%
-    .[measures >= 30,]
+    .[measures >= 30, ]
 
-  PSPmeasure <- PSPmeasure[OrigPlotID1 %in% forestPlots$OrigPlotID1,]
-  PSPplot <- PSPplot[OrigPlotID1 %in% PSPmeasure$OrigPlotID1,]
+  PSPmeasure <- PSPmeasure[OrigPlotID1 %in% forestPlots$OrigPlotID1, ]
+  PSPplot <- PSPplot[OrigPlotID1 %in% PSPmeasure$OrigPlotID1, ]
 
-  #Restrict to trees >= ## DBH. Maybe necessary to get rid of small trees when they are inconsistently recorded
+  ## Restrict to trees >= ## DBH. Maybe necessary to get rid of small trees when they are inconsistently recorded
   PSPmeasure <- PSPmeasure[DBH >= minDBH,]
-  #decide what to do about above line and stem/density. PES approach is to just fix the data...
+  ## decide what to do about above line and stem/density. PES approach is to just fix the data...
 
   #Calculate biomass
   #Height must be calculated separately if there are NA heights -
@@ -47,7 +45,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                                   height = PSPmeasureHeight$Height,
                                   includeHeight = TRUE,
                                   equationSource = biomassModel)
-    #check if height is missing, join if so -- function fails if data.table is empty
+    ## check if height is missing, join if so -- function fails if data.table is empty
     if (nrow(PSPmeasureNoHeight) > 0) {
       tempOutNoHeight <- biomassCalculation(species = PSPmeasureNoHeight$newSpeciesName,
                                             DBH = PSPmeasureNoHeight$DBH,
@@ -60,7 +58,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
     }
     PSPmeasure[, biomass := tempOut$biomass]
     setkey(PSPmeasure, MeasureID, OrigPlotID1, TreeNumber)
-
   } else {
     tempOut <- biomassCalculation(species = PSPmeasure$newSpeciesName,
                                   DBH = PSPmeasure$DBH,
@@ -69,26 +66,26 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
                                   equationSource = biomassModel)
     PSPmeasure$biomass <- tempOut$biomass
   }
-  message(yellow("No PSP biomass estimate possible for these species: "))
-  message(crayon::yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
+  message(cli::col_yellow("No PSP biomass estimate possible for these species: "))
+  message(cli::col_yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
 
-  #TODO: is this still necessary? which plot?
-  #This will be fixed with PSPclean >= 0.1.5.9005
+  ## TODO: is this still necessary? which plot?
+  ## clean up - added a catch for incorrect plotSize affecting stem density
   densities <- PSPmeasure[, .(.N, PlotSize = mean(PlotSize)), MeasureID]
   densities[, density := N/PlotSize]
   junkPlots <- densities[density > 4000]$MeasureID
   PSPmeasure <- PSPmeasure[!MeasureID %in% junkPlots]
 
-  #bad biomass estimate
+  ## bad biomass estimate
   PSPmeasure <- PSPmeasure[biomass != 0]
   PSPmeasure$newSpeciesName <- as.factor(PSPmeasure$newSpeciesName)
 
-  #add stand age estimate
+  ## add stand age estimate
   PSPmeasure[, standAge := baseSA + MeasureYear - baseYear]
   PSPmeasure <- PSPmeasure[standAge > 0]
   PSPmeasure <- PSPmeasure[!is.na(biomass)]
 
-  #divide biomass by 10 to convert kg/ha to g/m2, the LandR unit
+  ## divide biomass by 10 to convert kg/ha to g/m2, the LandR unit
   PSPmeasure[, biomass := biomass/10]
 
   return(PSPmeasure)
@@ -96,8 +93,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                               minimumSampleSize, speciesFittingApproach = "focal") {
-
-  #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
+  ## must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   if (!isTRUE(speciesCol %in% colnames(sppEquiv))) {
     stop("sppEquivCol not in sppEquiv")
   }
@@ -116,25 +112,27 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   SpPSP[, speciesTemp := LandR::equivalentName(value = newSpeciesName, df = sppEquiv,
                                                column = speciesCol, searchColumn = "PSP")]
   whNA <- is.na(SpPSP$speciesTemp)
-  message(crayon::yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
-  message(crayon::yellow("   ... because they are not in sppEquiv"))
-  SpPSP <- SpPSP[!whNA]
+  if (any(whNA)) {
+    message(cli::col_yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
+    message(cli::col_yellow("   ... because they are not in sppEquiv"))
+    SpPSP <- SpPSP[!whNA]
+  }
   SpPSP <- SpPSP[newSpeciesName %in% sppEquiv[["PSP"]]]
   freq <- SpPSP[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
 
-  if (isTRUE(speciesFittingApproach == "pairwise") || isTRUE(speciesFittingApproach == "focal")) {
-    #subset to species-of-interest using relative biomass (dominance)
+  if (speciesFittingApproach %in% c("focal", "pairwise")) {
+    ## subset to species-of-interest using relative biomass (dominance)
     freq <- freq[spDom > 0.2] # minimum 20% dominance for pairwise or focal
 
     speciesComp <- freq[, .(numSp = .N, spComp = paste(speciesTemp, collapse = "__")), by = "MeasureID"]
-    # Pick only 2 species plots when using "pairwise"
+    ## Pick only 2 species plots when using "pairwise"
     if (isTRUE(speciesFittingApproach == "pairwise")) {
       speciesComp <- speciesComp[numSp == 2]
     }
     speciesCompN <- speciesComp[, .N, by = "spComp"]
 
-    gcSpecies1 <- unique(sppEquiv[[speciesCol]]) %>% setNames(nm = .)
-    gcSpecies2 <- unique(speciesComp$spComp) %>% setNames(nm = .)
+    gcSpecies1 <- unique(sppEquiv[[speciesCol]]) |> setNames(nm = _)
+    gcSpecies2 <- unique(speciesComp$spComp) |> setNames(nm = _)
     speciesForSplit <- if (isTRUE(speciesFittingApproach == "pairwise")) gcSpecies2 else gcSpecies1
     speciesCompListAll <- split(speciesComp, speciesComp$spComp)
     speciesCompList <- lapply(speciesForSplit, function(spName) {
@@ -149,17 +147,25 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
       })
     }
   } else {
-    #subset to species-of-interest using relative biomass (dominance)
+    ## subset to species-of-interest using relative biomass (dominance)
     SpPSP <- SpPSP[spDom > 0.5] # minimum 50% dominance for single
     SpPSPList <- split(SpPSP, SpPSP$speciesTemp)
   }
 
-  speciesForCurves <- names(SpPSPList) %>% setNames(nm = .)
-  message(crayon::yellow("-----------------------------------------------"))
-  message(crayon::yellow("building growth curves from PSP data: "))
-  outputGCs <- Map(species = speciesForCurves, buildModels, psp = SpPSPList,
-                   MoreArgs = list(speciesEquiv = sppEquiv, sppCol = speciesCol,
-                                   minSize = minimumSampleSize, q = quantileAgeSubset))
+  speciesForCurves <- names(SpPSPList) |> setNames(nm = _)
+  message(cli::col_yellow("-----------------------------------------------"))
+  message(cli::col_yellow("building growth curves from PSP data: "))
+  outputGCs <- Map(
+    f = buildModels,
+    species = speciesForCurves,
+    psp = SpPSPList,
+    MoreArgs = list(
+      speciesEquiv = sppEquiv,
+      sppCol = speciesCol,
+      minSize = minimumSampleSize,
+      q = quantileAgeSubset
+    )
+  )
 
   if (isTRUE("all" == speciesFittingApproach)) {
     outputGCs <- lapply(gcSpecies1, function(x) {
@@ -300,8 +306,7 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   return(list(best = bestWeighted, gg = gg))
 }
 
-buildModels <- function(species, psp, speciesEquiv,
-                       sppCol, minSize, q) {
+buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
   if (identical(species, "all")) {
     q <- mean(unlist(q))
   }
@@ -318,8 +323,13 @@ buildModels <- function(species, psp, speciesEquiv,
   if (nrow(standData) < minSize) {
     GC <- "insufficient data"
     names(GC) <- species
+
+    warning("insufficient PSP data to estimate traits:\n",
+            "(have ", nrow(standData), " rows; requested minimum ", minSize, " rows)")
+
     return(GC)
   }
+
   ## By default removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
   standData <- standData[standAge < quantile(standData$standAge, probs = q/100),]
   simulatedData <- simulateYoungStands(cohortData = standData, N = 50)
@@ -384,10 +394,10 @@ buildModels <- function(species, psp, speciesEquiv,
   #   k <- 4
   #   p <- 0.3
   #   points(col = "green", standAge, eval(parse(text = models[[model]])[[1]][[3]]), pch = 19, cex = 0.5)
-  species <- as.character(species) %>% setNames(nm = .)
-  speciesForFits <- setdiff(species, "Other") %>% setNames(nm = .)
+  species <- as.character(species) |> setNames(nm = _)
+  speciesForFits <- setdiff(species, "Other") |> setNames(nm = _)
   speciesForFitsMessage <- paste(speciesForFits, collapse = ", ")
-  message(crayon::yellow(
+  message(cli::col_yellow(
     speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
   ))
   nlsouts <- lapply(speciesForFits, function(sp, spFitData = simData2) {
