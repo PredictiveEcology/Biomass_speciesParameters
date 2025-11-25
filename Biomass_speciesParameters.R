@@ -280,12 +280,11 @@ Init <- function(sim) {
 
     gc()
     message("preparing PSPs for growth curves")
-    psp <- Cache(prepPSPaNPP, 
-                 studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
-                 PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
-                 PSPplot = sim$PSPplot_sppParams, useHeight = P(sim)$useHeight, 
-                 biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH, 
-                 userTags = c(currentModule(sim), "prepPSPaNPP"))
+    psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
+                       PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
+                       PSPplot = sim$PSPplot_sppParams, useHeight = P(sim)$useHeight, 
+                       biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH) |>
+      Cache(userTags = c(currentModule(sim), "prepPSPaNPP"))
     
     message("building growth curves") # this cache call takes several minutes to process..
     sim$speciesGrowthCurves <-  buildGrowthCurves(PSPdata = psp, 
