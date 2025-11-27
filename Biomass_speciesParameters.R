@@ -193,9 +193,9 @@ Init <- function(sim) {
       targetFile = basename(sim$cohortDataFactorial_path),
       destinationPath = inputPath(sim),
       fun = "readRDS",
-      overwrite = TRUE,
+      overwrite = TRUE, useCache = FALSE, # don't internal cache as it is a waste of time
       url = extractURL("cohortDataFactorial_path", sim)
-    )
+    ) |> Cache(.functionName = "prepInputs_cohortDataFactorial")
   } else {
     ## connect to arrow dataset
     ## TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
@@ -208,9 +208,9 @@ Init <- function(sim) {
       targetFile = basename(sim$speciesTableFactorial_path),
       destinationPath = inputPath(sim),
       url = extractURL("speciesTableFactorial_path", sim),
-      fun = "readRDS",
+      fun = "readRDS", useCache = FALSE, # don't internal cache as it is a waste of time
       overwrite = TRUE
-    )
+    ) |> Cache(.functionName = "prepInputs_speciesTableFactorial")
   } else {
     ## connect to arrow dataset
     ## TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
@@ -314,14 +314,26 @@ Init <- function(sim) {
       ))
     }
 
-    cacheExtra <- .robustDigest(list(
-      sim$speciesGrowthCurves[!names(sim$speciesGrowthCurves) %in% names(noDataSpp)],
-      setDT(mod$speciesTableFactorial),
-      setDT(mod$cohortDataFactorial)
-    ))
+    message("Digesting growth curve library and factorial...")
+    # Digesting of the growth curves has a stats object which changes every time;
+    #   just take the summary of the stats object
+    speciesGrowthCurves <-
+      sim$speciesGrowthCurves[!names(sim$speciesGrowthCurves) %in% names(noDataSpp)]
+    spgForDigest <- Map(sgc = speciesGrowthCurves, function(sgc) {
+      sgc$NonLinearModel <- summary(sgc$NonLinearModel[[1]]) # has no "function"
+      sgc
+    }
+      )
+    toDigest <- list(
+      speciesGrowthCurves = spgForDigest, # this has functions in it, so needs to be dealt with
+      speciesTableFactorial = setDT(mod$speciesTableFactorial),
+      cohortDataFactorial = setDT(mod$cohortDataFactorial)
+    )
+    cacheExtra <- .robustDigest(toDigest)
+    message("Done!")
 
     modifiedSpeciesTables <- modifySpeciesTable(
-      GCs = sim$speciesGrowthCurves[!names(sim$speciesGrowthCurves) %in% names(noDataSpp)],
+      GCs = speciesGrowthCurves,
       speciesTable = sim$species,
       factorialTraits = setDT(mod$speciesTableFactorial),
       ## setDT to deal with reload from Cache (no effect otherwise)
