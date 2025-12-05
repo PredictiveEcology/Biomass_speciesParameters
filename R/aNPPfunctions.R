@@ -1,4 +1,4 @@
-prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
+prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong,
                         useHeight, biomassModel, PSPperiod, minDBH) {
   ## crop points to studyArea
   if (!is.null(studyAreaANPP)) {
@@ -34,20 +34,24 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
   ## Restrict to trees >= ## DBH. Maybe necessary to get rid of small trees when they are inconsistently recorded
   PSPmeasure <- PSPmeasure[DBH >= minDBH,]
   ## decide what to do about above line and stem/density. PES approach is to just fix the data...
+  
+  #get column for estimating biomass
+  PSPmeasure <- sppEquivLong[PSPmeasure, on = c("Latin_full" = "Species")]
+  PSPmeasure[is.na(SpBiomassEq), SpBiomassEq := ""] #biomassCalculation errors with NA
 
   #Calculate biomass
   #Height must be calculated separately if there are NA heights -
   if (useHeight & !is.null(PSPmeasure$Height)) {
     PSPmeasureNoHeight <- PSPmeasure[is.na(Height)]
     PSPmeasureHeight <- PSPmeasure[!is.na(Height)]
-    tempOut <- biomassCalculation(species = PSPmeasureHeight$newSpeciesName,
+    tempOut <- biomassCalculation(species = PSPmeasureHeight$SpBiomassEq,
                                   DBH = PSPmeasureHeight$DBH,
                                   height = PSPmeasureHeight$Height,
                                   includeHeight = TRUE,
                                   equationSource = biomassModel)
     ## check if height is missing, join if so -- function fails if data.table is empty
     if (nrow(PSPmeasureNoHeight) > 0) {
-      tempOutNoHeight <- biomassCalculation(species = PSPmeasureNoHeight$newSpeciesName,
+      tempOutNoHeight <- biomassCalculation(species = PSPmeasureNoHeight$SpBiomassEq,
                                             DBH = PSPmeasureNoHeight$DBH,
                                             height = PSPmeasureNoHeight$Height,
                                             includeHeight = FALSE,
@@ -59,19 +63,19 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
     PSPmeasure[, biomass := tempOut$biomass]
     setkey(PSPmeasure, MeasureID, OrigPlotID1, TreeNumber)
   } else {
-    tempOut <- biomassCalculation(species = PSPmeasure$newSpeciesName,
+    tempOut <- biomassCalculation(species = PSPmeasure$SpBiomassEq,
                                   DBH = PSPmeasure$DBH,
                                   height = PSPmeasure$Height,
                                   includeHeight = useHeight,
                                   equationSource = biomassModel)
     PSPmeasure$biomass <- tempOut$biomass
   }
-  message(cli::col_yellow("No PSP biomass estimate possible for these species: "))
-  message(cli::col_yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
+  # message(cli::col_yellow("No PSP biomass estimate possible for these species: "))
+  # message(cli::col_yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
 
   #bad biomass estimate
   PSPmeasure <- PSPmeasure[biomass != 0]
-  PSPmeasure$newSpeciesName <- as.factor(PSPmeasure$newSpeciesName)
+  PSPmeasure$Species <- as.factor(PSPmeasure$Species)
 
   ## add stand age estimate
   PSPmeasure[, standAge := baseSA + MeasureYear - baseYear]
@@ -103,14 +107,14 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   SpPSP[, "spPlotBiomass" := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
   SpPSP[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
   SpPSP[, speciesTemp := LandR::equivalentName(value = newSpeciesName, df = sppEquiv,
-                                               column = speciesCol, searchColumn = "PSP")]
+                                               column = speciesCol, searchColumn = "Latin_full")]
   whNA <- is.na(SpPSP$speciesTemp)
   if (any(whNA)) {
     message(cli::col_yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
     message(cli::col_yellow("   ... because they are not in sppEquiv"))
     SpPSP <- SpPSP[!whNA]
   }
-  SpPSP <- SpPSP[newSpeciesName %in% sppEquiv[["PSP"]]]
+  SpPSP <- SpPSP[Latin_full %in% sppEquiv[["Latin_full"]]]
   freq <- SpPSP[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
 
   if (speciesFittingApproach %in% c("focal", "pairwise")) {

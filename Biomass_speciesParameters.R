@@ -25,7 +25,7 @@ defineModule(sim, list(
     "SpaDES.core (>= 2.1.4)",
     "PredictiveEcology/LandR (>= 1.1.0.9077)",
     "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
-    "ianmseddy/PSPclean@development (>= 0.1.4.9005)"
+    "ianmseddy/PSPclean@fixes (>= 0.1.4.9086)"
   ),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
@@ -99,8 +99,8 @@ defineModule(sim, list(
                  sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput("PSPmeasure_sppParams", "data.table",
                  desc = paste("Merged PSP and TSP individual tree measurements. Must include the following columns:",
-                              "`MeasureID`, `OrigPlotID1`, `MeasureYear`, `TreeNumber`, `Species`, `DBH` and `newSpeciesName`,",
-                              "the latter corresponding to species names in `LandR::sppEquivalencies_CA$PSP`.",
+                              "`MeasureID`, `OrigPlotID1`, `MeasureYear`, `TreeNumber`, `Species`, `DBH` and `PSP`,",
+                              "where `Species` corresponds to species names in `LandR::sppEquivalencies_CA$Latin_full`.",
                               "Defaults to randomized PSP data stripped of real `plotID`s"),
                  sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
     expectsInput("PSPplot_sppParams", "data.table",
@@ -136,7 +136,14 @@ defineModule(sim, list(
                  ),
                  sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
     expectsInput("sppEquiv", "data.table",
-                 desc = "Table of species equivalencies. See `?LandR::sppEquivalencies_CA`."),
+                 desc = paste("Table of species equivalencies - see `?LandR::sppEquivalencies_CA`.", 
+                              "Traits will be estimated for each unique entry in the `sppEquivCol` column.")),
+    expectsInput("sppEquivLong", "data.table", 
+                 desc = paste("The full table of species equivalencies - see `?LandR::sppEquivalencies_CA`.",
+                              "Biomass will be estimated for each species based on the `sp_Biomass_eq' column,",
+                              "which uses `pemisc::biomassCalculation` to derive AGB from DBH and height",
+                              "(based on the equations from https://doi.org/10.1139/x05-112). The full table",
+                              "is used to improve stand biomass estimates even if some species are not of interest.")),
     expectsInput("studyAreaANPP", "sf",
                  desc = paste("Optional study area used to crop PSP data before building growth curves.",
                               "If supplied, an ecoregion-scale object is recommended, at a minimum."))
@@ -279,11 +286,17 @@ Init <- function(sim) {
     mod$speciesTableFactorial <- dplyr::collect(mod$speciesTableFactorial) |> setDT()
 
     gc()
+
+    #TODO:  #change PSP to be a dedicated biomass equation column in sppEquiv
+    biomassKey <- unique(sim$sppEquivLong[, .(PSP, Latin_full)])
+    setnames(biomassKey, old = "PSP", new = "SpBiomassEq")
+    browser() #TODO: where does newSpeicesName come from - then push 
     message("preparing PSPs for growth curves")
     psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
                        PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
                        PSPplot = sim$PSPplot_sppParams, useHeight = P(sim)$useHeight, 
-                       biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH) |>
+                       biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH, 
+                       sppEquivLong = biomassKey) |>
       Cache(userTags = c(currentModule(sim), "prepPSPaNPP"))
     
     message("building growth curves") # this cache call takes several minutes to process..
@@ -386,6 +399,11 @@ Save <- function(sim) {
     sim$sppEquiv <- sppEquiv[Boreal %in% c("Pice_Mar", "Pice_Gla", "Pinu_Con",
                                            "Pinu_Ban", "Popu_Tre", "Lari_Lar",
                                            "Betu_Pap", "Abie_Bal"), ]
+  }
+  
+  if (!suppliedElsewhere("sppEquivLong", sim)) {
+    ## pass a default sppEquivalencies_CA for common species in western Canada
+    sim$sppEquivLong <- LandR::sppEquivalencies_CA
   }
 
   if (!suppliedElsewhere("speciesEcoregion", sim)) {
