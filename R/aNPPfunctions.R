@@ -23,7 +23,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
   PSPplot <- PSPplot[MeasureYear > min(PSPperiod) & MeasureYear < max(PSPperiod), ]
   PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear", "source")]
 
-  ## TODO: this should be parameterized - besides its tree density
+  ## TODO: this should be parameterized - besides its tree density you want not the raw count
   ## filter by > 30 trees at first measurement (P) to ensure forest.
   forestPlots <- PSPmeasure[MeasureYear == baseYear, .(measures = .N), OrigPlotID1] %>%
     .[measures >= 30, ]
@@ -102,15 +102,25 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   gcSpecies <- setNames(nm = gcSpecies)
 
   SpPSP <- copy(PSPdata)
+  #SpPSP has SpBiomassEq, Latin_full and PSP
+  sppEquivShort <- unique(sppEquiv[, .SD, .SDcol = c("Latin_full", speciesCol)])
+  
+  SpPSP[, speciesTemp := LandR::equivalentName(value = Latin_full, df = sppEquiv,
+                                               column = speciesCol)]
+  #probably do setnames, Species, and make things NULL
+  
+  
+  
+  
   SpPSP[, "areaAdjustedB" := biomass/PlotSize]
   SpPSP  <- SpPSP[, "plotBiomass" := sum(areaAdjustedB), .(MeasureID)]
-  SpPSP[, "spPlotBiomass" := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
+  SpPSP[, "spPlotBiomass" := sum(areaAdjustedB), .(MeasureID, speciesTemp)]
   SpPSP[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
-  SpPSP[, speciesTemp := LandR::equivalentName(value = newSpeciesName, df = sppEquiv,
-                                               column = speciesCol, searchColumn = "Latin_full")]
+
+  #remove these AFTER calculating stand biomass and dominance
   whNA <- is.na(SpPSP$speciesTemp)
   if (any(whNA)) {
-    message(cli::col_yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
+    message(cli::col_yellow("Removing ", paste(unique(SpPSP$Latin_full[whNA]), collapse = ", ")))
     message(cli::col_yellow("   ... because they are not in sppEquiv"))
     SpPSP <- SpPSP[!whNA]
   }

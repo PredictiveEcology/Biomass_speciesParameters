@@ -290,7 +290,7 @@ Init <- function(sim) {
     #TODO:  #change PSP to be a dedicated biomass equation column in sppEquiv
     biomassKey <- unique(sim$sppEquivLong[, .(PSP, Latin_full)])
     setnames(biomassKey, old = "PSP", new = "SpBiomassEq")
-    browser() #TODO: where does newSpeicesName come from - then push 
+
     message("preparing PSPs for growth curves")
     psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
                        PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
@@ -318,7 +318,7 @@ Init <- function(sim) {
       message(cli::col_yellow(
         "Insufficient data to estimate species parameters for ",
         paste(names(noDataSpp), collapse = ", "),
-        "- will keep original user-supplied parameters"
+        " - will keep original user-supplied parameters"
       ))
     }
     
