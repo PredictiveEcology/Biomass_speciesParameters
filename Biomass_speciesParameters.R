@@ -25,7 +25,7 @@ defineModule(sim, list(
     "SpaDES.core (>= 2.1.4)",
     "PredictiveEcology/LandR (>= 1.1.0.9077)",
     "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
-    "ianmseddy/PSPclean@fixes (>= 0.1.4.9086)"
+    "ianmseddy/PSPclean@development(>= 1.0.0.9001)"
   ),
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
@@ -298,7 +298,7 @@ Init <- function(sim) {
                        biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH, 
                        sppEquivLong = biomassKey) |>
       Cache(userTags = c(currentModule(sim), "prepPSPaNPP"))
-    
+
     message("building growth curves") # this cache call takes several minutes to process..
     sim$speciesGrowthCurves <-  buildGrowthCurves(PSPdata = psp, 
                                                   speciesCol =  P(sim)$sppEquivCol, 

@@ -75,7 +75,8 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
 
   #bad biomass estimate
   PSPmeasure <- PSPmeasure[biomass != 0]
-  PSPmeasure$Species <- as.factor(PSPmeasure$Species)
+  #keep objects as small as possible
+  PSPmeasure[, c("status", "first_tree_year", "last_tree_year", "diff_dbh") := NULL]
 
   ## add stand age estimate
   PSPmeasure[, standAge := baseSA + MeasureYear - baseYear]
@@ -126,7 +127,8 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   }
   SpPSP <- SpPSP[Latin_full %in% sppEquiv[["Latin_full"]]]
   freq <- SpPSP[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
-
+  SpPSP[, c("SpBiomassEq", "source", "PSP", "Latin_full", "Elevation") := NULL]
+  SpPSP[, speciesTemp := as.factor(speciesTemp)]
   if (speciesFittingApproach %in% c("focal", "pairwise")) {
     ## subset to species-of-interest using relative biomass (dominance)
     freq <- freq[spDom > 0.2] # minimum 20% dominance for pairwise or focal
@@ -158,7 +160,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
     SpPSP <- SpPSP[spDom > 0.5] # minimum 50% dominance for single
     SpPSPList <- split(SpPSP, SpPSP$speciesTemp)
   }
-
+  
   speciesForCurves <- names(SpPSPList) |> setNames(nm = _)
   message(cli::col_yellow("-----------------------------------------------"))
   message(cli::col_yellow("building growth curves from PSP data: "))
