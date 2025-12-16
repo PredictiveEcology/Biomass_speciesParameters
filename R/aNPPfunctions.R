@@ -300,16 +300,18 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   # rm(fullDataAll)
   ymaxes <- max(bestIndCurves$BscaledNonLinear, bestIndCurves$predNonLinear) * 1.05
 
-  gg <- ggplot(bestIndCurves, aes(standAge, BscaledNonLinear, colour = species)) +
-    geom_line(size = 2) +
-    geom_point(data = originalData, aes(standAge, biomass, colour = speciesTemp), size = 0.25, alpha = 0.3) +
-    geom_line(size = 2, aes(standAge, predNonLinear, col = species), lty = "dashed") +
+  gg <- ggplot(bestIndCurves, aes(x = standAge, colour = species)) +
+    geom_point(data = originalData, aes(standAge, biomass, colour = speciesTemp),
+               size = 0.25, alpha = 0.3) +
+    geom_line(aes(y = BscaledNonLinear, linetype = "LandR"), size = 2) +
+    geom_line(aes(y = predNonLinear, linetype = "Non-Linear"), size = 2) +
+    scale_linetype_manual(name = "Curve", values = c("LandR" = "solid", "Non-Linear" = "twodash")) +
+    guides(linetype = guide_legend(override.aes = list(size = 1.2, colour = "black", lwd = 1))) +
     facet_wrap(~ Pair, nrow = ceiling(sqrt(length(outputTraits))), scales = "fixed") +
     xlim(c(0, max(bestIndCurves$standAge))) + # ggplot2::scale_y_log() +
     ylim(c(0, ymaxes)) +
-    ylab(label = "biomass") +
-    xlab(label = "stand age") +
-    ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
+    labs( y = "Biomass", x = "Stand Age", colour = "Species") +
+    ggtitle("Comparing best LandR and Non-linear curves") +
     theme_bw()
 
   return(list(best = bestWeighted, gg = gg))
