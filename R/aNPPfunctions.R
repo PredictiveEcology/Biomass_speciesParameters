@@ -200,7 +200,9 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   set(setDT(factorialTraits), NULL, "Sp", gsub(".+_(Sp.)", "\\1", factorialTraits$species, perl = TRUE))
 
   factorialTraitsThatVary <- sapply(factorialTraits, function(x) length(unique(x)) > 1)
-  factorialTraitsThatVary <- names(factorialTraitsThatVary)[factorialTraitsThatVary]
+  #this must include longevity even if it does not vary
+  factorialTraitsThatVary <- unique(c(names(factorialTraitsThatVary)[factorialTraitsThatVary], 
+                                    "longevity"))
   factorialTraitsVarying <- factorialTraits[, ..factorialTraitsThatVary]
   rm(factorialTraits)
   GCtrans <- purrr::transpose(GCs)
@@ -217,9 +219,9 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   ## join with inflationFactorKey
   suppressWarnings(set(inflationFactorKey, NULL, "species", NULL))
   tempTraits <- copy(factorialTraitsVarying)
+  #do not hard-code join cols in case they do not vary
   tempTraits <- inflationFactorKey[tempTraits,
-                                   on = c("growthcurve", "mortalityshape",
-                                          "longevity", "mANPPproportion")]
+                                   on = intersect(names(tempTraits), names(inflationFactorKey))]
   tempTraits <- tempTraits[, .(speciesCode, inflationFactor)]
   factorialBiomass <- tempTraits[factorialBiomass, on = "speciesCode"]
 
@@ -524,6 +526,15 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   dt <- dt[predGrid, on = c("standAge", "Sp")]
 
   candFB <- fB[dt, on = c("standAge", "speciesCode", "Sp")] # exclude points past longevity?
+
+  if (any(is.na(candFB$B))) {
+    stop("error occurred joining factorial data with growth curve due to NA values of B. ",
+         "Please debug factorial object -- check that param minCohortBiomass does not cause ",
+         "removal of species prior to longevity")
+    #this occurred once when longevity was accidentally created with values < standAgesForFitting
+    #ultimately NA values passed in the predict downstream, which triggers an error
+    #then with extremely low mortalityshape, B dropped to 1 before age 100
+  }
   whNA <- which(is.na(candFB$B))
   set(candFB, whNA, "B", 0L)
   candFB[, `:=`(
