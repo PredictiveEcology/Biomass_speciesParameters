@@ -220,6 +220,7 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   suppressWarnings(set(inflationFactorKey, NULL, "species", NULL))
   tempTraits <- copy(factorialTraitsVarying)
   #do not hard-code join cols in case they do not vary
+  inflationFactorKey[, pixelGroup := NULL]
   tempTraits <- inflationFactorKey[tempTraits,
                                    on = intersect(names(tempTraits), names(inflationFactorKey))]
   tempTraits <- tempTraits[, .(speciesCode, inflationFactor)]
