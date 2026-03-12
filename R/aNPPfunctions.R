@@ -104,7 +104,7 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
 
   SpPSP <- copy(PSPdata)
   #SpPSP has SpBiomassEq, Latin_full and PSP
-  sppEquivShort <- unique(sppEquiv[, .SD, .SDcol = c("Latin_full", speciesCol)])
+  sppEquivShort <- unique(sppEquiv[, .SD, .SDcols = c("Latin_full", speciesCol)])
   
   SpPSP[, speciesTemp := LandR::equivalentName(value = Latin_full, df = sppEquiv,
                                                column = speciesCol)]
