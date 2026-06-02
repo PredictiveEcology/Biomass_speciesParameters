@@ -11,7 +11,7 @@ defineModule(sim, list(
     person(c("Ceres"), "Barros", email = "ceres.barros@ubc.ca", role = c("ctb"))
   ),
   childModules = character(0),
-  version = list(Biomass_speciesParameters = "3.0.0"),
+  version = list(Biomass_speciesParameters = "3.0.1"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
@@ -144,7 +144,7 @@ defineModule(sim, list(
                               "which uses `pemisc::biomassCalculation` to derive AGB from DBH and height",
                               "(based on the equations from https://doi.org/10.1139/x05-112). The full table",
                               "is used to improve stand biomass estimates even if some species are not of interest.")),
-    expectsInput("studyAreaANPP", "sf",
+    expectsInput("studyAreaANPP", "sf",                                         # nolint: in_no_default
                  desc = paste("Optional study area used to crop PSP data before building growth curves.",
                               "If supplied, an ecoregion-scale object is recommended, at a minimum."))
   ),
