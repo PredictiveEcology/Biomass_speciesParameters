@@ -30,6 +30,13 @@ defineModule(sim, list(
   parameters = rbind(
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
+    defineParameter("landis", "logical", FALSE, NA, NA,
+                    desc = paste("If `TRUE`, run in 'LANDIS mode': expose the fitted LANDIS-version growth curves",
+                                 "(the scaled non-linear biomass-over-age curves shown in the LandR-vs-non-linear plot)",
+                                 "per species as the output object `speciesGrowthCurvesLandis`, for use as inputs to",
+                                 "LANDIS-II Biomass Succession. The per-species growth-curve parameters",
+                                 "(`growthcurve`, `mortalityshape`, etc.) are written to `species` regardless.",
+                                 "Default `FALSE` preserves the standard behaviour.")),
     defineParameter("maxBInFactorial", "integer", 5000L, NA, NA,
                     desc = paste("The arbitrary maximum biomass for the factorial simulations.",
                                  "This is a per-species maximum within a pixel")),
@@ -156,7 +163,11 @@ defineModule(sim, list(
                                "(see description for this object in inputs)")),
     createsOutput("speciesGrowthCurves", "list",
                   desc = paste("list containing each species' non-linear model,",
-                               "model data, and the unfiltered PSP data"))
+                               "model data, and the unfiltered PSP data")),
+    createsOutput("speciesGrowthCurvesLandis", "data.table",
+                  desc = paste("Only when `P(sim)$landis` is `TRUE`. The fitted LANDIS-version growth curves",
+                               "(`BscaledNonLinear`) by `species` and `standAge` (the scaled non-linear curves shown",
+                               "in the `LandR_VS_NLM_growthCurves` plot), for use as LANDIS-II Biomass Succession inputs."))
   )
 ))
 
@@ -363,6 +374,11 @@ Init <- function(sim) {
     suppressWarnings(Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
           filename = paste("LandR_VS_NLM_growthCurves")))
     sim$species <- modifiedSpeciesTables$best
+    if (isTRUE(P(sim)$landis)) {
+      ## LANDIS mode: expose the fitted LANDIS-version growth curves (BscaledNonLinear by species and
+      ## standAge) for use as LANDIS-II Biomass Succession inputs.
+      sim$speciesGrowthCurvesLandis <- modifiedSpeciesTables$landisCurves
+    }
   } else {
     message("P(sim)$PSPdataTypes is 'none' -- bypassing species traits estimation from PSP data.")
   }
