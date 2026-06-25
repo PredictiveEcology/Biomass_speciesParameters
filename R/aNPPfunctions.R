@@ -319,8 +319,10 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
 
   ## `landisCurves` (bestIndCurves): the per-species fitted curves -- `BscaledNonLinear` is the
   ## LANDIS-version growth curve, `predNonLinear` the Chapman-Richards fit -- by species and standAge.
-  ## Surfaced for the module's LANDIS mode (`P(sim)$landis`); harmless otherwise.
-  return(list(best = bestWeighted, gg = gg, landisCurves = bestIndCurves))
+  ## `psp` (originalData): the PSP observations used for the fits (`biomass` by `standAge` and species,
+  ## with `OrigPlotID1` for joining to plot locations / ecoregion). Both surfaced for the module's LANDIS
+  ## mode (`P(sim)$landis`); harmless otherwise.
+  return(list(best = bestWeighted, gg = gg, landisCurves = bestIndCurves, psp = originalData))
 }
 
 buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {

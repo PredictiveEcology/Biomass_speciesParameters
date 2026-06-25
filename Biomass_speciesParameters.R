@@ -165,9 +165,15 @@ defineModule(sim, list(
                   desc = paste("list containing each species' non-linear model,",
                                "model data, and the unfiltered PSP data")),
     createsOutput("speciesGrowthCurvesLandis", "data.table",
-                  desc = paste("Only when `P(sim)$landis` is `TRUE`. The fitted LANDIS-version growth curves",
-                               "(`BscaledNonLinear`) by `species` and `standAge` (the scaled non-linear curves shown",
-                               "in the `LandR_VS_NLM_growthCurves` plot), for use as LANDIS-II Biomass Succession inputs."))
+                  desc = paste("An empty `data.table` unless `P(sim)$landis` is `TRUE`, when it holds the fitted",
+                               "LANDIS-version growth curves (`BscaledNonLinear`) by `species` and `standAge` (the",
+                               "scaled non-linear curves shown in the `LandR_VS_NLM_growthCurves` plot), for use as",
+                               "LANDIS-II Biomass Succession inputs.")),
+    createsOutput("speciesGrowthCurvesPSP", "data.table",
+                  desc = paste("An empty `data.table` unless `P(sim)$landis` is `TRUE`, when it holds the PSP",
+                               "observations used to fit the growth curves (`biomass` by `standAge` and species, with",
+                               "`OrigPlotID1` for joining to plot locations / ecoregion), a diagnostic to plot against",
+                               "`speciesGrowthCurvesLandis`."))
   )
 ))
 
@@ -202,6 +208,13 @@ Init <- function(sim) {
     data.table::setDTthreads(P(sim)$.useParallel)
   }
   on.exit(data.table::setDTthreads(origDTthreads))
+
+  ## LANDIS-mode outputs are always created so the `createsOutput` contract holds regardless of
+  ## `P(sim)$landis`: empty `data.table`s by default, populated below only when `landis = TRUE`. This
+  ## keeps the default (non-LANDIS) path backwards compatible apart from these two empty placeholders.
+  sim$speciesGrowthCurvesLandis <- data.table::data.table()
+  sim$speciesGrowthCurvesPSP <- data.table::data.table()
+
   ## load factorial tables -------------------------------------------------------------------------
   fmt <- "feather" ## faster for small-med data compared to parquet
 
@@ -376,8 +389,10 @@ Init <- function(sim) {
     sim$species <- modifiedSpeciesTables$best
     if (isTRUE(P(sim)$landis)) {
       ## LANDIS mode: expose the fitted LANDIS-version growth curves (BscaledNonLinear by species and
-      ## standAge) for use as LANDIS-II Biomass Succession inputs.
+      ## standAge) and the PSP observations behind them, for LANDIS-II Biomass Succession inputs and the
+      ## vegetation-report growth-curve diagnostic.
       sim$speciesGrowthCurvesLandis <- modifiedSpeciesTables$landisCurves
+      sim$speciesGrowthCurvesPSP <- modifiedSpeciesTables$psp
     }
   } else {
     message("P(sim)$PSPdataTypes is 'none' -- bypassing species traits estimation from PSP data.")
