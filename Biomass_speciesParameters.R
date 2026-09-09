@@ -87,7 +87,7 @@ defineModule(sim, list(
     defineParameter(".studyAreaName", "character", NA, NA, NA,
                     desc = paste("Human-readable name for the growth curve filename.",
                                  "If `NA`, a hash of sppEquiv[[sppEquivCol]] will be used.")),
-    defineParameter(".useCache", "character", c(".inputObjects"), NA, NA,
+    defineParameter(".useCache", "character", c(".inputObjects", "init"), NA, NA,
                     desc = paste("Should this entire module be run with caching activated?",
                                  "This is generally intended for data-type modules,",
                                  "where stochasticity and time are not relevant")),
@@ -224,7 +224,7 @@ Init <- function(sim) {
       targetFile = basename(sim$cohortDataFactorial_path),
       destinationPath = inputPath(sim),
       fun = "readRDS",
-      overwrite = TRUE, useCache = FALSE, # don't internal cache as it is a waste of time
+      useCache = FALSE, # don't internal cache as it is a waste of time
       url = extractURL("cohortDataFactorial_path", sim)
     ) |> Cache(.functionName = "prepInputs_cohortDataFactorial")
   } else {
@@ -239,8 +239,7 @@ Init <- function(sim) {
       targetFile = basename(sim$speciesTableFactorial_path),
       destinationPath = inputPath(sim),
       url = extractURL("speciesTableFactorial_path", sim),
-      fun = "readRDS", useCache = FALSE, # don't internal cache as it is a waste of time
-      overwrite = TRUE
+      fun = "readRDS", useCache = FALSE # don't internal cache as it is a waste of time
     ) |> Cache(.functionName = "prepInputs_speciesTableFactorial")
   } else {
     ## connect to arrow dataset
