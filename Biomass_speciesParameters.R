@@ -184,6 +184,14 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
   switch(
     eventType,
     init = {
+      ## No tree species in this study area (sppEquiv has no rows, established by fireSense_ELFs):
+      ## there are no species parameters to estimate. Biomass_borealDataPrep already supplied the
+      ## empty species / speciesEcoregion tables, so leave them and schedule nothing.
+      if (is.data.frame(sim$sppEquiv) && nrow(sim$sppEquiv) == 0L) {
+        message("Biomass_speciesParameters: no tree species in this study area; nothing to estimate")
+        return(invisible(sim))
+      }
+
       ## build growth curves if applicable
       sim <- Init(sim)
 
