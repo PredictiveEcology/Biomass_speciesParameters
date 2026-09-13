@@ -1,5 +1,9 @@
 Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/issues>
 
+# Biomass_speciesParameters 3.0.2
+
+* `cohortDataFactorial` and `speciesTableFactorial` are now local variables of `Init` instead of `mod$` objects. They were only ever used inside `Init`, but as `mod$` objects the ~9 GB stayed in the simList's `.modObjs` (and in every `Copy(sim)`) for the rest of the simulation.
+
 # Biomass_speciesParameters 3.0.1
 
 * new "LANDIS mode": added a `landis` parameter (default `FALSE`) that exposes the fitted, scaled non-linear biomass-over-age growth curves per species as a new output `speciesGrowthCurvesLandis` for use as inputs to LANDIS-II Biomass Succession; also added a `speciesGrowthCurvesPSP` output holding the PSP points behind the fitted curves.
