@@ -23,7 +23,7 @@ defineModule(sim, list(
     "mgcv", "nlme", "purrr", "robustbase", "sf",
     "reproducible (>= 2.1.0)",
     "SpaDES.core (>= 2.1.4)",
-    "PredictiveEcology/LandR (>= 1.1.0.9077)",
+    "PredictiveEcology/LandR@development (>= 1.1.0.9077)",
     "PredictiveEcology/pemisc@development (>= 0.0.3.9002)",
     "ianmseddy/PSPclean@development(>= 1.0.0.9001)"
   ),
