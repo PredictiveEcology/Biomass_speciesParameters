@@ -565,7 +565,7 @@ Account, and to be granted access to the data.
 
 A realistic usage example of this module and a few others can be found in [this
 repository](https://github.com/CeresBarros/LandRBiomass_publication) and in
-@BarrosEtAlinreview.
+@BarrosEtAl2023.
 
 ### Load `SpaDES` and other packages.
 
