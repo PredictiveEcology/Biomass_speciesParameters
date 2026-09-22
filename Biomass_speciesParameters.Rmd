@@ -86,7 +86,7 @@ badgeURL <- if (!is_detached(modulePath)) {
 }
 badgeURL <- sub(".*github[.]com:", "https://github.com/", badgeURL)
 
-badgePath <- normPath("figures/moduleVersionBadge.png")
+badgePath <- SpaDES.docs::stageFigure("figures/moduleVersionBadge.png")
 
 ## make string of markdown code to be executed as-is
 cat(paste0("[![module-version-Badge](", badgePath, ")](", badgeURL, ")"))
@@ -94,7 +94,7 @@ cat(paste0("[![module-version-Badge](", badgePath, ")](", badgeURL, ")"))
 
 ```{r issuesBadge-Biomass-speciesParameters, echo = FALSE, eval = TRUE, cache = FALSE, results = "asis"}
 badgeURL <- "https://github.com/PredictiveEcology/Biomass_speciesParameters/issues"
-badgePath <- normPath("figures/issuesBadge.png")
+badgePath <- SpaDES.docs::stageFigure("figures/issuesBadge.png")
 
 ## make string of markdown code to be executed as-is
 cat(paste0("[![Issues-badge](", badgePath, ")](", badgeURL,")"))
