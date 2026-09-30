@@ -277,7 +277,7 @@ Init <- function(sim) {
     tempMaxB <- cohortDataFactorial |>
       dplyr::filter(age == 1) |>
       dplyr::group_by(pixelGroup) |>
-      dplyr::summarise(N = dplyr::n()) |>
+      dplyr::summarise(N = n()) |>
       dplyr::collect()
 
     ## take the pixelGroups with only 1 species at start of factorial.
