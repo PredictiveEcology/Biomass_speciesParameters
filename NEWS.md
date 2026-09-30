@@ -1,5 +1,9 @@
 Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/issues>
 
+# Biomass_speciesParameters 3.0.2.9000
+
+* `dplyr` is in `reqdPkgs` (the module calls it 17 times) and `n()` is written `dplyr::n()`. With `options(spades.reqdPkgsAttach = FALSE)` (SpaDES.core >= 3.2.1.9030) a module sees only its own reqdPkgs, and `dplyr::summarise(N = n())` stopped with "could not find function \"n\"". A new test checks that every `pkg::` names a listed package and that every unqualified call comes from the module, base R or a listed package.
+
 # Biomass_speciesParameters 3.0.2
 
 * `cohortDataFactorial` and `speciesTableFactorial` are now local variables of `Init` instead of `mod$` objects. They were only ever used inside `Init`, but as `mod$` objects the ~9 GB stayed in the simList's `.modObjs` (and in every `Copy(sim)`) for the rest of the simulation.
