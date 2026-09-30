@@ -1,5 +1,9 @@
 Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/issues>
 
+# Biomass_speciesParameters 3.0.2.9000
+
+* Missing packages in `reqdPkgs`: added `dplyr`.
+
 # Biomass_speciesParameters 3.0.2
 
 * `cohortDataFactorial` and `speciesTableFactorial` are now local variables of `Init` instead of `mod$` objects. They were only ever used inside `Init`, but as `mod$` objects the ~9 GB stayed in the simList's `.modObjs` (and in every `Copy(sim)`) for the rest of the simulation.
