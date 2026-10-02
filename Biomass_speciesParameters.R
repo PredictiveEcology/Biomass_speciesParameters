@@ -237,7 +237,7 @@ Init <- function(sim) {
       fun = "readRDS",
       useCache = FALSE, # don't internal cache as it is a waste of time
       url = extractURL("cohortDataFactorial_path", sim)
-    ) |> Cache(.functionName = "prepInputs_cohortDataFactorial")
+    ) # not Cache()d: a cache copy is the same .rds, so a hit saves ~1 s, a miss costs ~6 min
   } else {
     ## connect to arrow dataset
     ## TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
@@ -251,7 +251,7 @@ Init <- function(sim) {
       destinationPath = inputPath(sim),
       url = extractURL("speciesTableFactorial_path", sim),
       fun = "readRDS", useCache = FALSE # don't internal cache as it is a waste of time
-    ) |> Cache(.functionName = "prepInputs_speciesTableFactorial")
+    ) # not Cache()d, for the same reason as cohortDataFactorial
   } else {
     ## connect to arrow dataset
     ## TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
