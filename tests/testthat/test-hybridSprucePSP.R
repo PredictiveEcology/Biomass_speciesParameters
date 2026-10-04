@@ -125,3 +125,35 @@ test_that("regression: a study area without BC plots is unchanged by default", {
   expect_identical(suppressMessages(relabelHybridSprucePSP(nonBC, p$gis, mergedEquiv(), "engelmann",
                                                            "BWBS", synthBEC())), nonBC)
 })
+
+test_that("a relabelled tree keeps the biomass of its own species, only its species grouping changes", {
+  ## prepPSPaNPP calls biomassCalculation(), setkey() ... unqualified, as it does attached in a simList
+  withr::local_package("pemisc")
+  withr::local_package("data.table")
+  trees <- function(sp, ids) data.table::data.table(
+    MeasureID = 1L, OrigPlotID1 = ids, MeasureYear = 2000L, source = "BC", TreeNumber = seq_along(ids),
+    DBH = 20, Height = 15, Species = sp, status = "A", first_tree_year = 2000L, last_tree_year = 2010L,
+    diff_dbh = 0)
+  ## 40 trees per plot (the forest filter needs >= 30 at the first measurement)
+  ids <- rep("sbs", 40)
+  plot <- data.table::data.table(MeasureID = 1L, OrigPlotID1 = "sbs", MeasureYear = 2000L, source = "BC",
+                                 baseYear = 2000L, baseSA = 50, PlotSize = 0.1)
+  gis <- sf::st_as_sf(data.table::data.table(OrigPlotID1 = "sbs", lon = -122, lat = 54),
+                      coords = c("lon", "lat"), crs = 4326)
+  equivLong <- data.table::data.table(
+    Latin_full = c("Picea glauca", hybridLatin), SpBiomassEq = c("white spruce", "spruce"))
+  prep <- function(mergeHybridSprucePSP) suppressMessages(prepPSPaNPP(
+    studyAreaANPP = NULL, PSPgis = gis, PSPmeasure = trees("Picea glauca", ids), PSPplot = plot,
+    sppEquivLong = equivLong, useHeight = TRUE, biomassModel = "Lambert2005",
+    PSPperiod = c(1990, 2020), minDBH = 0, sppEquiv = mergedEquiv(),
+    mergeHybridSprucePSP = mergeHybridSprucePSP, excludeBECzones = "BWBS", BECzones = synthBEC()))
+  off <- prep(NA_character_)
+  on <- prep("engelmann")
+  expect_identical(unique(off$Latin_full), "Picea glauca")
+  expect_identical(unique(on$Latin_full), hybridLatin)
+  expect_equal(on$biomass, off$biomass)
+  ## and that equation is the white spruce one, not the hybrid's generic spruce one
+  asSpruce <- pemisc::biomassCalculation(species = "spruce", DBH = 20, height = 15, includeHeight = TRUE,
+                                        equationSource = "Lambert2005")$biomass / 10
+  expect_false(isTRUE(all.equal(unique(on$biomass), asSpruce)))
+})

@@ -37,12 +37,6 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
   PSPmeasure <- PSPmeasure[DBH >= minDBH,]
   ## decide what to do about above line and stem/density. PES approach is to just fix the data...
   
-  ## BC hybrid-zone "Picea glauca" -> the hybrid that sppEquiv merged into Pice_eng
-  if (!is.null(sppEquiv)) {
-    PSPmeasure <- relabelHybridSprucePSP(PSPmeasure, PSPgis, sppEquiv, mergeHybridSprucePSP,
-                                         excludeBECzones, BECzones)
-  }
-
   #get column for estimating biomass
   PSPmeasure <- sppEquivLong[PSPmeasure, on = c("Latin_full" = "Species")]
   PSPmeasure[is.na(SpBiomassEq), SpBiomassEq := ""] #biomassCalculation errors with NA
@@ -80,6 +74,13 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
   }
   # message(cli::col_yellow("No PSP biomass estimate possible for these species: "))
   # message(cli::col_yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
+
+  ## BC hybrid-zone "Picea glauca" -> the hybrid that sppEquiv merged into Pice_eng. After the
+  ## biomass calculation: biomass keeps the species' own equation, only the species grouping follows
+  if (!is.null(sppEquiv)) {
+    PSPmeasure <- relabelHybridSprucePSP(PSPmeasure, PSPgis, sppEquiv, mergeHybridSprucePSP,
+                                         excludeBECzones, BECzones, speciesCol = "Latin_full")
+  }
 
   #bad biomass estimate
   PSPmeasure <- PSPmeasure[biomass != 0]

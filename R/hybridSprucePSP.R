@@ -18,7 +18,7 @@ hybridSpruceLatin <- "Picea engelmannii x glauca"
 #' plots from other sources and plots outside every BEC polygon. Only `"engelmann"` relabels:
 #' with `"white"` the hybrid records already map to `Pice_gla`.
 #'
-#' @param PSPmeasure data.table of tree measurements, with `Species`, `OrigPlotID1` and `source`.
+#' @param PSPmeasure data.table of tree measurements, with the `speciesCol` column, `OrigPlotID1` and `source`.
 #' @param PSPgis sf of plot locations, with `OrigPlotID1`.
 #' @param sppEquiv the study area's `sppEquiv`; the relabel happens only if it has a row with
 #'   `Latin_full` "Picea engelmannii x glauca" and `LandR` "Pice_eng" (the merged hybrid).
@@ -28,13 +28,16 @@ hybridSpruceLatin <- "Picea engelmannii x glauca"
 #'   `excludeBECzonesHybridSpruce` holds the default.
 #' @param BECzones optional sf of BEC polygons with a `ZONE` column; if `NULL`, they are fetched
 #'   with [getBECzonesBC()].
-#' @return `PSPmeasure`, as a copy, with `Species` relabelled where it applies.
+#' @param speciesCol the column of `PSPmeasure` holding the Latin name (`Species`, or `Latin_full` after
+#'   the `sppEquivLong` join in `prepPSPaNPP`).
+#' @return `PSPmeasure`, as a copy, with `speciesCol` relabelled where it applies.
 #' @keywords internal
 relabelHybridSprucePSP <- function(PSPmeasure, PSPgis, sppEquiv,
-                                   mergeHybridSprucePSP, excludeBECzones, BECzones = NULL) {
+                                   mergeHybridSprucePSP, excludeBECzones, BECzones = NULL,
+                                   speciesCol = "Species") {
   hybridMerged <- nrow(sppEquiv[Latin_full == hybridSpruceLatin & LandR == "Pice_eng"]) > 0
   if (!isTRUE(mergeHybridSprucePSP == "engelmann") || !hybridMerged) return(PSPmeasure)
-  candidate <- PSPmeasure$source %in% "BC" & PSPmeasure$Species %in% whiteSpruceLatin
+  candidate <- PSPmeasure$source %in% "BC" & PSPmeasure[[speciesCol]] %in% whiteSpruceLatin
   if (!any(candidate)) return(PSPmeasure)
 
   plots <- unique(PSPmeasure$OrigPlotID1[candidate])
@@ -54,7 +57,7 @@ relabelHybridSprucePSP <- function(PSPmeasure, PSPgis, sppEquiv,
   PSPmeasure <- data.table::copy(PSPmeasure)
   plotZone <- zoneOf[PSPmeasure$OrigPlotID1]
   relabel <- candidate & !is.na(plotZone) & !plotZone %in% excludeBECzones
-  PSPmeasure[relabel, Species := hybridSpruceLatin]
+  data.table::set(PSPmeasure, which(relabel), speciesCol, hybridSpruceLatin)
 
   counts <- PSPmeasure[relabel, .(plots = data.table::uniqueN(OrigPlotID1), records = .N),
                        by = .(zone = plotZone[relabel])][order(zone)]
