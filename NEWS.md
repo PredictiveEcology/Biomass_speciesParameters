@@ -3,6 +3,7 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 # Biomass_speciesParameters 3.0.2.9000
 
 * Missing packages in `reqdPkgs`: added `dplyr`.
+* New opt-in `balanceGrowth` (default `FALSE`, so nothing changes unless set), with `sharedGrowthcurve` and `targetK`: all fitted species get one `growthcurve`, and `mANPPproportion` is set so K = `mANPPproportion` * maxB^(1 - `growthcurve`) is equal across species, since under LandR competition any difference in K is winner-take-all while the per-species fitted `growthcurve` values are statistically indistinguishable. Both traits are then rounded to 3 decimals. The fit of the new values to the PSP data is returned in the new output `speciesBalanceCheck`, with a warning for species more than 2 log-likelihood units worse than their own best.
 
 # Biomass_speciesParameters 3.0.2
 
