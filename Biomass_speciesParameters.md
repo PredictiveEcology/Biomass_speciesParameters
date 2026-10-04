@@ -28,7 +28,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParametersfd46e2454b0e007e11a13c592d6882b51c8aeafa)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameterse56852a4751c7a2faba805e5206e000554a0660c)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
 
