@@ -1,5 +1,7 @@
 prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong,
-                        useHeight, biomassModel, PSPperiod, minDBH) {
+                        useHeight, biomassModel, PSPperiod, minDBH, sppEquiv = NULL,
+                        mergeHybridSprucePSP = NA_character_, excludeBECzones = character(0),
+                        BECzones = NULL) {
   ## crop points to studyArea
   if (!is.null(studyAreaANPP)) {
     studyAreaANPP <- st_as_sf(studyAreaANPP) # in case SPDF
@@ -35,6 +37,12 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
   PSPmeasure <- PSPmeasure[DBH >= minDBH,]
   ## decide what to do about above line and stem/density. PES approach is to just fix the data...
   
+  ## BC hybrid-zone "Picea glauca" -> the hybrid that sppEquiv merged into Pice_eng
+  if (!is.null(sppEquiv)) {
+    PSPmeasure <- relabelHybridSprucePSP(PSPmeasure, PSPgis, sppEquiv, mergeHybridSprucePSP,
+                                         excludeBECzones, BECzones)
+  }
+
   #get column for estimating biomass
   PSPmeasure <- sppEquivLong[PSPmeasure, on = c("Latin_full" = "Species")]
   PSPmeasure[is.na(SpBiomassEq), SpBiomassEq := ""] #biomassCalculation errors with NA
