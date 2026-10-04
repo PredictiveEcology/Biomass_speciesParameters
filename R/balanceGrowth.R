@@ -18,7 +18,7 @@ balanceDigits <- 3L
 #' @param speciesEcoregion data.table with `speciesCode` and `maxB`.
 #' @return a named numeric vector, names are species codes.
 medianMaxB <- function(speciesEcoregion) {
-  mb <- speciesEcoregion[, list(maxB = stats::median(maxB, na.rm = TRUE)), by = "speciesCode"]
+  mb <- speciesEcoregion[, list(maxB = stats::median(as.numeric(maxB), na.rm = TRUE)), by = "speciesCode"]
   stats::setNames(mb$maxB, mb$speciesCode)
 }
 

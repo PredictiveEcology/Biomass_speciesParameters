@@ -56,6 +56,19 @@ test_that("BC Picea glauca outside BWBS/SWB becomes the hybrid, and then Pice_en
   expect_true(all(out[DBH == 10]$Species == "Abies lasiocarpa"))
 })
 
+test_that("regression: factor plot IDs, as PSPclean returns them, are matched by name", {
+  ## zoneOf[<factor>] indexed by the factor codes, so in box D no plot was relabelled
+  p <- synthPSP()
+  p$measure[, OrigPlotID1 := factor(OrigPlotID1)]
+  p$gis$OrigPlotID1 <- factor(p$gis$OrigPlotID1)
+  out <- suppressMessages(relabelHybridSprucePSP(p$measure, p$gis, mergedEquiv(),
+                                                 paramDefault("mergeHybridSprucePSP"),
+                                                 paramDefault("excludeBECzonesHybridSpruce"), synthBEC()))
+  expect_identical(species(out, "sbs"), hybridLatin)
+  expect_identical(species(out, "ich"), hybridLatin)
+  expect_identical(species(out, "bwbs"), "Picea glauca")
+})
+
 test_that("the defaults are the documented ones", {
   expect_identical(paramDefault("excludeBECzonesHybridSpruce"), c("BWBS", "SWB"))
   expect_identical(paramDefault("mergeHybridSprucePSP"), getOption("LandR.mergeHybridSpruce", "engelmann"))

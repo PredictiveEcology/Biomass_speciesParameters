@@ -55,7 +55,7 @@ relabelHybridSprucePSP <- function(PSPmeasure, PSPgis, sppEquiv,
   zoneOf <- setNames(as.character(zone$ZONE), zone$OrigPlotID1)
 
   PSPmeasure <- data.table::copy(PSPmeasure)
-  plotZone <- zoneOf[PSPmeasure$OrigPlotID1]
+  plotZone <- zoneOf[as.character(PSPmeasure$OrigPlotID1)] # PSPclean gives a factor; its codes are not names
   relabel <- candidate & !is.na(plotZone) & !plotZone %in% excludeBECzones
   data.table::set(PSPmeasure, which(relabel), speciesCol, hybridSpruceLatin)
 
