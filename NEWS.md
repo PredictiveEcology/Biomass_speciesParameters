@@ -1,6 +1,6 @@
 Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/issues>
 
-# Biomass_speciesParameters 3.0.2.9000
+# Biomass_speciesParameters 3.0.2.9001
 
 * BC interior (hybrid-zone) spruce PSPs are recorded as "Picea glauca", so they matched nothing, and were dropped, when the study area's `sppEquiv` has the hybrid spruce merged into Engelmann (`LandR.mergeHybridSpruce = "engelmann"`). New parameter `mergeHybridSprucePSP` (default: follow that option; NA or "white" for no relabel) relabels those BC records as "Picea engelmannii x glauca", so they count as `Pice_eng`. BC plots in the BEC zones of the new parameter `excludeBECzonesHybridSpruce` (default `BWBS`, `SWB`: boreal white spruce) are not relabelled. The BEC zones come from the new optional input `BECzonesBC`, else from the BC Data Catalogue (`bcdata`, added to `reqdPkgs`); if neither is available there is a warning and no relabel.
 * Missing packages in `reqdPkgs`: added `dplyr`.
