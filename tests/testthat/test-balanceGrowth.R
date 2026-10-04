@@ -75,6 +75,13 @@ test_that("medianMaxB takes the median over each species' speciesEcoregion rows"
   expect_equal(medianMaxB(se), c(A = 200, B = 60))
 })
 
+test_that("regression: medianMaxB works on integer maxB with odd and even row counts per species", {
+  ## median() of an integer is an integer for an odd count and a double for an even one, which
+  ## data.table refused across groups in box D
+  se <- data.table::data.table(speciesCode = rep(c("A", "B"), c(3, 2)), maxB = c(100L, 300L, 200L, 50L, 71L))
+  expect_equal(medianMaxB(se), c(A = 200, B = 60.5))
+})
+
 test_that("modifySpeciesTable with default settings gives the unchanged species table", {
   skip_if_not_installed("LandR")
   skip_if_not_installed("purrr")
