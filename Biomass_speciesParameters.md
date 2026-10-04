@@ -1,6 +1,6 @@
 ---
 title: "LandR _Biomass_speciesParameters_ Manual"
-date: "Last updated: 2026-10-02"
+date: "Last updated: 2026-10-04"
 output:
   bookdown::html_document2:
     toc: true
@@ -28,7 +28,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameterse079ade9ae27e1551acbe19c21619762bcbc8a38)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParametersfd46e2454b0e007e11a13c592d6882b51c8aeafa)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
 
@@ -77,7 +77,7 @@ data/calibration module that does so (e.g., *Biomass_borealDataPrep*). However
 it can be used stand-alone in an initial developmental phase for easier
 inspection of the statistical calibration procedure employed.
 
-As of October 02, 2026, the *raw* PSP data used in this
+As of October 04, 2026, the *raw* PSP data used in this
 module is not freely available, and data sharing agreements must be obtained
 from the governments of SK, AB, and BC to obtain it. However, the *processed and
 anonymized* PSP data is provided via a Google Drive folder accessed
@@ -400,6 +400,12 @@ determining the geographic extent of the PSP data.
    <td style="text-align:left;"> https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing </td>
   </tr>
   <tr>
+   <td style="text-align:left;"> BECzonesBC </td>
+   <td style="text-align:left;"> sf </td>
+   <td style="text-align:left;"> Optional. BC BEC zone polygons, with a `ZONE` column, used to exclude the zones of `excludeBECzonesHybridSpruce` from the hybrid-spruce relabel of PSPs. If not supplied, they are fetched from the BC Data Catalogue (WHSE_FOREST_VEGETATION.BEC_BIOGEOCLIMATIC_POLY); if that fails there is no relabel. </td>
+   <td style="text-align:left;"> NA </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> PSPgis_sppParams </td>
    <td style="text-align:left;"> sf </td>
    <td style="text-align:left;"> Plot location `sf` object. Defaults to PSP data stripped of real `plotID`s/location. Must include field `OrigPlotID1` for joining to `PSPplot` object </td>
@@ -494,6 +500,14 @@ because the default will attempt to use PSP data that may be inaccessible
  </thead>
 <tbody>
   <tr>
+   <td style="text-align:left;"> balanceGrowth </td>
+   <td style="text-align:left;"> logical </td>
+   <td style="text-align:left;"> FALSE </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> If `TRUE`, give all fitted species the same `growthcurve` (`sharedGrowthcurve`) and set each species' `mANPPproportion` so that K = `mANPPproportion` maxB^(1 - `growthcurve`) is the same for all (`balanceGrowthK`). Under LandR competition a small cohort grows with K, and any difference in K between species is winner-take-all, while the per-species fitted `growthcurve` values are statistically indistinguishable. maxB is the median over the species' rows of `speciesEcoregion`. `growthcurve` and `mANPPproportion` are then rounded to 3 decimals, not 2. Species that were not fitted are not changed. The fit of the new values to the PSP data is returned in `speciesBalanceCheck`, with a warning for species that are worse than their own best fit by more than 2 log-likelihood units. Default `FALSE` keeps the fitted values. </td>
+  </tr>
+  <tr>
    <td style="text-align:left;"> biomassModel </td>
    <td style="text-align:left;"> character </td>
    <td style="text-align:left;"> Lambert2005 </td>
@@ -516,6 +530,22 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> The arbitrary maximum biomass for the factorial simulations. This is a per-species maximum within a pixel </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> excludeBECzonesHybridSpruce </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> BWBS, SWB </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> BC BEC zones whose PSPs are NOT relabelled by `mergeHybridSprucePSP`: the boreal zones, where 'Picea glauca' is true white spruce. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> mergeHybridSprucePSP </td>
+   <td style="text-align:left;"> character </td>
+   <td style="text-align:left;"> engelmann </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Mirrors `LandR.mergeHybridSpruce`, and follows it by default. With 'engelmann', and the hybrid spruce merged into Pice_eng in `sppEquiv`, BC PSP records of 'Picea glauca' (how BC's interior hybrid-zone spruce is recorded) are relabelled 'Picea engelmannii x glauca' so they count as Pice_eng, except in the BEC zones of `excludeBECzonesHybridSpruce`. 'white' and NA do not relabel. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> minimumPlots </td>
@@ -580,6 +610,22 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> The minimum and maximum ages of the biomass-by-age curves used in fitting. It is generally recommended to keep this param under 200, given the low data availability of stands aged 200+, with some exceptions. For a closed interval, end with a 1, e.g. `c(31, 101)`. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> sharedGrowthcurve </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Only used if `balanceGrowth` is `TRUE`. The `growthcurve` given to all fitted species. `NA` uses the median of the species' unrounded fitted `growthcurve`. </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> targetK </td>
+   <td style="text-align:left;"> numeric </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> NA </td>
+   <td style="text-align:left;"> Only used if `balanceGrowth` is `TRUE`. The K = `mANPPproportion` maxB^(1 - `growthcurve`) given to all fitted species. `NA` uses the median over species of K computed with `sharedGrowthcurve` and each species' fitted (unrounded) `mANPPproportion`. </td>
   </tr>
   <tr>
    <td style="text-align:left;"> useHeight </td>
@@ -692,6 +738,11 @@ name.
    <td style="text-align:left;"> speciesEcoregion </td>
    <td style="text-align:left;"> data.table </td>
    <td style="text-align:left;"> The updated spatially-varying species traits table (see description for this object in inputs) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> speciesBalanceCheck </td>
+   <td style="text-align:left;"> data.table </td>
+   <td style="text-align:left;"> An empty `data.table` unless `P(sim)$balanceGrowth` is `TRUE`, when it has one row per fitted species: fitted and new `growthcurve` and `mANPPproportion`, the `maxB` used, the resulting `K`, and `deltaLL`, the log-likelihood units by which the new values fit the PSP data worse than the species' best fit (linearly interpolated on the factorial grid; `NA` outside the grid). </td>
   </tr>
   <tr>
    <td style="text-align:left;"> speciesGrowthCurves </td>
