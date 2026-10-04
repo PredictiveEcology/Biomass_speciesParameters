@@ -28,6 +28,18 @@ defineModule(sim, list(
     "ianmseddy/PSPclean@development(>= 1.0.0.9001)"
   ),
   parameters = rbind(
+    defineParameter("balanceGrowth", "logical", FALSE, NA, NA,
+                    desc = paste("If `TRUE`, give all fitted species the same `growthcurve` (`sharedGrowthcurve`) and set",
+                                 "each species' `mANPPproportion` so that K = `mANPPproportion` * maxB^(1 - `growthcurve`)",
+                                 "is the same for all (`balanceGrowthK`). Under LandR competition a small cohort grows",
+                                 "with K, and any difference in K between species is winner-take-all, while the",
+                                 "per-species fitted `growthcurve` values are statistically indistinguishable.",
+                                 "maxB is the median over the species' rows of `speciesEcoregion`.",
+                                 "`growthcurve` and `mANPPproportion` are then rounded to 3 decimals, not 2.",
+                                 "Species that were not fitted are not changed. The fit of the new values to the PSP data",
+                                 "is returned in `speciesBalanceCheck`, with a warning for species that are worse",
+                                 "than their own best fit by more than 2 log-likelihood units.",
+                                 "Default `FALSE` keeps the fitted values.")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
     defineParameter("landis", "logical", FALSE, NA, NA,
@@ -71,6 +83,13 @@ defineModule(sim, list(
                                  "It is generally recommended to keep this param under 200, given the low data",
                                  "availability of stands aged 200+, with some exceptions.",
                                  "For a closed interval, end with a 1, e.g. `c(31, 101)`.")),
+    defineParameter("sharedGrowthcurve", "numeric", NA, NA, NA,
+                    desc = paste("Only used if `balanceGrowth` is `TRUE`. The `growthcurve` given to all fitted species.",
+                                 "`NA` uses the median of the species' unrounded fitted `growthcurve`.")),
+    defineParameter("targetK", "numeric", NA, NA, NA,
+                    desc = paste("Only used if `balanceGrowth` is `TRUE`. The K = `mANPPproportion` * maxB^(1 - `growthcurve`)",
+                                 "given to all fitted species. `NA` uses the median over species of K computed with",
+                                 "`sharedGrowthcurve` and each species' fitted (unrounded) `mANPPproportion`.")),
     defineParameter("useHeight", "logical", TRUE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).",
                                  "DBH is used by itself when height is missing.")),
@@ -161,6 +180,12 @@ defineModule(sim, list(
     createsOutput("speciesEcoregion", "data.table",
                   desc = paste("The updated spatially-varying species traits table",
                                "(see description for this object in inputs)")),
+    createsOutput("speciesBalanceCheck", "data.table",
+                  desc = paste("An empty `data.table` unless `P(sim)$balanceGrowth` is `TRUE`, when it has one row per",
+                               "fitted species: fitted and new `growthcurve` and `mANPPproportion`, the `maxB` used, the",
+                               "resulting `K`, and `deltaLL`, the log-likelihood units by which the new values fit the PSP",
+                               "data worse than the species' best fit (linearly interpolated on the factorial grid;",
+                               "`NA` outside the grid).")),
     createsOutput("speciesGrowthCurves", "list",
                   desc = paste("list containing each species' non-linear model,",
                                "model data, and the unfiltered PSP data")),
@@ -222,6 +247,7 @@ Init <- function(sim) {
   ## keeps the default (non-LANDIS) path backwards compatible apart from these two empty placeholders.
   sim$speciesGrowthCurvesLandis <- data.table::data.table()
   sim$speciesGrowthCurvesPSP <- data.table::data.table()
+  sim$speciesBalanceCheck <- data.table::data.table()
 
   ## load factorial tables -------------------------------------------------------------------------
   ## These two tables are scratch for this event only: nothing after `Init` reads them. They are kept
@@ -397,6 +423,16 @@ Init <- function(sim) {
     suppressWarnings(Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
           filename = paste("LandR_VS_NLM_growthCurves")))
     sim$species <- modifiedSpeciesTables$best
+    if (isTRUE(P(sim)$balanceGrowth)) {
+      sim$speciesBalanceCheck <- balanceGrowthK(
+        fitted = modifiedSpeciesTables$bestUnrounded,
+        maxB = medianMaxB(sim$speciesEcoregion),
+        ll = modifiedSpeciesTables$llTable,
+        sharedGrowthcurve = P(sim)$sharedGrowthcurve,
+        targetK = P(sim)$targetK
+      )
+      sim$species <- applyBalancedTraits(sim$species, sim$speciesBalanceCheck)
+    }
     if (isTRUE(P(sim)$landis)) {
       ## LANDIS mode: expose the fitted LANDIS-version growth curves (BscaledNonLinear by species and
       ## standAge) and the PSP observations behind them, for LANDIS-II Biomass Succession inputs and the
