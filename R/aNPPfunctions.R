@@ -1,5 +1,7 @@
 prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong,
-                        useHeight, biomassModel, PSPperiod, minDBH) {
+                        useHeight, biomassModel, PSPperiod, minDBH, sppEquiv = NULL,
+                        mergeHybridSprucePSP = NA_character_, excludeBECzones = character(0),
+                        BECzones = NULL) {
   ## crop points to studyArea
   if (!is.null(studyAreaANPP)) {
     studyAreaANPP <- st_as_sf(studyAreaANPP) # in case SPDF
@@ -72,6 +74,13 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
   }
   # message(cli::col_yellow("No PSP biomass estimate possible for these species: "))
   # message(cli::col_yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
+
+  ## BC hybrid-zone "Picea glauca" -> the hybrid that sppEquiv merged into Pice_eng. After the
+  ## biomass calculation: biomass keeps the species' own equation, only the species grouping follows
+  if (!is.null(sppEquiv)) {
+    PSPmeasure <- relabelHybridSprucePSP(PSPmeasure, PSPgis, sppEquiv, mergeHybridSprucePSP,
+                                         excludeBECzones, BECzones, speciesCol = "Latin_full")
+  }
 
   #bad biomass estimate
   PSPmeasure <- PSPmeasure[biomass != 0]

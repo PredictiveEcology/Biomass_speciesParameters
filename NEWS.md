@@ -2,6 +2,7 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters 3.0.2.9000
 
+* BC interior (hybrid-zone) spruce PSPs are recorded as "Picea glauca", so they matched nothing, and were dropped, when the study area's `sppEquiv` has the hybrid spruce merged into Engelmann (`LandR.mergeHybridSpruce = "engelmann"`). New parameter `mergeHybridSprucePSP` (default: follow that option; NA or "white" for no relabel) relabels those BC records as "Picea engelmannii x glauca", so they count as `Pice_eng`. BC plots in the BEC zones of the new parameter `excludeBECzonesHybridSpruce` (default `BWBS`, `SWB`: boreal white spruce) are not relabelled. The BEC zones come from the new optional input `BECzonesBC`, else from the BC Data Catalogue (`bcdata`, added to `reqdPkgs`); if neither is available there is a warning and no relabel.
 * Missing packages in `reqdPkgs`: added `dplyr`.
 * New opt-in `balanceGrowth` (default `FALSE`, so nothing changes unless set), with `sharedGrowthcurve` and `targetK`: all fitted species get one `growthcurve`, and `mANPPproportion` is set so K = `mANPPproportion` * maxB^(1 - `growthcurve`) is equal across species, since under LandR competition any difference in K is winner-take-all while the per-species fitted `growthcurve` values are statistically indistinguishable. Both traits are then rounded to 3 decimals. The fit of the new values to the PSP data is returned in the new output `speciesBalanceCheck`, with a warning for species more than 2 log-likelihood units worse than their own best.
 

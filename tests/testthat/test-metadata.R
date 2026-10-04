@@ -17,7 +17,8 @@ test_that("inputs are the expected names and classes", {
   inputs <- stats::setNames(md$inputObjects$objectClass, md$inputObjects$objectName)
   expect_identical(
     inputs[order(names(inputs))],
-    c(cohortDataFactorial_path   = "fs_path",
+    c(BECzonesBC                 = "sf",
+      cohortDataFactorial_path   = "fs_path",
       PSPgis_sppParams           = "sf",
       PSPmeasure_sppParams       = "data.table",
       PSPplot_sppParams          = "data.table",
@@ -50,10 +51,11 @@ test_that("parameters are the expected names", {
     sort(md$parameters$paramName),
     sort(c(".plotInitialTime", ".plotInterval", ".plots", ".saveInitialTime",
            ".saveInterval", ".studyAreaName", ".useCache", ".useParallel",
-           "balanceGrowth", "biomassModel", "landis", "maxBInFactorial", "minDBH",
-           "minimumPlots", "PSPdataTypes", "PSPperiod", "quantileAgeSubset",
-           "sharedGrowthcurve", "speciesFittingApproach", "sppEquivCol",
-           "standAgesForFitting", "targetK", "useHeight"))
+           "balanceGrowth", "biomassModel", "excludeBECzonesHybridSpruce", "landis",
+           "maxBInFactorial", "mergeHybridSprucePSP", "minDBH", "minimumPlots",
+           "PSPdataTypes", "PSPperiod", "quantileAgeSubset", "sharedGrowthcurve",
+           "speciesFittingApproach", "sppEquivCol", "standAgesForFitting", "targetK",
+           "useHeight"))
   )
 })
 

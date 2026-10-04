@@ -19,7 +19,7 @@ defineModule(sim, list(
   loadOrder = list(after = c("Biomass_speciesFactorial", "Biomass_borealDataPrep"),
                    before = c("Biomass_core")),
   reqdPkgs = list(
-    "arrow", "cli", "data.table", "dplyr", "fpCompare", "fs", "ggplot2", "gridExtra",
+    "arrow", "bcdata", "cli", "data.table", "dplyr", "fpCompare", "fs", "ggplot2", "gridExtra",
     "mgcv", "nlme", "purrr", "robustbase", "sf",
     "reproducible (>= 2.1.0)",
     "SpaDES.core (>= 2.1.4)",
@@ -52,6 +52,15 @@ defineModule(sim, list(
     defineParameter("maxBInFactorial", "integer", 5000L, NA, NA,
                     desc = paste("The arbitrary maximum biomass for the factorial simulations.",
                                  "This is a per-species maximum within a pixel")),
+    defineParameter("excludeBECzonesHybridSpruce", "character", c("BWBS", "SWB"), NA, NA,
+                    desc = paste("BC BEC zones whose PSPs are NOT relabelled by `mergeHybridSprucePSP`:",
+                                 "the boreal zones, where 'Picea glauca' is true white spruce.")),
+    defineParameter("mergeHybridSprucePSP", "character", getOption("LandR.mergeHybridSpruce", "engelmann"), NA, NA,
+                    desc = paste("Mirrors `LandR.mergeHybridSpruce`, and follows it by default. With 'engelmann',",
+                                 "and the hybrid spruce merged into Pice_eng in `sppEquiv`, BC PSP records of",
+                                 "'Picea glauca' (how BC's interior hybrid-zone spruce is recorded) are relabelled",
+                                 "'Picea engelmannii x glauca' so they count as Pice_eng, except in the BEC zones",
+                                 "of `excludeBECzonesHybridSpruce`. 'white' and NA do not relabel.")),
     defineParameter("minimumPlots", "numeric", 50, 10, NA,
                     desc = paste("Minimum number of PSP plots per species")),
     defineParameter("minDBH", "integer", 0L, 0L, NA,
@@ -134,6 +143,12 @@ defineModule(sim, list(
                               "Must contain columns `MeasureID`, `MeasureYear`, `OrigPlotID1`, and `baseSA`,",
                               "the latter being stand age at year of first measurement"),
                  sourceURL = "https://drive.google.com/file/d/1LmOaEtCZ6EBeIlAm6ttfLqBqQnQu4Ca7/view?usp=sharing"),
+    expectsInput("BECzonesBC", "sf",
+                 desc = paste("Optional. BC BEC zone polygons, with a `ZONE` column, used to exclude the zones of",
+                              "`excludeBECzonesHybridSpruce` from the hybrid-spruce relabel of PSPs.",
+                              "If not supplied, they are fetched from the BC Data Catalogue",
+                              "(WHSE_FOREST_VEGETATION.BEC_BIOGEOCLIMATIC_POLY); if that fails there is no relabel."),
+                 sourceURL = NA),
     expectsInput("PSPgis_sppParams", "sf",
                  desc = paste("Plot location `sf` object. Defaults to PSP data stripped of real `plotID`s/location.",
                               "Must include field `OrigPlotID1` for joining to `PSPplot` object"),
@@ -356,7 +371,10 @@ Init <- function(sim) {
                        PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
                        PSPplot = sim$PSPplot_sppParams, useHeight = P(sim)$useHeight, 
                        biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH, 
-                       sppEquivLong = biomassKey) |>
+                       sppEquivLong = biomassKey, sppEquiv = sim$sppEquiv,
+                       mergeHybridSprucePSP = P(sim)$mergeHybridSprucePSP,
+                       excludeBECzones = P(sim)$excludeBECzonesHybridSpruce,
+                       BECzones = sim$BECzonesBC) |>
       Cache(userTags = c(currentModule(sim), "prepPSPaNPP"))
 
     message("building growth curves") # this cache call takes several minutes to process..
