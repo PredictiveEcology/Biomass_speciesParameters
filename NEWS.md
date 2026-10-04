@@ -1,6 +1,6 @@
 Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/issues>
 
-# Biomass_speciesParameters 3.0.2.9001
+# Biomass_speciesParameters 3.0.2.9002
 
 * Fixed two bugs in the 3.0.2.9001 additions, found in the first FIIS run with them. `relabelHybridSprucePSP` matched plots by the factor codes of `OrigPlotID1` (PSPclean returns a factor) instead of by name, so almost no BC plot got its BEC zone and none was relabelled. `medianMaxB` failed with `balanceGrowth = TRUE` when `maxB` is integer, because `median()` returns an integer for an odd number of rows and a double for an even number.
 * BC interior (hybrid-zone) spruce PSPs are recorded as "Picea glauca", so they matched nothing, and were dropped, when the study area's `sppEquiv` has the hybrid spruce merged into Engelmann (`LandR.mergeHybridSpruce = "engelmann"`). New parameter `mergeHybridSprucePSP` (default: follow that option; NA or "white" for no relabel) relabels those BC records as "Picea engelmannii x glauca", so they count as `Pice_eng`. BC plots in the BEC zones of the new parameter `excludeBECzonesHybridSpruce` (default `BWBS`, `SWB`: boreal white spruce) are not relabelled. The BEC zones come from the new optional input `BECzonesBC`, else from the BC Data Catalogue (`bcdata`, added to `reqdPkgs`); if neither is available there is a warning and no relabel.
