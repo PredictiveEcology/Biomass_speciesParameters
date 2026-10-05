@@ -11,7 +11,7 @@ defineModule(sim, list(
     person(c("Ceres"), "Barros", email = "ceres.barros@ubc.ca", role = c("ctb"))
   ),
   childModules = character(0),
-  version = list(Biomass_speciesParameters = "3.0.2.9002"),
+  version = list(Biomass_speciesParameters = "3.0.2.9003"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
