@@ -68,9 +68,12 @@ balanceGrowthK <- function(fitted, maxB, ll, sharedGrowthcurve = NA_real_, targe
                                 growthcurveFitted = fitted$growthcurve,
                                 mANPPproportionFitted = fitted$mANPPproportion)
   chk[, maxB := unname(maxB[species])]
+  ## a fitted species with no speciesEcoregion row (e.g. below the ecoregion support threshold
+  ## everywhere) cannot establish, so it is left out of the balance and keeps its fitted traits
   if (anyNA(chk$maxB)) {
-    stop("balanceGrowth: no maxB in speciesEcoregion for fitted species ",
-         paste(chk$species[is.na(chk$maxB)], collapse = ", "))
+    message("balanceGrowth: not in speciesEcoregion, so not balanced, traits unchanged: ",
+            paste(chk$species[is.na(chk$maxB)], collapse = ", "))
+    chk <- chk[!is.na(maxB)]
   }
   if (is.na(sharedGrowthcurve)) sharedGrowthcurve <- stats::median(chk$growthcurveFitted)
   if (is.na(targetK)) {

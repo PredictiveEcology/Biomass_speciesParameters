@@ -44,6 +44,17 @@ test_that("applyBalancedTraits leaves unfitted species untouched and reports the
   expect_equal(out[match(chk$species, species)]$mANPPproportion, chk$mANPPproportionNew)
 })
 
+test_that("regression: a fitted species missing from speciesEcoregion is left out, not an error", {
+  ## stopped TSA04, TSA08, ... with "no maxB in speciesEcoregion for fitted species Betu_pap"
+  noC <- maxB[c("A", "B", "D")]
+  expect_message(chk <- suppressWarnings(balanceGrowthK(fitted, noC, ll)), "not in speciesEcoregion.*C")
+  expect_equal(chk$species, c("A", "B"))
+  expect_equal(chk$growthcurveNew, rep(0.71, 2))             # median over A and B only
+  sp <- data.table::data.table(species = c("A", "B", "C"), growthcurve = c(1, 2, 3), mANPPproportion = c(9, 8, 7))
+  out <- suppressMessages(applyBalancedTraits(sp, chk))
+  expect_equal(out[species == "C"], sp[species == "C"])
+})
+
 test_that("balanceGrowthK says what it did for each species", {
   expect_message(balanceGrowthK(fitted, maxB, ll), "balanceGrowth B: growthcurve 0.720 -> 0.720, mANPPproportion 4.000 -> ")
 })
