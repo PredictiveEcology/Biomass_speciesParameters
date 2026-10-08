@@ -1,52 +1,59 @@
-prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
-                        useHeight, biomassModel, PSPperiod, minDBH) {
-  #Crop points to studyArea
+prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong,
+                        useHeight, biomassModel, PSPperiod, minDBH, sppEquiv = NULL,
+                        mergeHybridSprucePSP = NA_character_, excludeBECzones = character(0),
+                        BECzones = NULL) {
+  ## crop points to studyArea
   if (!is.null(studyAreaANPP)) {
     studyAreaANPP <- st_as_sf(studyAreaANPP) # in case SPDF
     studyAreaANPP <- st_transform(x = studyAreaANPP, crs = st_crs(PSPgis))
-    message(yellow("Filtering PSPs for ANPP to study Area..."))
-    PSP_sa <- PSPgis[studyAreaANPP,] %>%
-      setkey(., OrigPlotID1)
-    message(yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
-
-    #Filter other PSP datasets to those in study Area
-    PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
-    PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1,]
+    message(cli::col_yellow("Filtering PSPs for ANPP to study Area..."))
+    PSP_sa <- PSPgis[studyAreaANPP,] |>
+      setkey(OrigPlotID1)
+    message(cli::col_yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
+    if (nrow(PSP_sa) == 0) {
+      stop("subsetting PSPs to those within studyAreaANPP appears to ",
+      "have removed all of them...please review")
+    }
+    ## filter other PSP datasets to those in study Area
+    PSPmeasure <- PSPmeasure[OrigPlotID1 %in% PSP_sa$OrigPlotID1, ]
+    PSPplot <- PSPplot[OrigPlotID1 %in% PSP_sa$OrigPlotID1, ]
   }
 
-  #Filter data by study period
-  message(yellow("Filtering PSPs for ANPP by study period..."))
-  PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) &
-                             MeasureYear < max(PSPperiod),]
-  PSPplot <- PSPplot[MeasureYear > min(PSPperiod) &
-                       MeasureYear < max(PSPperiod),]
+  ## filter data by study period
+  message(cli::col_yellow("Filtering PSPs for ANPP by study period..."))
+  PSPmeasure <- PSPmeasure[MeasureYear > min(PSPperiod) & MeasureYear < max(PSPperiod), ]
+  PSPplot <- PSPplot[MeasureYear > min(PSPperiod) & MeasureYear < max(PSPperiod), ]
+  PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear", "source")]
 
-  PSPmeasure <- PSPmeasure[PSPplot, on = c("MeasureID", "OrigPlotID1", "MeasureYear")]
+  ## TODO: this should be parameterized - besides its tree density you want not the raw count
+  ## filter by > 30 trees at first measurement (P) to ensure forest.
+  forestPlots <- PSPmeasure[MeasureYear == baseYear, .(measures = .N), OrigPlotID1] %>%
+    .[measures >= 30, ]
 
-  #Filter by > 30 trees at first measurement (P) to ensure forest.
-  forestPlots <- PSPmeasure[, .(measures = .N), OrigPlotID1] %>%
-    .[measures >= 30,]
+  PSPmeasure <- PSPmeasure[OrigPlotID1 %in% forestPlots$OrigPlotID1, ]
+  PSPplot <- PSPplot[OrigPlotID1 %in% PSPmeasure$OrigPlotID1, ]
 
-  PSPmeasure <- PSPmeasure[OrigPlotID1 %in% forestPlots$OrigPlotID1,]
-  PSPplot <- PSPplot[OrigPlotID1 %in% PSPmeasure$OrigPlotID1,]
-
-  #Restrict to trees >= ## DBH. Maybe necessary to get rid of small trees when they are inconsistently recorded
+  ## Restrict to trees >= ## DBH. Maybe necessary to get rid of small trees when they are inconsistently recorded
   PSPmeasure <- PSPmeasure[DBH >= minDBH,]
-  #decide what to do about above line and stem/density. PES approach is to just fix the data...
+  ## decide what to do about above line and stem/density. PES approach is to just fix the data...
+  
+  #get column for estimating biomass
+  PSPmeasure <- sppEquivLong[PSPmeasure, on = c("Latin_full" = "Species")]
+  PSPmeasure[is.na(SpBiomassEq), SpBiomassEq := ""] #biomassCalculation errors with NA
 
   #Calculate biomass
   #Height must be calculated separately if there are NA heights -
-  if (useHeight) {
+  if (useHeight & !is.null(PSPmeasure$Height)) {
     PSPmeasureNoHeight <- PSPmeasure[is.na(Height)]
     PSPmeasureHeight <- PSPmeasure[!is.na(Height)]
-    tempOut <- biomassCalculation(species = PSPmeasureHeight$newSpeciesName,
+    tempOut <- biomassCalculation(species = PSPmeasureHeight$SpBiomassEq,
                                   DBH = PSPmeasureHeight$DBH,
                                   height = PSPmeasureHeight$Height,
                                   includeHeight = TRUE,
                                   equationSource = biomassModel)
-    #check if height is missing, join if so -- function fails if data.table is empty
+    ## check if height is missing, join if so -- function fails if data.table is empty
     if (nrow(PSPmeasureNoHeight) > 0) {
-      tempOutNoHeight <- biomassCalculation(species = PSPmeasureNoHeight$newSpeciesName,
+      tempOutNoHeight <- biomassCalculation(species = PSPmeasureNoHeight$SpBiomassEq,
                                             DBH = PSPmeasureNoHeight$DBH,
                                             height = PSPmeasureNoHeight$Height,
                                             includeHeight = FALSE,
@@ -57,34 +64,35 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
     }
     PSPmeasure[, biomass := tempOut$biomass]
     setkey(PSPmeasure, MeasureID, OrigPlotID1, TreeNumber)
-
   } else {
-    tempOut <- biomassCalculation(species = PSPmeasure$newSpeciesName,
+    tempOut <- biomassCalculation(species = PSPmeasure$SpBiomassEq,
                                   DBH = PSPmeasure$DBH,
                                   height = PSPmeasure$Height,
                                   includeHeight = useHeight,
                                   equationSource = biomassModel)
     PSPmeasure$biomass <- tempOut$biomass
   }
-  message(yellow("No PSP biomass estimate possible for these species: "))
-  message(crayon::yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
+  # message(cli::col_yellow("No PSP biomass estimate possible for these species: "))
+  # message(cli::col_yellow(paste(unique(tempOut$missedSpecies), collapse = ", ")))
 
-  #clean up - added a catch for incorrect plotSize affecting stem density
-  densities <- PSPmeasure[, .(.N, PlotSize = mean(PlotSize)), MeasureID]
-  densities[, density := N/PlotSize]
-  junkPlots <- densities[density > 4000]$MeasureID
-  PSPmeasure <- PSPmeasure[!MeasureID %in% junkPlots]
+  ## BC hybrid-zone "Picea glauca" -> the hybrid that sppEquiv merged into Pice_eng. After the
+  ## biomass calculation: biomass keeps the species' own equation, only the species grouping follows
+  if (!is.null(sppEquiv)) {
+    PSPmeasure <- relabelHybridSprucePSP(PSPmeasure, PSPgis, sppEquiv, mergeHybridSprucePSP,
+                                         excludeBECzones, BECzones, speciesCol = "Latin_full")
+  }
 
   #bad biomass estimate
   PSPmeasure <- PSPmeasure[biomass != 0]
-  PSPmeasure$newSpeciesName <- as.factor(PSPmeasure$newSpeciesName)
+  #keep objects as small as possible
+  PSPmeasure[, c("status", "first_tree_year", "last_tree_year", "diff_dbh") := NULL]
 
-  #add stand age estimate
+  ## add stand age estimate
   PSPmeasure[, standAge := baseSA + MeasureYear - baseYear]
   PSPmeasure <- PSPmeasure[standAge > 0]
   PSPmeasure <- PSPmeasure[!is.na(biomass)]
 
-  #divide biomass by 10 to convert kg/ha to g/m2, the LandR unit
+  ## divide biomass by 10 to convert kg/ha to g/m2, the LandR unit
   PSPmeasure[, biomass := biomass/10]
 
   return(PSPmeasure)
@@ -92,10 +100,11 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot,
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                               minimumSampleSize, speciesFittingApproach = "focal") {
-  #Must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
+  ## must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   if (!isTRUE(speciesCol %in% colnames(sppEquiv))) {
     stop("sppEquivCol not in sppEquiv")
   }
+
   gcSpecies <- speciesFittingApproach
   if (identical(speciesFittingApproach, "single")) {
     gcSpecies <- unique(sppEquiv[[speciesCol]])
@@ -103,32 +112,45 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
   gcSpecies <- setNames(nm = gcSpecies)
 
   SpPSP <- copy(PSPdata)
+  #SpPSP has SpBiomassEq, Latin_full and PSP
+  sppEquivShort <- unique(sppEquiv[, .SD, .SDcols = c("Latin_full", speciesCol)])
+  
+  SpPSP[, speciesTemp := LandR::equivalentName(value = Latin_full, df = sppEquiv,
+                                               column = speciesCol)]
+  #probably do setnames, Species, and make things NULL
+  
+  
+  
+  
   SpPSP[, "areaAdjustedB" := biomass/PlotSize]
   SpPSP  <- SpPSP[, "plotBiomass" := sum(areaAdjustedB), .(MeasureID)]
-  SpPSP[, "spPlotBiomass" := sum(areaAdjustedB), .(MeasureID, newSpeciesName)]
+  SpPSP[, "spPlotBiomass" := sum(areaAdjustedB), .(MeasureID, speciesTemp)]
   SpPSP[, "spDom" := spPlotBiomass/plotBiomass, .(MeasureID)]
-  SpPSP[, speciesTemp := equivalentName(value = newSpeciesName, df = sppEquiv,
-                                       column = speciesCol, searchColumn = "PSP")]
-  whNA <- is.na(SpPSP$speciesTemp)
-  message(crayon::yellow("Removing ", paste(unique(SpPSP$newSpeciesName[whNA]), collapse = ", ")))
-  message(crayon::yellow("   ... because they are not in sppEquiv"))
-  SpPSP <- SpPSP[!whNA]
-  SpPSP <- SpPSP[newSpeciesName %in% sppEquiv[["PSP"]]]
-  freq <- SpPSP[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
 
-  if (isTRUE(speciesFittingApproach == "pairwise") || isTRUE(speciesFittingApproach == "focal")) {
-    #subset to species-of-interest using relative biomass (dominance)
+  #remove these AFTER calculating stand biomass and dominance
+  whNA <- is.na(SpPSP$speciesTemp)
+  if (any(whNA)) {
+    message(cli::col_yellow("Removing ", paste(unique(SpPSP$Latin_full[whNA]), collapse = ", ")))
+    message(cli::col_yellow("   ... because they are not in sppEquiv"))
+    SpPSP <- SpPSP[!whNA]
+  }
+  SpPSP <- SpPSP[Latin_full %in% sppEquiv[["Latin_full"]]]
+  freq <- SpPSP[, .(N = .N, spDom = spDom[1]), .(speciesTemp, MeasureID)]
+  SpPSP[, c("SpBiomassEq", "source", "PSP", "Latin_full", "Elevation") := NULL]
+  SpPSP[, speciesTemp := as.factor(speciesTemp)]
+  if (speciesFittingApproach %in% c("focal", "pairwise")) {
+    ## subset to species-of-interest using relative biomass (dominance)
     freq <- freq[spDom > 0.2] # minimum 20% dominance for pairwise or focal
 
     speciesComp <- freq[, .(numSp = .N, spComp = paste(speciesTemp, collapse = "__")), by = "MeasureID"]
-    # Pick only 2 species plots when using "pairwise"
+    ## Pick only 2 species plots when using "pairwise"
     if (isTRUE(speciesFittingApproach == "pairwise")) {
       speciesComp <- speciesComp[numSp == 2]
     }
     speciesCompN <- speciesComp[, .N, by = "spComp"]
 
-    gcSpecies1 <- unique(sppEquiv[[speciesCol]]) %>% setNames(nm = .)
-    gcSpecies2 <- unique(speciesComp$spComp) %>% setNames(nm = .)
+    gcSpecies1 <- unique(sppEquiv[[speciesCol]]) |> setNames(nm = _)
+    gcSpecies2 <- unique(speciesComp$spComp) |> setNames(nm = _)
     speciesForSplit <- if (isTRUE(speciesFittingApproach == "pairwise")) gcSpecies2 else gcSpecies1
     speciesCompListAll <- split(speciesComp, speciesComp$spComp)
     speciesCompList <- lapply(speciesForSplit, function(spName) {
@@ -143,21 +165,29 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
       })
     }
   } else {
-    #subset to species-of-interest using relative biomass (dominance)
+    ## subset to species-of-interest using relative biomass (dominance)
     SpPSP <- SpPSP[spDom > 0.5] # minimum 50% dominance for single
     SpPSPList <- split(SpPSP, SpPSP$speciesTemp)
   }
-
-  speciesForCurves <- names(SpPSPList) %>% setNames(nm = .)
-  message(crayon::yellow("-----------------------------------------------"))
-  message(crayon::yellow("building growth curves from PSP data: "))
-  outputGCs <- Map(species = speciesForCurves, buildModels, psp = SpPSPList,
-                   MoreArgs = list(speciesEquiv = sppEquiv, sppCol = speciesCol,
-                                   minSize = minimumSampleSize, q = quantileAgeSubset))
+  
+  speciesForCurves <- names(SpPSPList) |> setNames(nm = _)
+  message(cli::col_yellow("-----------------------------------------------"))
+  message(cli::col_yellow("building growth curves from PSP data: "))
+  outputGCs <- Map(
+    f = buildModels,
+    species = speciesForCurves,
+    psp = SpPSPList,
+    MoreArgs = list(
+      speciesEquiv = sppEquiv,
+      sppCol = speciesCol,
+      minSize = minimumSampleSize,
+      q = quantileAgeSubset
+    )
+  )
 
   if (isTRUE("all" == speciesFittingApproach)) {
     outputGCs <- lapply(gcSpecies1, function(x) {
-      matchingSpecies <- equivalentName(x, sppEquiv, column = "PSP")
+      matchingSpecies <- LandR::equivalentName(x, sppEquiv, column = "PSP")
       ogc <- Copy(outputGCs[[1]])
       ogc
     })
@@ -179,27 +209,36 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   set(setDT(factorialTraits), NULL, "Sp", gsub(".+_(Sp.)", "\\1", factorialTraits$species, perl = TRUE))
 
   factorialTraitsThatVary <- sapply(factorialTraits, function(x) length(unique(x)) > 1)
-  factorialTraitsThatVary <- names(factorialTraitsThatVary)[factorialTraitsThatVary]
+  #this must include longevity even if it does not vary
+  factorialTraitsThatVary <- unique(c(names(factorialTraitsThatVary)[factorialTraitsThatVary], 
+                                    "longevity"))
   factorialTraitsVarying <- factorialTraits[, ..factorialTraitsThatVary]
   rm(factorialTraits)
   GCtrans <- purrr::transpose(GCs)
   originalData <- rbindlist(GCtrans$originalData, idcol = "Pair")
 
-  factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, "Sp")]
+  startsWithLetter <- ifelse(approach == "single", "A", "Sp")
+  #Sp beginning with A are numbered A1-AN, where N = the factorial of species traits
+  #these were not grown with competition, unlike the "Sp1/Sp2" paired groups
+
+  factorialBiomass <- factorialBiomass[startsWith(factorialBiomass$Sp, startsWithLetter)]
+  if (startsWithLetter == "A") {factorialBiomass[, Sp := "Sp1"]}
   gc() #these objects can be enormous - recommend gc
 
   ## join with inflationFactorKey
   suppressWarnings(set(inflationFactorKey, NULL, "species", NULL))
   tempTraits <- copy(factorialTraitsVarying)
+  #do not hard-code join cols in case they do not vary
+  inflationFactorKey[, pixelGroup := NULL]
   tempTraits <- inflationFactorKey[tempTraits,
-                                   on = c("growthcurve", "mortalityshape",
-                                          "longevity", "mANPPproportion")]
+                                   on = intersect(names(tempTraits), names(inflationFactorKey))]
   tempTraits <- tempTraits[, .(speciesCode, inflationFactor)]
   factorialBiomass <- tempTraits[factorialBiomass, on = "speciesCode"]
 
-  ## Take only 2-cohort pixels -- they will start with Sp
+  ## Take only 2-cohort pixels -- they will start with Sp -- unless fitting single
   factorialTraitsVarying <- factorialTraitsVarying[startsWith(
-    factorialTraitsVarying$Sp, "Sp")]
+    factorialTraitsVarying$Sp, startsWithLetter)]
+  if (startsWithLetter == "A") {factorialTraitsVarying[, Sp := "Sp1"]}
 
   setnames(factorialBiomass, "age", "standAge")
 
@@ -215,7 +254,6 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   }
   fbAges <- seq(1, max(factorialTraitsVarying$longevity), fbAgeSample[2] - fbAgeSample[1])
   rm(fbAgeSample)
-
   outputTraits <- Map(name = species, GC = GCs, f = editSpeciesTraits,
                       MoreArgs = list(traits = speciesTable, fT = factorialTraitsVarying, fB = factorialBiomass,
                                        speciesEquiv = sppEquiv, sppCol = sppEquivCol, standAge = fbAges,
@@ -226,37 +264,30 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   outputTraitsT <- purrr::transpose(outputTraits)
   fullDataAll <- rbindlist(outputTraitsT$fullData, idcol = "Pair")
   newTraits <- rbindlist(outputTraitsT$bestTraits, idcol = "Pair")
+  newTraitsAll <- rbindlist(outputTraitsT$bestTraitsAll, idcol = "Pair")
   llAll <- rbindlist(outputTraitsT$ll, idcol = "Pair")
   rm(GCtrans, factorialBiomass, factorialTraitsVarying)
   gc()
-  ## limit best traits to only those that are nearest to longevity provided in SpeciesTable
-  ## Take next higher longevity (the -Inf in the rolling joing, on the "last" join column i.e., longevity)
-  # set(setDT(speciesTable), NULL, "longevityOrig", speciesTable$longevity)
-  suppressWarnings(set(setDT(newTraits), NULL, "longevityOrigFac", newTraits$longevity))
-
-  bt2 <- newTraits[speciesTable[, c("species", "longevity")],
-                   on = c("species", "longevity"), roll = -Inf]
-  bt2[, longevity := longevityOrigFac]
-  bt2 <- unique(bt2[, c("species", "longevity")], by = c("species"))
-  bt1 <- newTraits[speciesTable[, c("species", "longevity")],
-                   on = c("species", "longevity"), roll = Inf]
-  # bt1 <- newTraits[speciesTable[, c("species", "longevity", "longevityOrig")],
-  bt1[, longevity := longevityOrigFac]
-  bt1 <- unique(bt1[, c("species", "longevity")], by = c("species"))
-  speciesTableNew <- na.omit(rbindlist(list(bt1, bt2))  )
-  newTraits <- newTraits[speciesTableNew, on = c("species", "longevity")]
+  newTraits <- limitToSpeciesLongevity(newTraits, speciesTable)
+  llTable <- limitToSpeciesLongevity(newTraitsAll, speciesTable)[, c("species", "growthcurve", "mANPPproportion",
+                                                                    "llNonLinDelta")]
+  rm(newTraitsAll)
 
   ## Collapse new traits and replace old traits
   newTraits[, AICWeights := exp( -0.5 * llNonLinDelta)]
   newTraits[, AICWeightsStd := AICWeights/sum(AICWeights), by = "species"]
 
   ## Showing species-level averages -- this is not assigned to object
-  bestWeighted <- newTraits[, .(growthcurve = round(sum(AICWeightsStd * growthcurve), 2),
+  bestWeighted <- newTraits[, .(growthcurve = sum(AICWeightsStd * growthcurve),
                                 longevity = round(sum(AICWeightsStd * longevity), 0),
                                 mortalityshape = round(sum(AICWeightsStd * mortalityshape), 0),
-                                mANPPproportion = round(sum(AICWeightsStd * mANPPproportion), 3),
+                                mANPPproportion = sum(AICWeightsStd * mANPPproportion),
                                 inflationFactor = round(sum(AICWeightsStd * inflationFactor), 3)),
                             by = "species"]
+  ## the unrounded weighted fits, for `balanceGrowth`
+  bestUnrounded <- bestWeighted[, c("species", "growthcurve", "mANPPproportion")]
+  set(bestWeighted, NULL, "growthcurve", round(bestWeighted$growthcurve, 2))
+  set(bestWeighted, NULL, "mANPPproportion", round(bestWeighted$mANPPproportion, 3))
   speciesTable <- copy(speciesTable)
   bestWeighted <- speciesTable[match(bestWeighted$species, species),
                                c(names(bestWeighted)) := bestWeighted]
@@ -272,25 +303,49 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   #                        predNonLinear = mean(predNonLinear)),
   #                    c("species", "standAge", "Pair")]
   # rm(fullDataAll)
-  ymaxes <- max(bestIndCurves$BscaledNonLinear, bestIndCurves$predNonLinear)
+  ymaxes <- max(bestIndCurves$BscaledNonLinear, bestIndCurves$predNonLinear) * 1.05
 
-  gg <- ggplot(bestIndCurves, aes(standAge, BscaledNonLinear, colour = species)) +
-    geom_line(size = 2) +
-    geom_point(data = originalData, aes(standAge, biomass, colour = speciesTemp), size = 0.25, alpha = 0.3) +
-    geom_line(size = 2, aes(standAge, predNonLinear, col = species), lty = "dashed") +
+  gg <- ggplot(bestIndCurves, aes(x = standAge, colour = species)) +
+    geom_point(data = originalData, aes(standAge, biomass, colour = speciesTemp),
+               size = 0.25, alpha = 0.3) +
+    geom_line(aes(y = BscaledNonLinear, linetype = "LandR"), size = 2) +
+    geom_line(aes(y = predNonLinear, linetype = "Non-Linear"), size = 2) +
+    scale_linetype_manual(name = "Curve", values = c("LandR" = "solid", "Non-Linear" = "twodash")) +
+    guides(linetype = guide_legend(override.aes = list(size = 1.2, colour = "black", lwd = 1))) +
     facet_wrap(~ Pair, nrow = ceiling(sqrt(length(outputTraits))), scales = "fixed") +
     xlim(c(0, max(bestIndCurves$standAge))) + # ggplot2::scale_y_log() +
     ylim(c(0, ymaxes)) +
-    ylab(label = "biomass") +
-    xlab(label = "stand age") +
-    ggtitle("Comparing best LandR curves (solid) with best Non-Linear fit (dashed)") +
+    labs( y = "Biomass", x = "Stand Age", colour = "Species") +
+    ggtitle("Comparing best LandR and Non-linear curves") +
     theme_bw()
 
-  return(list(best = bestWeighted, gg = gg))
+  ## `landisCurves` (bestIndCurves): the per-species fitted curves -- `BscaledNonLinear` is the
+  ## LANDIS-version growth curve, `predNonLinear` the Chapman-Richards fit -- by species and standAge.
+  ## `psp` (originalData): the PSP observations used for the fits (`biomass` by `standAge` and species,
+  ## with `OrigPlotID1` for joining to plot locations / ecoregion). Both surfaced for the module's LANDIS
+  ## mode (`P(sim)$landis`); harmless otherwise.
+  return(list(best = bestWeighted, bestUnrounded = bestUnrounded, llTable = llTable,
+              gg = gg, landisCurves = bestIndCurves, psp = originalData))
 }
 
-buildModels <- function(species, psp, speciesEquiv,
-                       sppCol, minSize, q) {
+## Limit traits to those nearest to the longevity provided in the species table
+limitToSpeciesLongevity <- function(newTraits, speciesTable) {
+  ## Take next higher longevity (the -Inf in the rolling joing, on the "last" join column i.e., longevity)
+  suppressWarnings(set(setDT(newTraits), NULL, "longevityOrigFac", newTraits$longevity))
+
+  bt2 <- newTraits[speciesTable[, c("species", "longevity")],
+                   on = c("species", "longevity"), roll = -Inf]
+  bt2[, longevity := longevityOrigFac]
+  bt2 <- unique(bt2[, c("species", "longevity")], by = c("species"))
+  bt1 <- newTraits[speciesTable[, c("species", "longevity")],
+                   on = c("species", "longevity"), roll = Inf]
+  bt1[, longevity := longevityOrigFac]
+  bt1 <- unique(bt1[, c("species", "longevity")], by = c("species"))
+  speciesTableNew <- na.omit(rbindlist(list(bt1, bt2)))
+  newTraits[speciesTableNew, on = c("species", "longevity")]
+}
+
+buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
   if (identical(species, "all")) {
     q <- mean(unlist(q))
   }
@@ -307,14 +362,19 @@ buildModels <- function(species, psp, speciesEquiv,
   if (nrow(standData) < minSize) {
     GC <- "insufficient data"
     names(GC) <- species
+
+    warning("insufficient PSP data to estimate traits:\n",
+            "(have ", nrow(standData), " rows; requested minimum ", minSize, " rows)")
+
     return(GC)
   }
+
   ## By default removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
   standData <- standData[standAge < quantile(standData$standAge, probs = q/100),]
   simulatedData <- simulateYoungStands(cohortData = standData, N = 50)
   simData <- rbindlist(list(standData, simulatedData), fill = TRUE)
 
-  ## This weights the real data by spDominance, without distorting the mean of fake data. Weights should center around 1 for gamm I think
+  ## This weights the real data by spDominance, without distorting the mean of fake data.
   Realweights <- standData$spDom/mean(standData$spDom)
   Fakeweights <- rep(1, times = nrow(simulatedData))
   simData$Weights <- c(Realweights, Fakeweights)
@@ -373,10 +433,10 @@ buildModels <- function(species, psp, speciesEquiv,
   #   k <- 4
   #   p <- 0.3
   #   points(col = "green", standAge, eval(parse(text = models[[model]])[[1]][[3]]), pch = 19, cex = 0.5)
-  species <- as.character(species) %>% setNames(nm = .)
-  speciesForFits <- setdiff(species, "Other") %>% setNames(nm = .)
+  species <- as.character(species) |> setNames(nm = _)
+  speciesForFits <- setdiff(species, "Other") |> setNames(nm = _)
   speciesForFitsMessage <- paste(speciesForFits, collapse = ", ")
-  message(crayon::yellow(
+  message(cli::col_yellow(
     speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
   ))
   nlsouts <- lapply(speciesForFits, function(sp, spFitData = simData2) {
@@ -426,6 +486,7 @@ buildModels <- function(species, psp, speciesEquiv,
 
 editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
                               standAge, standAgesForFitting = c(0, 150), approach) {
+
   nameOrig <- name
   if (grepl("__", name)) {
     name <- strsplit(name, "__")[[1]]
@@ -457,9 +518,13 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
     }
   }
 
+  #under focal or pairwise, there will be two species in original data
   maxBiomass <- GC$originalData[, .(maxBiomass = max(biomass)), "speciesTemp"]
   setorderv(maxBiomass, "maxBiomass", order = -1L)
+
   set(maxBiomass, NULL, "Sp", paste0("Sp", 1:nrow(maxBiomass)))
+  # match whether species of interest is Sp1 or Sp2
+  # (the name is dependent on which species had higher max biomass)
   SpNames <- maxBiomass$Sp[match(names(GC$NonLinearModel), maxBiomass$speciesTemp)]
   SpMapping <- data.table(Sp = SpNames, species = name)
   names(GC$NonLinearModel) <- SpNames
@@ -469,65 +534,79 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   predGrid <- as.data.table(expand.grid(Sp = SpNames, standAge = standAge))
 
   ## Predict from statistical fits to data
+  #TODO: confirm that this should only predict for species of interest, even under focal and pairwise
   predGrid[, `:=`(
     predNonLinear = predict(GC$NonLinearModel[[unlist(.BY)]], .SD)
   ), by = "Sp", .SDcols = "standAge"]
 
   ## misses points past longevity -- have to expand explicitly the standAges for each "speciesCode"
+
   dt <- as.data.table(expand.grid(speciesCode = unique(fB$speciesCode), standAge = unique(predGrid$standAge)))
-  set(dt, NULL, "Sp", gsub(".+_", "", dt$speciesCode))
+  #make Sp column with whether species is Sp1 or Sp2 - under single, it is only Sp1
+  if (approach == "single") {
+    dt[, Sp := "Sp1"]
+  } else {
+    set(dt, NULL, "Sp", gsub(".+_", "", dt$speciesCode))
+  }
+
+  #join predGrid so dt has the predicted biomass from data
+  #next, scale simulated biomass based on difference in real and simulated max
   dt <- dt[predGrid, on = c("standAge", "Sp")]
-  candFB <- fB[dt, on = c("standAge", "speciesCode", "Sp")] # misses points past longevity
+
+  candFB <- fB[dt, on = c("standAge", "speciesCode", "Sp")] # exclude points past longevity?
+
+  if (any(is.na(candFB$B))) {
+    stop("error occurred joining factorial data with growth curve due to NA values of B. ",
+         "Please debug factorial object -- check that param minCohortBiomass does not cause ",
+         "removal of species prior to longevity")
+    #this occurred once when longevity was accidentally created with values < standAgesForFitting
+    #ultimately NA values passed in the predict downstream, which triggers an error
+    #then with extremely low mortalityshape, B dropped to 1 before age 100
+  }
   whNA <- which(is.na(candFB$B))
   set(candFB, whNA, "B", 0L)
   candFB[, `:=`(
     pixelGroup = pixelGroup[1],
     inflationFactor = inflationFactor[1]), by = "speciesCode"]
 
+  #scale the simulated biomass (with maxB likely 5000) by the real max biomass in data
   scaleFactorNonLinear <- max(predGrid$predNonLinear)/maxBInFactorial
   stdevNonLinear <- sd(predGrid$predNonLinear)
 
   set(candFB, NULL, "BscaledNonLinear", candFB$B * scaleFactorNonLinear * candFB$inflationFactor)
 
-  ## Curve matching
+  ## Curve matching - calcualte log-likelihood of each biomass increment based on non-linear curve
   ll <- candFB[, .(llNonLinear = sum(dnorm(x = BscaledNonLinear, mean = predNonLinear,
                                            sd = stdevNonLinear, log = TRUE))),
                .(pixelGroup)]
   ## Sort them so that best is on top
   setorderv(ll, "llNonLinear", order = -1L)
+  # standardize the difference
   ll[, c("llNonLinDelta") := list(abs(llNonLinear - max(llNonLinear)))]
   set(ll, NULL, "llNonLinear", NULL)
 
-  deltaDiff <- 2
+  ## before the truncation below; `balanceGrowth` needs the likelihood away from the best fits
+  llFull <- copy(ll)
+  firstAge <- candFB[standAge == min(standAge), c("pixelGroup", "speciesCode", "inflationFactor")]
+
+  #TODO: where does deltaDiff 2 come from?
+  deltaDiff <- quantile(ll$llNonLinDelta, 0.25)
   ll <- ll[llNonLinDelta < deltaDiff]
   candFB <- candFB[ll, on = "pixelGroup"]
   varsToInteger <- c("BscaledNonLinear", "predNonLinear")
   set(candFB, NULL, varsToInteger, lapply(varsToInteger, function(v) asInteger(candFB[[v]])))
 
-  rr <- candFB[standAge == min(standAge)][, c("speciesCode", "llNonLinDelta", "inflationFactor")]
-
+  ## Traits of each pixelGroup in a likelihood table
+  traitsOf <- function(llTable) {
+    rr <- firstAge[llTable, on = "pixelGroup", nomatch = NULL][, c("speciesCode", "llNonLinDelta", "inflationFactor")]
+    SpMapping[fT[rr, on = c("speciesCode")], on = "Sp"]
+  }
   ## Take the average of the best
-  best <- fT[rr, on = c("speciesCode")]
-  bestTraits <- SpMapping[best, on = "Sp"]
+  bestTraits <- traitsOf(ll)
+  bestTraitsAll <- traitsOf(llFull)
   candFB <- SpMapping[candFB, on = "Sp"]
-  rm(rr,fT, SpMapping, deltaDiff, fB)
+  rm(traitsOf, firstAge, llFull, fT, SpMapping, deltaDiff, fB)
+
   gc()
-  return(list(bestTraits = bestTraits, fullData = candFB, ll = ll))
-}
-
-buildGrowthCurves_Wrapper <- function(studyAreaANPP, PSPperiod, PSPgis, PSPmeasure,
-                                      PSPplot, useHeight, biomassModel, speciesCol,
-                                      sppEquiv, minimumSampleSize, minDBH,
-                                      quantileAgeSubset, speciesFittingApproach) {
-
-  ## this function is just a wrapper around these functions, for caching purposes
-  psp <- prepPSPaNPP(studyAreaANPP = studyAreaANPP, PSPperiod = PSPperiod,
-                     PSPgis = PSPgis, PSPmeasure = PSPmeasure, PSPplot = PSPplot,
-                     useHeight = useHeight, biomassModel = biomassModel, minDBH = minDBH)
-
-  sppGCs <- buildGrowthCurves(PSPdata = psp, speciesCol = speciesCol, sppEquiv = sppEquiv,
-                              minimumSampleSize = minimumSampleSize,
-                              quantileAgeSubset = quantileAgeSubset,
-                              speciesFittingApproach = speciesFittingApproach)
-  return(sppGCs)
+  return(list(bestTraits = bestTraits, bestTraitsAll = bestTraitsAll, fullData = candFB, ll = ll))
 }
