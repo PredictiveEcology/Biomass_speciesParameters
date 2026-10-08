@@ -1,5 +1,11 @@
 Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/issues>
 
+# Biomass_speciesParameters 3.1.0
+
+This release brings a new storage system for the module's large intermediate data, which is faster and uses much less memory during a run. A new "LANDIS mode" exports the fitted growth curves for each species in the form LANDIS-II Biomass Succession uses. An optional new setting gives all species one shared growth curve shape, so that no species wins only because of small differences in its fitted curve.
+
+The module now uses the current format of the permanent sample plot data. In British Columbia, plots recorded as white spruce in the hybrid spruce zone are counted correctly when a project merges hybrid spruce with Engelmann spruce. A species that cannot establish anywhere in the study area no longer stops the run. Fitted species parameters will differ from earlier versions.
+
 # Biomass_speciesParameters 3.0.2.9003
 
 * `balanceGrowth = TRUE` no longer stops when a fitted species has no `speciesEcoregion` rows (e.g. it is below the ecoregion support threshold everywhere in the study area, as Betu_pap in several BC TSAs). Such a species cannot establish, so it is left out of the balance, keeps its fitted traits, and a message names it.
