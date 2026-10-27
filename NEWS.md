@@ -2,6 +2,8 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
+* With `speciesFittingApproach = "focal"` (the default), the other species in a plot are pooled into "Other", but "Other" got the biomass of only one of them instead of their sum. "Other" is now their summed biomass. It is not fitted, but it decides whether the focal species is matched to the first or the second cohort of the factorial curves, and it enters the fitting weights. Fitted traits change for species with plots where two or more non-focal species each exceed 20% of the plot biomass.
+
 # Biomass_speciesParameters 3.1.0
 
 This release brings a new storage system for the module's large intermediate data, which is faster and uses much less memory during a run. A new "LANDIS mode" exports the fitted growth curves for each species in the form LANDIS-II Biomass Succession uses. An optional new setting gives all species one shared growth curve shape, so that no species wins only because of small differences in its fitted curve.
