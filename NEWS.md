@@ -2,6 +2,8 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
+* `speciesFittingApproach = "all"` is removed. It was meant to pool all species into one fit and give every species the same traits, but it has stopped with an error (`object 'gcSpecies1' not found`) since December 2021, and the current fitting has no pooled fit to give it. It now stops at once with a message saying so; use `"focal"` (default), `"pairwise"` or `"single"`. An unknown value also stops with a clear message.
+
 # Biomass_speciesParameters 3.1.0
 
 This release brings a new storage system for the module's large intermediate data, which is faster and uses much less memory during a run. A new "LANDIS mode" exports the fitted growth curves for each species in the form LANDIS-II Biomass Succession uses. An optional new setting gives all species one shared growth curve shape, so that no species wins only because of small differences in its fitted curve.
