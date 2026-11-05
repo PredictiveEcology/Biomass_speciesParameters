@@ -80,8 +80,8 @@ defineModule(sim, list(
                     desc =  paste(
                       "Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool",
                       "all species into one fit, do pairwise species (for multiple cohort situations)",
-                      "do pairwise species, but using a focal species approach where all other species",
-                      "are pooled into 'other' or do one species at a time.",
+                      "do pairwise species, but using a focal species approach where all other species with",
+                      "more than 20% of plot biomass are pooled into 'other' or do one species at a time.",
                       "If 'all', all species will have identical species-level traits."
                     )),
     defineParameter("sppEquivCol", "character", "LandR", NA, NA,
