@@ -100,6 +100,14 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
 
 buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
                               minimumSampleSize, speciesFittingApproach = "focal") {
+  if (identical(speciesFittingApproach, "all")) {
+    stop("speciesFittingApproach = 'all' is no longer supported: it has failed since December 2021, ",
+         "and the current fitting has no pooled all-species fit. ",
+         "Use 'focal' (default), 'pairwise' or 'single'.")
+  }
+  if (!isTRUE(speciesFittingApproach %in% c("focal", "pairwise", "single"))) {
+    stop("speciesFittingApproach must be one of 'focal', 'pairwise' or 'single'.")
+  }
   ## must filter PSPdata by all sppEquiv$PSP with same sppEquivCol
   if (!isTRUE(speciesCol %in% colnames(sppEquiv))) {
     stop("sppEquivCol not in sppEquiv")
@@ -185,13 +193,6 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
     )
   )
 
-  if (isTRUE("all" == speciesFittingApproach)) {
-    outputGCs <- lapply(gcSpecies1, function(x) {
-      matchingSpecies <- LandR::equivalentName(x, sppEquiv, column = "PSP")
-      ogc <- Copy(outputGCs[[1]])
-      ogc
-    })
-  }
   return(outputGCs)
 }
 
@@ -346,10 +347,6 @@ limitToSpeciesLongevity <- function(newTraits, speciesTable) {
 }
 
 buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
-  if (identical(species, "all")) {
-    q <- mean(unlist(q))
-  }
-
   if (class(q) == "list") {
     q <- q[[species]]
   }

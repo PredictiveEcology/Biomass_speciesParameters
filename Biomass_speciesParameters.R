@@ -78,11 +78,11 @@ defineModule(sim, list(
                                  "both a single value and a list of vectors, named according to `sppEquivCol`.")),
     defineParameter("speciesFittingApproach", "character", "focal", NA, NA,
                     desc =  paste(
-                      "Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool",
-                      "all species into one fit, do pairwise species (for multiple cohort situations)",
+                      "Either 'pairwise', 'focal' or 'single', indicating whether to",
+                      "do pairwise species (for multiple cohort situations)",
                       "do pairwise species, but using a focal species approach where all other species",
                       "are pooled into 'other' or do one species at a time.",
-                      "If 'all', all species will have identical species-level traits."
+                      "'all' (pool all species into one fit) is no longer available."
                     )),
     defineParameter("sppEquivCol", "character", "LandR", NA, NA,
                     paste("The column in `sim$sppEquiv` data.table that defines individual species.",
