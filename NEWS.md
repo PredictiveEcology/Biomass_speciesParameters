@@ -2,6 +2,9 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
+* The message for species with too few PSP plots to fit said they keep their original parameters. They do not: `growthcurve`, `mortalityshape`, `mANPPproportion` and `inflationFactor` become the average of the fitted species with the same `hardsoft` value. The message now says so. No results change.
+* Corrected the `species` input description (the module uses `species`, `longevity` and `hardsoft`, and replaces `longevity`, `growthcurve` and `mortalityshape` of the fitted species), and the name of the factorial module in the `cohortDataFactorial_path` and `speciesTableFactorial_path` descriptions (`Biomass_speciesFactorial`).
+
 # Biomass_speciesParameters 3.1.0
 
 This release brings a new storage system for the module's large intermediate data, which is faster and uses much less memory during a run. A new "LANDIS mode" exports the fitted growth curves for each species in the form LANDIS-II Biomass Succession uses. An optional new setting gives all species one shared growth curve shape, so that no species wins only because of small differences in its fitted curve.
