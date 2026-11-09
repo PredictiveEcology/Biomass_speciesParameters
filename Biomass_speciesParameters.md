@@ -28,7 +28,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters0845d705abf7ef30162cb18d034533001a073302)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters31d36ad72432acd446e29eb83e68713512e3eb1c)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
 
@@ -605,7 +605,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> focal </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool all species into one fit, do pairwise species (for multiple cohort situations) do pairwise species, but using a focal species approach where all other species with more than 20% of plot biomass are pooled into 'other' or do one species at a time. If 'all', all species will have identical species-level traits. </td>
+   <td style="text-align:left;"> Either 'pairwise', 'focal' or 'single', indicating whether to do pairwise species (for multiple cohort situations) do pairwise species, but using a focal species approach where all other species are pooled into 'other' or do one species at a time. 'all' (pool all species into one fit) is no longer available. </td>
    <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
