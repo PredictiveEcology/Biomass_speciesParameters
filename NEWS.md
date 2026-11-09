@@ -2,6 +2,8 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
+* The message for species with too few PSP plots to fit said they keep their original parameters. They do not: `growthcurve`, `mortalityshape`, `mANPPproportion` and `inflationFactor` become the average of the fitted species with the same `hardsoft` value. The message now says so. No results change.
+* Corrected the `species` input description (the module uses `species`, `longevity` and `hardsoft`, and replaces `longevity`, `growthcurve` and `mortalityshape` of the fitted species), and the name of the factorial module in the `cohortDataFactorial_path` and `speciesTableFactorial_path` descriptions (`Biomass_speciesFactorial`).
 * `speciesFittingApproach = "all"` is removed. It was meant to pool all species into one fit and give every species the same traits, but it has stopped with an error (`object 'gcSpecies1' not found`) since December 2021, and the current fitting has no pooled fit to give it. It now stops at once with a message saying so; use `"focal"` (default), `"pairwise"` or `"single"`. An unknown value also stops with a clear message.
 
 # Biomass_speciesParameters 3.1.0
@@ -20,7 +22,8 @@ The module now uses the current format of the permanent sample plot data. In Bri
 
 # Biomass_speciesParameters 3.0.2.9001
 
-* BC interior (hybrid-zone) spruce PSPs are recorded as "Picea glauca", so they matched nothing, and were dropped, when the study area's `sppEquiv` has the hybrid spruce merged into Engelmann (`LandR.mergeHybridSpruce = "engelmann"`). New parameter `mergeHybridSprucePSP` (default: follow that option; NA or "white" for no relabel) relabels those BC records as "Picea engelmannii x glauca", so they count as `Pice_eng`. BC plots in the BEC zones of the new parameter `excludeBECzonesHybridSpruce` (default `BWBS`, `SWB`: boreal white spruce) are not relabelled. The BEC zones come from the new optional input `BECzonesBC`, else from the BC Data Catalogue (`bcdata`, added to `reqdPkgs`); if neither is available there is a warning and no relabel.
+* BC interior (hybrid-zone) spruce PSPs are recorded as "Picea glauca", so they matched nothing, and were dropped, when the study area's `sppEquiv` has the hybrid spruce merged into Engelmann (`LandR.mergeHybridSpruce = "engelmann"`). New parameter `mergeHybridSprucePSP` (default: follow that option; NA or "white" for no relabel) relabels those BC records as "Picea engelmannii x glauca", so they count as `Pice_eng`. BC plots in the BEC zones of the new parameter `excludeBECzonesHybridSpruce` (default `BWBS`, `SWB`: boreal white spruce) are not relabelled. The BEC zones come from the new optional input `BECzonesBC`, 
+* else from the BC Data Catalogue (`bcdata`, added to `reqdPkgs`); if neither is available there is a warning and no relabel.
 * Missing packages in `reqdPkgs`: added `dplyr`.
 * New opt-in `balanceGrowth` (default `FALSE`, so nothing changes unless set), with `sharedGrowthcurve` and `targetK`: all fitted species get one `growthcurve`, and `mANPPproportion` is set so K = `mANPPproportion` * maxB^(1 - `growthcurve`) is equal across species, since under LandR competition any difference in K is winner-take-all while the per-species fitted `growthcurve` values are statistically indistinguishable. Both traits are then rounded to 3 decimals. The fit of the new values to the PSP data is returned in the new output `speciesBalanceCheck`, with a warning for species more than 2 log-likelihood units worse than their own best.
 
