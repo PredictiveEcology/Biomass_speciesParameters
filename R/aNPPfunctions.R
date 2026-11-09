@@ -162,6 +162,9 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
     if (isTRUE(speciesFittingApproach == "focal")) {
       SpPSPList <- Map(psp = SpPSPList, spName = names(SpPSPList), function(psp, spName) {
         psp[speciesTemp != spName, speciesTemp := "Other"]
+        ## pool the non-focal species: "Other" biomass and dominance are their sum in each plot measurement
+        psp[speciesTemp == "Other", spPlotBiomass := sum(areaAdjustedB), by = "MeasureID"]
+        psp[speciesTemp == "Other", spDom := spPlotBiomass / plotBiomass]
       })
     }
   } else {
