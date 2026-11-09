@@ -1,6 +1,6 @@
 ---
 title: "LandR _Biomass_speciesParameters_ Manual"
-date: "Last updated: 2026-10-08"
+date: "Last updated: 2026-11-05"
 output:
   bookdown::html_document2:
     toc: true
@@ -28,7 +28,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParametersa44467499899e70e32e41d35dc1fbcb658b3ac92)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParametersb170fad4b2a118ddcaaf3fd387228edb8640fd83)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
 
@@ -77,7 +77,7 @@ data/calibration module that does so (e.g., *Biomass_borealDataPrep*). However
 it can be used stand-alone in an initial developmental phase for easier
 inspection of the statistical calibration procedure employed.
 
-As of October 08, 2026, the *raw* PSP data used in this
+As of November 05, 2026, the *raw* PSP data used in this
 module is not freely available, and data sharing agreements must be obtained
 from the governments of SK, AB, and BC to obtain it. However, the *processed and
 anonymized* PSP data is provided via a Google Drive folder accessed
@@ -496,6 +496,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <th style="text-align:left;"> min </th>
    <th style="text-align:left;"> max </th>
    <th style="text-align:left;"> paramDesc </th>
+   <th style="text-align:left;"> cacheKey </th>
   </tr>
  </thead>
 <tbody>
@@ -506,6 +507,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> If `TRUE`, give all fitted species the same `growthcurve` (`sharedGrowthcurve`) and set each species' `mANPPproportion` so that K = `mANPPproportion` maxB^(1 - `growthcurve`) is the same for all (`balanceGrowthK`). Under LandR competition a small cohort grows with K, and any difference in K between species is winner-take-all, while the per-species fitted `growthcurve` values are statistically indistinguishable. maxB is the median over the species' rows of `speciesEcoregion`. `growthcurve` and `mANPPproportion` are then rounded to 3 decimals, not 2. Species that were not fitted are not changed. The fit of the new values to the PSP data is returned in `speciesBalanceCheck`, with a warning for species that are worse than their own best fit by more than 2 log-likelihood units. Default `FALSE` keeps the fitted values. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> biomassModel </td>
@@ -514,6 +516,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> landis </td>
@@ -522,6 +525,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> If `TRUE`, run in 'LANDIS mode': expose the fitted LANDIS-version growth curves (the scaled non-linear biomass-over-age curves shown in the LandR-vs-non-linear plot) per species as the output object `speciesGrowthCurvesLandis`, for use as inputs to LANDIS-II Biomass Succession. The per-species growth-curve parameters (`growthcurve`, `mortalityshape`, etc.) are written to `species` regardless. Default `FALSE` preserves the standard behaviour. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> maxBInFactorial </td>
@@ -530,6 +534,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> The arbitrary maximum biomass for the factorial simulations. This is a per-species maximum within a pixel </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> excludeBECzonesHybridSpruce </td>
@@ -538,6 +543,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> BC BEC zones whose PSPs are NOT relabelled by `mergeHybridSprucePSP`: the boreal zones, where 'Picea glauca' is true white spruce. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> mergeHybridSprucePSP </td>
@@ -546,6 +552,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Mirrors `LandR.mergeHybridSpruce`, and follows it by default. With 'engelmann', and the hybrid spruce merged into Pice_eng in `sppEquiv`, BC PSP records of 'Picea glauca' (how BC's interior hybrid-zone spruce is recorded) are relabelled 'Picea engelmannii x glauca' so they count as Pice_eng, except in the BEC zones of `excludeBECzonesHybridSpruce`. 'white' and NA do not relabel. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> minimumPlots </td>
@@ -554,6 +561,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> 10 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Minimum number of PSP plots per species </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> minDBH </td>
@@ -562,6 +570,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> 0 </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Minimum diameter at breast height (DBH) in cm used to filter PSP data. Defaults to 0 cm, i.e. all tree measurements are used. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> PSPdataTypes </td>
@@ -570,6 +579,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Which PSP datasets to source, defaulting to all. Other available options include 'BC', 'AB', 'SK', 'ON', 'NB', 'NFI', and 'dummy'. 'dummy' should be used for unauthorized users. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> PSPperiod </td>
@@ -578,6 +588,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> The years by which to subset sample plot data, if desired. Must be a vector of length 2 </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> quantileAgeSubset </td>
@@ -586,6 +597,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> 1 </td>
    <td style="text-align:left;"> 100 </td>
    <td style="text-align:left;"> Quantile by which to subset PSP data. As older stands are sparsely represented the oldest measurements become vastly more influential. This parameter accepts both a single value and a list of vectors, named according to `sppEquivCol`. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> speciesFittingApproach </td>
@@ -594,6 +606,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool all species into one fit, do pairwise species (for multiple cohort situations) do pairwise species, but using a focal species approach where all other species are pooled into 'other' or do one species at a time. If 'all', all species will have identical species-level traits. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> sppEquivCol </td>
@@ -602,6 +615,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> The column in `sim$sppEquiv` data.table that defines individual species. The names should match those in the species table. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> standAgesForFitting </td>
@@ -610,6 +624,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> The minimum and maximum ages of the biomass-by-age curves used in fitting. It is generally recommended to keep this param under 200, given the low data availability of stands aged 200+, with some exceptions. For a closed interval, end with a 1, e.g. `c(31, 101)`. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> sharedGrowthcurve </td>
@@ -618,6 +633,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Only used if `balanceGrowth` is `TRUE`. The `growthcurve` given to all fitted species. `NA` uses the median of the species' unrounded fitted `growthcurve`. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> targetK </td>
@@ -626,6 +642,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Only used if `balanceGrowth` is `TRUE`. The K = `mANPPproportion` maxB^(1 - `growthcurve`) given to all fitted species. `NA` uses the median over species of K computed with `sharedGrowthcurve` and each species' fitted (unrounded) `mANPPproportion`. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> useHeight </td>
@@ -634,6 +651,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Should height be used to calculate biomass (in addition to DBH). DBH is used by itself when height is missing. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .plots </td>
@@ -642,6 +660,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Used by Plots function, which can be optionally used here </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .plotInitialTime </td>
@@ -650,6 +669,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> This describes the simulation time at which the first plot event should occur </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .plotInterval </td>
@@ -658,6 +678,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> This describes the simulation time interval between plot events </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .saveInitialTime </td>
@@ -666,6 +687,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> This describes the simulation time at which the first save event should occur </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .saveInterval </td>
@@ -674,6 +696,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> This describes the simulation time interval between save events </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .studyAreaName </td>
@@ -682,6 +705,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Human-readable name for the growth curve filename. If `NA`, a hash of sppEquiv[[sppEquivCol]] will be used. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .useCache </td>
@@ -690,6 +714,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> Should this entire module be run with caching activated? This is generally intended for data-type modules, where stochasticity and time are not relevant </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
    <td style="text-align:left;"> .useParallel </td>
@@ -698,6 +723,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> maximum number of threads/workers to use for data.table operations; passed to `data.table::setDTthreads` and should be &lt;= 4. </td>
+   <td style="text-align:left;"> TRUE </td>
   </tr>
 </tbody>
 </table>
