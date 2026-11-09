@@ -1,6 +1,6 @@
 ---
 title: "LandR _Biomass_speciesParameters_ Manual"
-date: "Last updated: 2026-11-05"
+date: "Last updated: 2026-11-09"
 output:
   bookdown::html_document2:
     toc: true
@@ -28,7 +28,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParametersb170fad4b2a118ddcaaf3fd387228edb8640fd83)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters0845d705abf7ef30162cb18d034533001a073302)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
 
@@ -77,7 +77,7 @@ data/calibration module that does so (e.g., *Biomass_borealDataPrep*). However
 it can be used stand-alone in an initial developmental phase for easier
 inspection of the statistical calibration procedure employed.
 
-As of November 05, 2026, the *raw* PSP data used in this
+As of November 09, 2026, the *raw* PSP data used in this
 module is not freely available, and data sharing agreements must be obtained
 from the governments of SK, AB, and BC to obtain it. However, the *processed and
 anonymized* PSP data is provided via a Google Drive folder accessed
@@ -605,7 +605,7 @@ because the default will attempt to use PSP data that may be inaccessible
    <td style="text-align:left;"> focal </td>
    <td style="text-align:left;"> NA </td>
    <td style="text-align:left;"> NA </td>
-   <td style="text-align:left;"> Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool all species into one fit, do pairwise species (for multiple cohort situations) do pairwise species, but using a focal species approach where all other species are pooled into 'other' or do one species at a time. If 'all', all species will have identical species-level traits. </td>
+   <td style="text-align:left;"> Either 'all', 'pairwise', 'focal' or 'single', indicating whether to pool all species into one fit, do pairwise species (for multiple cohort situations) do pairwise species, but using a focal species approach where all other species with more than 20% of plot biomass are pooled into 'other' or do one species at a time. If 'all', all species will have identical species-level traits. </td>
    <td style="text-align:left;"> TRUE </td>
   </tr>
   <tr>
