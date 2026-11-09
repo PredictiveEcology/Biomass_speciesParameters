@@ -2,7 +2,7 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
-* With `speciesFittingApproach = "focal"` (the default), the other species in a plot are pooled into "Other", but "Other" got the biomass of only one of them instead of their sum. "Other" is now their summed biomass. It is not fitted, but it decides whether the focal species is matched to the first or the second cohort of the factorial curves, and it enters the fitting weights. Fitted traits change for species with plots where two or more non-focal species each exceed 20% of the plot biomass.
+* `speciesFittingApproach = "all"` is removed. It was meant to pool all species into one fit and give every species the same traits, but it has stopped with an error (`object 'gcSpecies1' not found`) since December 2021, and the current fitting has no pooled fit to give it. It now stops at once with a message saying so; use `"focal"` (default), `"pairwise"` or `"single"`. An unknown value also stops with a clear message.
 
 # Biomass_speciesParameters 3.1.0
 
