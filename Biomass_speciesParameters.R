@@ -1,8 +1,11 @@
 defineModule(sim, list(
   name = "Biomass_speciesParameters",
   description = paste(
-    "For estimating LANDIS-II species traits based on growth curves derived",
-    "from Permanent Sample Plot (PSP) and Temporary Sample Plot (TSP) data"
+    "Estimates the `growthcurve`, `mANPPproportion` and `inflationFactor` species traits of `Biomass_core`",
+    "from Permanent Sample Plot (PSP) and Temporary Sample Plot (TSP) data. A non-linear biomass-by-age model is",
+    "fitted to each species' PSP data and matched to a single-species `Biomass_speciesFactorial` (which gives",
+    "`mANPPproportion` and `inflationFactor` for every `growthcurve`); `growthcurve` is then calibrated with",
+    "`Biomass_core` simulations of remeasured, mixed-species PSPs."
   ),
   keywords = NA, # TODO: add keywords
   authors = c(
@@ -11,7 +14,7 @@ defineModule(sim, list(
     person(c("Ceres"), "Barros", email = "ceres.barros@ubc.ca", role = c("ctb"))
   ),
   childModules = character(0),
-  version = list(Biomass_speciesParameters = "3.1.0.9000"),
+  version = list(Biomass_speciesParameters = "4.0.0.9000"),
   timeframe = as.POSIXlt(c(NA, NA)),
   timeunit = "year",
   citation = list("citation.bib"),
@@ -20,7 +23,7 @@ defineModule(sim, list(
                    before = c("Biomass_core")),
   reqdPkgs = list(
     "arrow", "bcdata", "cli", "data.table", "dplyr", "fpCompare", "fs", "ggplot2", "gridExtra",
-    "googledrive", "httr2", "mgcv", "nlme", "purrr", "robustbase", "sf",
+    "googledrive", "httr2", "mgcv", "nlme", "purrr", "qs2", "robustbase", "sf", "terra", "viridis",
     "reproducible (>= 2.1.0)",
     "SpaDES.core (>= 2.1.4)",
     "PredictiveEcology/LandR@development (>= 1.1.0.9077)",
@@ -28,20 +31,24 @@ defineModule(sim, list(
     "ianmseddy/PSPclean@development(>= 1.0.0.9001)"
   ),
   parameters = rbind(
-    defineParameter("balanceGrowth", "logical", FALSE, NA, NA,
-                    desc = paste("If `TRUE`, give all fitted species the same `growthcurve` (`sharedGrowthcurve`) and set",
-                                 "each species' `mANPPproportion` so that K = `mANPPproportion` * maxB^(1 - `growthcurve`)",
-                                 "is the same for all (`balanceGrowthK`). Under LandR competition a small cohort grows",
-                                 "with K, and any difference in K between species is winner-take-all, while the",
-                                 "per-species fitted `growthcurve` values are statistically indistinguishable.",
-                                 "maxB is the median over the species' rows of `speciesEcoregion`.",
-                                 "`growthcurve` and `mANPPproportion` are then rounded to 3 decimals, not 2.",
-                                 "Species that were not fitted are not changed. The fit of the new values to the PSP data",
-                                 "is returned in `speciesBalanceCheck`, with a warning for species that are worse",
-                                 "than their own best fit by more than 2 log-likelihood units.",
-                                 "Default `FALSE` keeps the fitted values.")),
     defineParameter("biomassModel", "character", "Lambert2005", NA, NA,
                     desc =  paste("The model used to calculate biomass from DBH. Can be either 'Lambert2005' or 'Ung2008'.")),
+    defineParameter("calibrateGrowthcurve", "logical", TRUE, NA, NA,
+                    desc = paste("If `TRUE`, `growthcurve` is calibrated with `Biomass_core` simulations of remeasured PSPs",
+                                 "(see the module manual). This needs `ecoregionMap` and `speciesEcoregion` from",
+                                 "`Biomass_borealDataPrep`. If `FALSE`, or if there are too few remeasured plots, the species'",
+                                 "`growthcurve` in `species` is kept and only `mANPPproportion` and `inflationFactor` are",
+                                 "estimated, for that `growthcurve`.")),
+    defineParameter("calibrationIterations", "integer", 2L, 1L, NA,
+                    desc = paste("Number of passes of the `growthcurve` calibration. Competitors are simulated",
+                                 "with the `growthcurve` found by the previous pass.")),
+    defineParameter("calibrationMaxInterval", "numeric", 30, NA, NA,
+                    desc = "Longest interval (years) between PSP measurements that is simulated in the calibration."),
+    defineParameter("calibrationMinFocalProportion", "numeric", 0.2, 0, 1,
+                    desc = paste("A species is the focal species of a remeasured PSP, i.e., its `growthcurve` is scored",
+                                 "on it, if it is at least this proportion of the plot's biomass at the first measurement.")),
+    defineParameter("calibrationMinInterval", "numeric", 3, NA, NA,
+                    desc = "Shortest interval (years) between PSP measurements that is simulated in the calibration."),
     defineParameter("landis", "logical", FALSE, NA, NA,
                     desc = paste("If `TRUE`, run in 'LANDIS mode': expose the fitted LANDIS-version growth curves",
                                  "(the scaled non-linear biomass-over-age curves shown in the LandR-vs-non-linear plot)",
@@ -52,6 +59,10 @@ defineModule(sim, list(
     defineParameter("maxBInFactorial", "integer", 5000L, NA, NA,
                     desc = paste("The arbitrary maximum biomass for the factorial simulations.",
                                  "This is a per-species maximum within a pixel")),
+    defineParameter("maxCalibrationPlots", "integer", 500L, 1L, NA,
+                    desc = paste("Maximum number of pairs of consecutive PSP measurements simulated in each pass of the",
+                                 "`growthcurve` calibration. Each is simulated once per focal species and candidate",
+                                 "`growthcurve`. A random subset is used if there are more.")),
     defineParameter("excludeBECzonesHybridSpruce", "character", c("BWBS", "SWB"), NA, NA,
                     desc = paste("BC BEC zones whose PSPs are NOT relabelled by `mergeHybridSprucePSP`:",
                                  "the boreal zones, where 'Picea glauca' is true white spruce.")),
@@ -76,29 +87,14 @@ defineModule(sim, list(
                     desc = paste("Quantile by which to subset PSP data. As older stands are sparsely represented",
                                  "the oldest measurements become vastly more influential. This parameter accepts",
                                  "both a single value and a list of vectors, named according to `sppEquivCol`.")),
-    defineParameter("speciesFittingApproach", "character", "focal", NA, NA,
-                    desc =  paste(
-                      "Either 'pairwise', 'focal' or 'single', indicating whether to",
-                      "do pairwise species (for multiple cohort situations)",
-                      "do pairwise species, but using a focal species approach where all other species",
-                      "are pooled into 'other' or do one species at a time.",
-                      "'all' (pool all species into one fit) is no longer available."
-                    )),
     defineParameter("sppEquivCol", "character", "LandR", NA, NA,
                     paste("The column in `sim$sppEquiv` data.table that defines individual species.",
                           "The names should match those in the species table.")),
     defineParameter("standAgesForFitting", "integer", c(21L, 91L), NA, NA,
-                    desc = paste("The minimum and maximum ages of the biomass-by-age curves used in fitting.",
-                                 "It is generally recommended to keep this param under 200, given the low data",
-                                 "availability of stands aged 200+, with some exceptions.",
-                                 "For a closed interval, end with a 1, e.g. `c(31, 101)`.")),
-    defineParameter("sharedGrowthcurve", "numeric", NA, NA, NA,
-                    desc = paste("Only used if `balanceGrowth` is `TRUE`. The `growthcurve` given to all fitted species.",
-                                 "`NA` uses the median of the species' unrounded fitted `growthcurve`.")),
-    defineParameter("targetK", "numeric", NA, NA, NA,
-                    desc = paste("Only used if `balanceGrowth` is `TRUE`. The K = `mANPPproportion` * maxB^(1 - `growthcurve`)",
-                                 "given to all fitted species. `NA` uses the median over species of K computed with",
-                                 "`sharedGrowthcurve` and each species' fitted (unrounded) `mANPPproportion`.")),
+                    desc = paste("The minimum and maximum ages of the biomass-by-age curves used to compare the fitted",
+                                 "models with the factorial. The factorial's ages (every 10 years from 1) within this",
+                                 "range are used. It is generally recommended to keep this param under 200, given the low data",
+                                 "availability of stands aged 200+, with some exceptions.")),
     defineParameter("useHeight", "logical", TRUE, NA, NA,
                     desc = paste("Should height be used to calculate biomass (in addition to DBH).",
                                  "DBH is used by itself when height is missing.")),
@@ -127,11 +123,15 @@ defineModule(sim, list(
     expectsInput("cohortDataFactorial_path", "fs_path",
                  desc = paste(
                    "Path where the `cohortDataFactorial` object is saved as an `arrow` dataset.",
-                   "A large `cohortData` table (**sensu** `Biomass_core`) with columns `age`, `B`,",
-                   "and `speciesCode` that joins with `speciesTableFactorial`.",
-                   "See `PredictiveEcology/Biomass_factorial` for further information."
+                   "A `cohortData` table (**sensu** `Biomass_core`) with columns `age`, `B`,",
+                   "and `speciesCode` that joins with `speciesTableFactorial`. It must come from",
+                   "`Biomass_speciesFactorial` with `factorialDesign = 'perSpecies'`: one species per pixelGroup, no competition.",
+                   "See `PredictiveEcology/Biomass_speciesFactorial` for further information."
                   ),
-                 sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
+                 sourceURL = NA),
+    expectsInput("ecoregionMap", "SpatRaster",
+                 desc = paste("Categorical raster of `ecoregionGroup`, from `Biomass_borealDataPrep`. Used to place PSPs in",
+                              "ecoregions when calibrating `growthcurve`. Optional: without it `growthcurve` is not calibrated.")),
     expectsInput("PSPmeasure_sppParams", "data.table",
                  desc = paste("Merged PSP and TSP individual tree measurements. Must include the following columns:",
                               "`MeasureID`, `OrigPlotID1`, `MeasureYear`, `TreeNumber`, `Species`, `DBH` and `PSP`,",
@@ -159,7 +159,8 @@ defineModule(sim, list(
                               "'firetolerance', 'seeddistance_eff', 'seeddistance_max', 'resproutprob',",
                               "'mortalityshape', 'growthcurve', 'resproutage_min', 'resproutage_max',",
                               "'postfireregen', 'wooddecayrate', 'leaflongevity' 'leafLignin', and 'hardsoft'.",
-                              "Only 'growthcurve', 'hardsoft',  and 'mortalityshape' are used in this module.",
+                              "'longevity' and 'mortalityshape' are taken as known; 'growthcurve' is the starting value for",
+                              "the calibration and is replaced, with 'mANPPproportion' and 'inflationFactor', for fitted species.",
                               "Default is from Dominic Cyr and Yan Boulanger's applications of LANDIS-II"),
                  sourceURL = "https://raw.githubusercontent.com/dcyr/LANDIS-II_IA_generalUseFiles/master/speciesTraits.csv"),
     expectsInput("speciesEcoregion", "data.table",
@@ -170,16 +171,16 @@ defineModule(sim, list(
     expectsInput("speciesTableFactorial_path", "fs_path",
                  desc = paste(
                    "Path where the `speciesTableFactorial` object is saved as an `arrow` dataset.",
-                   "A large species table (**sensu** `Biomass_core`) with all columns used by",
-                   "Biomass_core, e.g., `longevity`, `growthcurve`, `mortalityshape`, etc., when",
-                   "it was used to generate `cohortDataFactorial`.",
-                   "See `PredictiveEcology/Biomass_factorial` for futher information."
+                   "A species table (**sensu** `Biomass_core`) with the traits of `cohortDataFactorial`: `species`",
+                   "(or `speciesCode`), `pixelGroup`, `targetSpecies` (the species the pixelGroup stands in for),",
+                   "`longevity`, `growthcurve`, `mortalityshape` and `mANPPproportion`.",
+                   "See `PredictiveEcology/Biomass_speciesFactorial` for further information."
                  ),
-                 sourceURL = "https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/"),
+                 sourceURL = NA),
     expectsInput("sppEquiv", "data.table",
-                 desc = paste("Table of species equivalencies - see `?LandR::sppEquivalencies_CA`.", 
+                 desc = paste("Table of species equivalencies - see `?LandR::sppEquivalencies_CA`.",
                               "Traits will be estimated for each unique entry in the `sppEquivCol` column.")),
-    expectsInput("sppEquivLong", "data.table", 
+    expectsInput("sppEquivLong", "data.table",
                  desc = paste("The full table of species equivalencies - see `?LandR::sppEquivalencies_CA`.",
                               "Biomass will be estimated for each species based on the `sp_Biomass_eq' column,",
                               "which uses `pemisc::biomassCalculation` to derive AGB from DBH and height",
@@ -191,19 +192,19 @@ defineModule(sim, list(
   ),
   outputObjects = bindrows(
     createsOutput("species", "data.table",
-                  desc = paste("The updated invariant species traits table (see above).")),
+                  desc = paste("The updated invariant species traits table (see above), with `growthcurve`,",
+                               "`mANPPproportion` and `inflationFactor` of the fitted species.")),
     createsOutput("speciesEcoregion", "data.table",
                   desc = paste("The updated spatially-varying species traits table",
                                "(see description for this object in inputs)")),
-    createsOutput("speciesBalanceCheck", "data.table",
-                  desc = paste("An empty `data.table` unless `P(sim)$balanceGrowth` is `TRUE`, when it has one row per",
-                               "fitted species: fitted and new `growthcurve` and `mANPPproportion`, the `maxB` used, the",
-                               "resulting `K`, and `deltaLL`, the log-likelihood units by which the new values fit the PSP",
-                               "data worse than the species' best fit (linearly interpolated on the factorial grid;",
-                               "`NA` outside the grid).")),
     createsOutput("speciesGrowthCurves", "list",
                   desc = paste("list containing each species' non-linear model,",
                                "model data, and the unfiltered PSP data")),
+    createsOutput("speciesGrowthcurveScore", "data.table",
+                  desc = paste("An empty `data.table` unless `growthcurve` was calibrated, when it has the scores of the last",
+                               "pass for every species and candidate `growthcurve`: the number of simulated plots `n`, `mse`",
+                               "(mean squared error of the focal species' biomass at the second measurement, relative to its",
+                               "`maxB`), `ll` (the Gaussian profile log-likelihood) and `dLL` (`ll` minus the best `ll` of the species).")),
     createsOutput("speciesGrowthCurvesLandis", "data.table",
                   desc = paste("An empty `data.table` unless `P(sim)$landis` is `TRUE`, when it holds the fitted",
                                "LANDIS-version growth curves (`BscaledNonLinear`) by `species` and `standAge` (the",
@@ -213,7 +214,14 @@ defineModule(sim, list(
                   desc = paste("An empty `data.table` unless `P(sim)$landis` is `TRUE`, when it holds the PSP",
                                "observations used to fit the growth curves (`biomass` by `standAge` and species, with",
                                "`OrigPlotID1` for joining to plot locations / ecoregion), a diagnostic to plot against",
-                               "`speciesGrowthCurvesLandis`."))
+                               "`speciesGrowthCurvesLandis`.")),
+    createsOutput("speciesTraitMatch", "data.table",
+                  desc = paste("For each fitted species and each candidate `growthcurve` of the factorial, the",
+                               "`mANPPproportion` and `inflationFactor` for which the factorial's net peak biomass increment",
+                               "(relative to maxB, `r`) matches that of the fitted non-linear model (`rTarget`), `rSim`",
+                               "(the `r` that was reached) and `clamped` (`TRUE` if `rTarget` is outside the range of the",
+                               "factorial for that `growthcurve`), and `nlmMaxB`, the fitted model's maximum biomass in",
+                               "the fitting window."))
   )
 ))
 
@@ -232,7 +240,7 @@ doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
         return(invisible(sim))
       }
 
-      ## build growth curves if applicable
+      ## estimate the traits
       sim <- Init(sim)
 
       ## update tables
@@ -257,211 +265,180 @@ Init <- function(sim) {
   }
   on.exit(data.table::setDTthreads(origDTthreads))
 
-  ## LANDIS-mode outputs are always created so the `createsOutput` contract holds regardless of
-  ## `P(sim)$landis`: empty `data.table`s by default, populated below only when `landis = TRUE`. This
-  ## keeps the default (non-LANDIS) path backwards compatible apart from these two empty placeholders.
+  ## outputs are always created so the `createsOutput` contract holds; populated below when applicable
   sim$speciesGrowthCurvesLandis <- data.table::data.table()
   sim$speciesGrowthCurvesPSP <- data.table::data.table()
-  sim$speciesBalanceCheck <- data.table::data.table()
-
-  ## load factorial tables -------------------------------------------------------------------------
-  ## These two tables are scratch for this event only: nothing after `Init` reads them. They are kept
-  ## as locals, not `mod$` objects, so the ~8 GB (`cohortDataFactorial`) + ~1 GB (`speciesTableFactorial`)
-  ## are freed when `Init` returns instead of living in the simList's `.modObjs` for the whole simulation.
-  fmt <- "feather" ## faster for small-med data compared to parquet
-
-  if (tools::file_ext(sim$cohortDataFactorial_path) == "rds") {
-    ## using rds default from .inputObjects
-    cohortDataFactorial <- prepInputs(
-      targetFile = basename(sim$cohortDataFactorial_path),
-      destinationPath = inputPath(sim),
-      fun = "readRDS",
-      useCache = FALSE, # don't internal cache as it is a waste of time
-      url = extractURL("cohortDataFactorial_path", sim)
-    ) # not Cache()d: a cache copy is the same .rds, so a hit saves ~1 s, a miss costs ~6 min
-  } else {
-    ## connect to arrow dataset
-    ## TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
-    cohortDataFactorial <- arrow::open_dataset(sim$cohortDataFactorial_path, format = fmt)
-  }
-
-  if (tools::file_ext(sim$speciesTableFactorial_path) == "rds") {
-    ## using rds default from .inputObjects
-    speciesTableFactorial <- prepInputs(
-      targetFile = basename(sim$speciesTableFactorial_path),
-      destinationPath = inputPath(sim),
-      url = extractURL("speciesTableFactorial_path", sim),
-      fun = "readRDS", useCache = FALSE # don't internal cache as it is a waste of time
-    ) # not Cache()d, for the same reason as cohortDataFactorial
-  } else {
-    ## connect to arrow dataset
-    ## TODO: consider adding try-catch and update Biomass_speciesFactorial if fails occur
-    speciesTableFactorial <- arrow::open_dataset(sim$speciesTableFactorial_path, format = fmt)
-  }
+  sim$speciesGrowthcurveScore <- data.table::data.table()
+  sim$speciesTraitMatch <- data.table::data.table()
 
   ## if no PSP data supplied, simList returned unchanged
+  if (all(P(sim)$PSPdataTypes == "none")) {
+    message("P(sim)$PSPdataTypes is 'none' -- bypassing species traits estimation from PSP data.")
+    return(sim)
+  }
+  if (is.na(P(sim)$sppEquivCol)) {
+    stop("Please supply 'sppEquivCol' in parameters of Biomass_speciesParameters.")
+  }
+  paramCheckOtherMods(sim, "maxBInFactorial")
+  paramCheckOtherMods(sim, paramToCheck = "sppEquivCol", ifSetButDifferent = "error")
 
-  if (all(P(sim)$PSPdataTypes != "none")) {
-    if (is.na(P(sim)$sppEquivCol)) {
-      stop("Please supply 'sppEquivCol' in parameters of Biomass_speciesParameters.")
-    }
+  ## 1. the single-species factorial ---------------------------------------------------------------
+  ## A local, not a `mod$` object, so it is freed when `Init` returns.
+  factorial <- loadSingleSpeciesFactorial(sim)
+  fcs <- factorialCurveStats(factorial, P(sim)$standAgesForFitting, P(sim)$maxBInFactorial)
 
-    paramCheckOtherMods(sim, "maxBInFactorial")
-    paramCheckOtherMods(sim, paramToCheck = "sppEquivCol", ifSetButDifferent = "error")
+  ## 2. non-linear models of biomass by age, one per species ---------------------------------------
+  biomassKey <- unique(sim$sppEquivLong[, .(PSP, Latin_full)])
+  setnames(biomassKey, old = "PSP", new = "SpBiomassEq")
 
-    ## 2025-10: removed deprecated package disk.frame, which no longer supports data.table syntax;
-    ##          switched to using arrow, which uses dplyr syntax;
-    ##          (retained data.table versions for comparison only).
+  message("preparing PSPs for growth curves")
+  psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
+                     PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams,
+                     PSPplot = sim$PSPplot_sppParams, useHeight = P(sim)$useHeight,
+                     biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH,
+                     sppEquivLong = biomassKey, sppEquiv = sim$sppEquiv,
+                     mergeHybridSprucePSP = P(sim)$mergeHybridSprucePSP,
+                     excludeBECzones = P(sim)$excludeBECzonesHybridSpruce,
+                     BECzones = sim$BECzonesBC) |>
+    Cache(userTags = c(currentModule(sim), "prepPSPaNPP"))
 
-    ## find the max biomass achieved by each species when growing with no competition
-    # tempMaxB <- mod$cohortDataFactorial[age == 1, .N, .(pixelGroup)]
-    tempMaxB <- cohortDataFactorial |>
-      dplyr::filter(age == 1) |>
-      dplyr::group_by(pixelGroup) |>
-      dplyr::summarise(N = n()) |>
-      dplyr::collect()
-
-    ## take the pixelGroups with only 1 species at start of factorial.
-    # tempMaxB <- tempMaxB[N == 1, ]
-    tempMaxB <- tempMaxB |> dplyr::filter(N == 1)
-
-    # tempMaxB <- mod$cohortDataFactorial[pixelGroup %in% tempMaxB$pixelGroup,
-    #                                     .(inflationFactor = P(sim)$maxBInFactorial/max(B)),
-    #                                     , .(pixelGroup, speciesCode)]
-    tempMaxB <- cohortDataFactorial |>
-      dplyr::filter(pixelGroup %in% tempMaxB$pixelGroup) |>
-      dplyr::group_by(pixelGroup, speciesCode) |>
-      dplyr::summarise(inflationFactor = P(sim)$maxBInFactorial / max(B)) |>
-      dplyr::collect()
-
-    ## speciesTableFactorial sometimes doesn't have 'species' column (only 'speciesCode');
-    ## TODO this is a work around -- the speciesTableFactorial should be stable
-    if (!("species" %in% names(speciesTableFactorial))) {
-      # setnames(speciesTableFactorial, old = "speciesCode", new = "species")
-      speciesTableFactorial <- speciesTableFactorial |>
-        dplyr::rename(species = speciesCode) |>
-        dplyr::collect()
-    }
-
-    ## NOTE: disk.frame doesn't support right_join, so need to rework as left_join below
-    # tempMaxB <- mod$speciesTableFactorial[tempMaxB, on = c("species" = "speciesCode", "pixelGroup")]
-    tempMaxB <- arrow_table(tempMaxB) |>
-      dplyr::rename(species = speciesCode) |>
-      dplyr::left_join(speciesTableFactorial, by = c("species", "pixelGroup")) |>
-      dplyr::collect()
-
-    ## pair-wise species will be matched with traits, as the species code won't match
-    # tempMaxB <- tempMaxB[, .(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor)]
-    tempMaxB <- tempMaxB |>
-      dplyr::select(species, longevity, growthcurve, mortalityshape, mANPPproportion, inflationFactor) |>
-      setDT()
-
-    ## bring tables to RAM for use below
-    cohortDataFactorial <- dplyr::collect(cohortDataFactorial) |> setDT()
-    speciesTableFactorial <- dplyr::collect(speciesTableFactorial) |> setDT()
-
-    gc()
-
-    #TODO:  #change PSP to be a dedicated biomass equation column in sppEquiv
-    biomassKey <- unique(sim$sppEquivLong[, .(PSP, Latin_full)])
-    setnames(biomassKey, old = "PSP", new = "SpBiomassEq")
-
-    message("preparing PSPs for growth curves")
-    psp <- prepPSPaNPP(studyAreaANPP = sim$studyAreaANPP, PSPperiod = P(sim)$PSPperiod,
-                       PSPgis =  sim$PSPgis_sppParams, PSPmeasure = sim$PSPmeasure_sppParams, 
-                       PSPplot = sim$PSPplot_sppParams, useHeight = P(sim)$useHeight, 
-                       biomassModel = P(sim)$biomassModel, minDBH = P(sim)$minDBH, 
-                       sppEquivLong = biomassKey, sppEquiv = sim$sppEquiv,
-                       mergeHybridSprucePSP = P(sim)$mergeHybridSprucePSP,
-                       excludeBECzones = P(sim)$excludeBECzonesHybridSpruce,
-                       BECzones = sim$BECzonesBC) |>
-      Cache(userTags = c(currentModule(sim), "prepPSPaNPP"))
-
-    message("building growth curves") # this cache call takes several minutes to process..
-    sim$speciesGrowthCurves <-  buildGrowthCurves(PSPdata = psp, 
-                                                  speciesCol =  P(sim)$sppEquivCol, 
-                                                  sppEquiv = sim$sppEquiv,
-                                                  minimumSampleSize = P(sim)$minimumPlots,
-                                                  quantileAgeSubset = P(sim)$quantileAgeSubset,
-                                                  speciesFittingApproach = P(sim)$speciesFittingApproach) |>
+  message("building growth curves") # this cache call takes several minutes to process..
+  sim$speciesGrowthCurves <- buildGrowthCurves(PSPdata = psp,
+                                               speciesCol = P(sim)$sppEquivCol,
+                                               sppEquiv = sim$sppEquiv,
+                                               minimumSampleSize = P(sim)$minimumPlots,
+                                               quantileAgeSubset = P(sim)$quantileAgeSubset,
+                                               speciesFittingApproach = "single") |>
     Cache(userTags = c(currentModule(sim), "buildGrowthCurves"))
 
-    classes <- lapply(sim$speciesGrowthCurves, FUN = "class")
-    
-    noDataSpp <- vapply(sim$speciesGrowthCurves[classes == "character"], FUN = function(x) {
-      x == "insufficient data"
-    }, FUN.VALUE = logical(1))
-    
-    if (any(noDataSpp)) {
-      message(cli::col_yellow(
-        "Insufficient data to estimate species parameters for ",
-        paste(names(noDataSpp), collapse = ", "),
-        " - will keep original user-supplied parameters"
-      ))
-    }
+  noData <- !vapply(sim$speciesGrowthCurves, is.list, logical(1))
+  if (any(noData)) {
+    message(cli::col_yellow("Insufficient data to estimate species parameters for ",
+                            paste(names(noData)[noData], collapse = ", "),
+                            " - will keep original user-supplied parameters"))
+  }
+  fitted <- sim$speciesGrowthCurves[!noData]
+  nlms <- lapply(fitted, function(x) x$NonLinearModel[[1]])
 
-    message("Digesting growth curve library and factorial...")
-    # Digesting of the growth curves has a stats object which changes every time;
-    #   just take the summary of the stats object
-    speciesGrowthCurves <-
-      sim$speciesGrowthCurves[!names(sim$speciesGrowthCurves) %in% names(noDataSpp)]
-    spgForDigest <- Map(sgc = speciesGrowthCurves, function(sgc) {
-      sgc$NonLinearModel <- summary(sgc$NonLinearModel[[1]]) # has no "function"
-      sgc
+  ## 3. mANPPproportion and inflationFactor that make the factorial grow like the fitted models -----
+  ## (for every growthcurve of the factorial; see `matchManppProportion()`)
+  facAges <- sort(unique(factorial$cohortData$age))
+  matched <- rbindlist(lapply(names(nlms), function(sp) {
+    f <- fcs[targetSpecies == sp]
+    if (!nrow(f)) {
+      message(cli::col_yellow(sp, " is not in the factorial - will keep original user-supplied parameters"))
+      return(NULL)
     }
-      )
-    toDigest <- list(
-      speciesGrowthCurves = spgForDigest, # this has functions in it, so needs to be dealt with
-      speciesTableFactorial = setDT(speciesTableFactorial),
-      cohortDataFactorial = setDT(cohortDataFactorial)
+    ages <- comparisonAges(facAges, P(sim)$standAgesForFitting, f$longevity[1])
+    ns <- nlmCurveStats(nlms[[sp]], ages)
+    if (is.na(ns$r) || ns$r <= 0) {
+      message(cli::col_yellow(sp, ": the fitted curve has no biomass increase in the fitting window",
+                              " - will keep original user-supplied parameters"))
+      return(NULL)
+    }
+    m <- matchManppProportion(f, ns$r)
+    if (!nrow(m)) {
+      return(NULL)
+    }
+    m[, `:=`(species = sp, nlmMaxB = ns$maxB, rTarget = ns$r)]
+  }))
+  if (!NROW(matched)) {
+    message("No species could be matched to the factorial; species traits are not changed.")
+    return(sim)
+  }
+  setcolorder(matched, "species")
+  sim$speciesTraitMatch <- matched
+  fittedSpecies <- unique(matched$species)
+
+  ## 4. growthcurve ---------------------------------------------------------------------------------
+  startGC <- setNames(sim$species$growthcurve[match(fittedSpecies, sim$species$species)], fittedSpecies)
+  startGC[is.na(startGC)] <- median(matched$growthcurve)
+  finalGC <- startGC
+
+  canCalibrate <- isTRUE(P(sim)$calibrateGrowthcurve)
+  if (canCalibrate && is.null(sim$ecoregionMap)) {
+    message("No `ecoregionMap`: `growthcurve` is not calibrated.")
+    canCalibrate <- FALSE
+  }
+  if (canCalibrate) {
+    cal <- calibrateGrowthcurves(
+      psp = psp, sppEquiv = sim$sppEquiv, sppEquivCol = P(sim)$sppEquivCol, PSPgis = sim$PSPgis_sppParams,
+      ecoregionMap = sim$ecoregionMap, speciesEcoregion = sim$speciesEcoregion,
+      speciesTable = sim$species, matched = matched[, .(species, growthcurve, mANPPproportion, inflationFactor)],
+      initialGrowthcurve = startGC, iterations = P(sim)$calibrationIterations,
+      minInterval = P(sim)$calibrationMinInterval, maxInterval = P(sim)$calibrationMaxInterval,
+      maxUnits = P(sim)$maxCalibrationPlots, focalMinProportion = P(sim)$calibrationMinFocalProportion,
+      paths = paths(sim), corePath = findCoreModule(modulePath(sim))
     )
-    cacheExtra <- .robustDigest(toDigest)
-    message("Done!")
-
-    modifiedSpeciesTables <- modifySpeciesTable(
-      GCs = speciesGrowthCurves,
-      speciesTable = sim$species,
-      factorialTraits = setDT(speciesTableFactorial),
-      ## setDT to deal with reload from Cache (no effect otherwise)
-      factorialBiomass = setDT(cohortDataFactorial),
-      ## setDT to deal with reload from Cache (no effect otherwise)
-      sppEquiv = sim$sppEquiv,
-      sppEquivCol = P(sim)$sppEquivCol,
-      inflationFactorKey = tempMaxB,
-      standAgesForFitting = P(sim)$standAgesForFitting,
-      approach = P(sim)$speciesFittingApproach,
-      maxBInFactorial = P(sim)$maxBInFactorial
-    ) |> Cache(
-      omitArgs = c("GCs", "factorialTraits", "factorialBiomass"),
-      .cacheExtra = cacheExtra,
-      userTags = c(currentModule(sim), "modifiedSpeciesTables")
-    )
-
-    gg <- modifiedSpeciesTables$gg
-    suppressWarnings(Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
-          filename = paste("LandR_VS_NLM_growthCurves")))
-    sim$species <- modifiedSpeciesTables$best
-    if (isTRUE(P(sim)$balanceGrowth)) {
-      sim$speciesBalanceCheck <- balanceGrowthK(
-        fitted = modifiedSpeciesTables$bestUnrounded,
-        maxB = medianMaxB(sim$speciesEcoregion),
-        ll = modifiedSpeciesTables$llTable,
-        sharedGrowthcurve = P(sim)$sharedGrowthcurve,
-        targetK = P(sim)$targetK
-      )
-      sim$species <- applyBalancedTraits(sim$species, sim$speciesBalanceCheck)
+    if (!is.null(cal)) {
+      finalGC[names(cal$growthcurve)] <- cal$growthcurve
+      sim$speciesGrowthcurveScore <- cal$score
+      gcPlot <- ggplot(cal$score, aes(growthcurve, dLL)) +
+        geom_line() + geom_point() +
+        facet_wrap(~ focal, scales = "free_y") +
+        geom_vline(data = data.table(focal = names(finalGC), gc = finalGC), aes(xintercept = gc), linetype = "dashed") +
+        labs(x = "growthcurve", y = "log-likelihood relative to the best", title = "Calibration of growthcurve") +
+        theme_bw()
+      suppressWarnings(Plots(gcPlot, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
+                             filename = "growthcurve_calibration"))
     }
-    if (isTRUE(P(sim)$landis)) {
-      ## LANDIS mode: expose the fitted LANDIS-version growth curves (BscaledNonLinear by species and
-      ## standAge) and the PSP observations behind them, for LANDIS-II Biomass Succession inputs and the
-      ## vegetation-report growth-curve diagnostic.
-      sim$speciesGrowthCurvesLandis <- modifiedSpeciesTables$landisCurves
-      sim$speciesGrowthCurvesPSP <- modifiedSpeciesTables$psp
-    }
-  } else {
-    message("P(sim)$PSPdataTypes is 'none' -- bypassing species traits estimation from PSP data.")
+  }
+
+  ## 5. species table -------------------------------------------------------------------------------
+  final <- rbindlist(lapply(fittedSpecies, function(sp) {
+    cbind(species = sp, traitsAtGrowthcurve(matched[species == sp], finalGC[[sp]]))
+  }))
+  message("Species traits:")
+  print(final)
+  species <- copy(sim$species)
+  if (!"inflationFactor" %in% names(species)) {
+    species[, inflationFactor := NA_real_]
+  }
+  idx <- match(final$species, species$species)
+  set(species, idx, "growthcurve", round(final$growthcurve, 3))
+  set(species, idx, "mANPPproportion", round(final$mANPPproportion, 3))
+  set(species, idx, "inflationFactor", round(final$inflationFactor, 3))
+  sim$species <- species
+
+  ## 6. the fitted and the LandR curves ----------------------------------------------------------------
+  curves <- landrVsNlmCurves(factorial, final, nlms, P(sim)$standAgesForFitting)
+  originalData <- rbindlist(lapply(fitted, function(x) x$originalData), idcol = "species")
+  gg <- ggplot(curves, aes(x = standAge, colour = species)) +
+    geom_point(data = originalData, aes(standAge, biomass), size = 0.25, alpha = 0.3) +
+    geom_line(aes(y = BscaledNonLinear, linetype = "LandR"), linewidth = 1.5) +
+    geom_line(aes(y = predNonLinear, linetype = "Non-Linear"), linewidth = 1.5) +
+    scale_linetype_manual(name = "Curve", values = c("LandR" = "solid", "Non-Linear" = "twodash")) +
+    facet_wrap(~ species, scales = "free_y") +
+    coord_cartesian(xlim = c(0, max(P(sim)$standAgesForFitting) * 1.5)) +
+    labs(y = "Biomass", x = "Stand Age", colour = "Species") +
+    ggtitle("Comparing best LandR and Non-linear curves") +
+    theme_bw()
+  suppressWarnings(Plots(gg, usePlot = FALSE, fn = print, ggsaveArgs = list(width = 10, height = 7),
+                         filename = "LandR_VS_NLM_growthCurves"))
+
+  if (isTRUE(P(sim)$landis)) {
+    ## LANDIS mode: expose the fitted LANDIS-version growth curves (BscaledNonLinear by species and
+    ## standAge) and the PSP observations behind them.
+    sim$speciesGrowthCurvesLandis <- curves
+    sim$speciesGrowthCurvesPSP <- originalData
   }
   return(sim)
+}
+
+#' Single-species factorial tables from the paths in the simList
+loadSingleSpeciesFactorial <- function(sim) {
+  fmt <- "feather" ## faster for small-med data compared to parquet
+  openFactorial <- function(path, nm) {
+    if (tools::file_ext(path) == "rds") {
+      ## using rds default from .inputObjects
+      prepInputs(targetFile = basename(path), destinationPath = inputPath(sim), fun = "readRDS",
+                 useCache = FALSE, url = extractURL(nm, sim))
+    } else {
+      arrow::open_dataset(path, format = fmt)
+    }
+  }
+  readSingleSpeciesFactorial(openFactorial(sim$cohortDataFactorial_path, "cohortDataFactorial_path"),
+                             openFactorial(sim$speciesTableFactorial_path, "speciesTableFactorial_path"))
 }
 
 updateSpeciesTables <- function(sim) {
@@ -507,7 +484,7 @@ Save <- function(sim) {
                                            "Pinu_Ban", "Popu_Tre", "Lari_Lar",
                                            "Betu_Pap", "Abie_Bal"), ]
   }
-  
+
   if (!suppliedElsewhere("sppEquivLong", sim)) {
     ## pass a default sppEquivalencies_CA for common species in western Canada
     sim$sppEquivLong <- LandR::sppEquivalencies_CA

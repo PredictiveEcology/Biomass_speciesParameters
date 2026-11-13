@@ -19,6 +19,7 @@ test_that("inputs are the expected names and classes", {
     inputs[order(names(inputs))],
     c(BECzonesBC                 = "sf",
       cohortDataFactorial_path   = "fs_path",
+      ecoregionMap               = "SpatRaster",
       PSPgis_sppParams           = "sf",
       PSPmeasure_sppParams       = "data.table",
       PSPplot_sppParams          = "data.table",
@@ -37,11 +38,12 @@ test_that("outputs are the expected names and classes", {
   expect_identical(
     outputs[order(names(outputs))],
     c(species                   = "data.table",
-      speciesBalanceCheck       = "data.table",
       speciesEcoregion          = "data.table",
       speciesGrowthCurves       = "list",
+      speciesGrowthcurveScore   = "data.table",
       speciesGrowthCurvesLandis = "data.table",
-      speciesGrowthCurvesPSP    = "data.table")
+      speciesGrowthCurvesPSP    = "data.table",
+      speciesTraitMatch         = "data.table")
   )
 })
 
@@ -51,18 +53,10 @@ test_that("parameters are the expected names", {
     sort(md$parameters$paramName),
     sort(c(".plotInitialTime", ".plotInterval", ".plots", ".saveInitialTime",
            ".saveInterval", ".studyAreaName", ".useCache", ".useParallel",
-           "balanceGrowth", "biomassModel", "excludeBECzonesHybridSpruce", "landis",
-           "maxBInFactorial", "mergeHybridSprucePSP", "minDBH", "minimumPlots",
-           "PSPdataTypes", "PSPperiod", "quantileAgeSubset", "sharedGrowthcurve",
-           "speciesFittingApproach", "sppEquivCol", "standAgesForFitting", "targetK",
-           "useHeight"))
+           "biomassModel", "calibrateGrowthcurve", "calibrationIterations",
+           "calibrationMaxInterval", "calibrationMinFocalProportion", "calibrationMinInterval",
+           "excludeBECzonesHybridSpruce", "landis", "maxBInFactorial", "maxCalibrationPlots",
+           "mergeHybridSprucePSP", "minDBH", "minimumPlots", "PSPdataTypes", "PSPperiod",
+           "quantileAgeSubset", "sppEquivCol", "standAgesForFitting", "useHeight"))
   )
-})
-
-test_that("balanceGrowth is off by default, with sharedGrowthcurve and targetK unset", {
-  md <- SpaDES.core::moduleMetadata(module = moduleName, path = modulePath)
-  defaults <- stats::setNames(md$parameters$default, md$parameters$paramName)
-  expect_false(defaults[["balanceGrowth"]])
-  expect_true(is.na(defaults[["sharedGrowthcurve"]]))
-  expect_true(is.na(defaults[["targetK"]]))
 })

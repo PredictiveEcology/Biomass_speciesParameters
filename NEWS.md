@@ -2,7 +2,10 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
-* `speciesFittingApproach = "all"` is removed. It was meant to pool all species into one fit and give every species the same traits, but it has stopped with an error (`object 'gcSpecies1' not found`) since December 2021, and the current fitting has no pooled fit to give it. It now stops at once with a message saying so; use `"focal"` (default), `"pairwise"` or `"single"`. An unknown value also stops with a clear message.
+* Redesign (branch `ModelRedesign`): `growthcurve` and `mANPPproportion` could not be told apart by fitting. Now (1) one non-linear model is fitted to the PSPs of each species, as before; (2) the net peak biomass increment of that model relative to its maximum (`r`) is matched to a single-species, no-competition `Biomass_speciesFactorial` (`factorialDesign = "perSpecies"`), which gives the `mANPPproportion` and `inflationFactor` for every candidate `growthcurve` (the model's slope is net of mortality, whereas `maxANPP` is gross, so it cannot be read off the derivative directly); (3) `growthcurve` is calibrated by simulating remeasured, mixed-species PSPs in `Biomass_core`, once per candidate `growthcurve` of the focal species, with `longevity` and `mortalityshape` taken as known.
+* The module runs after `Biomass_borealDataPrep` and `Biomass_speciesFactorial`, and still recalibrates `maxB`/`maxANPP` through `updateSpeciesTables`. New input `ecoregionMap`; new parameters `calibrateGrowthcurve`, `calibrationIterations`, `calibrationMinInterval`, `calibrationMaxInterval`, `calibrationMinFocalProportion` and `maxCalibrationPlots`; new outputs `speciesTraitMatch` and `speciesGrowthcurveScore`.
+* Removed: the `speciesFittingApproach` ("focal", "pairwise"), `balanceGrowth`, `sharedGrowthcurve` and `targetK` parameters, and the `speciesBalanceCheck` output. The old factorial (two species per pixel) can no longer be used.
+* `speciesFittingApproach = "all"` is removed. It was meant to pool all species into one fit and give every species the same traits, but it has stopped with an error (`object 'gcSpecies1' not found`) since December 2021, and the current fitting has no pooled fit to give it.
 
 # Biomass_speciesParameters 3.1.0
 
