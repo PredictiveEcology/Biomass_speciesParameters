@@ -8,6 +8,7 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
     studyAreaANPP <- st_transform(x = studyAreaANPP, crs = st_crs(PSPgis))
     message(cli::col_yellow("Filtering PSPs for ANPP to study Area..."))
     PSP_sa <- PSPgis[studyAreaANPP,] |>
+      as.data.table() |> # PSPgis may be a plain sf data.frame, which setkey() rejects
       setkey(OrigPlotID1)
     message(cli::col_yellow(paste0("There are "), nrow(PSP_sa), " PSPs in your study area"))
     if (nrow(PSP_sa) == 0) {
