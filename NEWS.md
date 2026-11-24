@@ -2,6 +2,7 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
+* Species codes are matched whole when choosing the PSP plots of each fit. Matched as substrings, a code that is part of another (e.g. `Pice_eng` in `Pice_eng_gla`) drew the other species' plots, as "Other" under "focal", and a pair whose name is part of another pair's drew that pair's plots under "pairwise".
 * The README shows the module's events, the objects each reads and writes, and a figure per event, generated from the code (needs SpaDES.core 3.2.1.9068 or later; older versions leave them out).
 * The message for species with too few PSP plots to fit said they keep their original parameters. They do not: `growthcurve`, `mortalityshape`, `mANPPproportion` and `inflationFactor` become the average of the fitted species with the same `hardsoft` value. The message now says so. No results change.
 * Corrected the `species` input description (the module uses `species`, `longevity` and `hardsoft`, and replaces `longevity`, `growthcurve` and `mortalityshape` of the fitted species), and the name of the factorial module in the `cohortDataFactorial_path` and `speciesTableFactorial_path` descriptions (`Biomass_speciesFactorial`).

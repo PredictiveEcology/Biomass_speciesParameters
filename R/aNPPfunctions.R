@@ -161,8 +161,17 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
     gcSpecies2 <- unique(speciesComp$spComp) |> setNames(nm = _)
     speciesForSplit <- if (isTRUE(speciesFittingApproach == "pairwise")) gcSpecies2 else gcSpecies1
     speciesCompListAll <- split(speciesComp, speciesComp$spComp)
+    ## The plots of each fit: under "pairwise", those of its own pair; under "focal", those of every
+    ## composition the species is part of. Species codes are matched whole: matched as substrings
+    ## (grepl), a code that is part of another (Pice_eng in Pice_eng_gla) drew that species' plots.
+    compMembers <- strsplit(names(speciesCompListAll), "__", fixed = TRUE)
     speciesCompList <- lapply(speciesForSplit, function(spName) {
-      rbindlist(speciesCompListAll[grepl(spName, names(speciesCompListAll))])
+      inComp <- if (isTRUE(speciesFittingApproach == "pairwise")) {
+        names(speciesCompListAll) == spName
+      } else {
+        vapply(compMembers, function(members) spName %in% members, logical(1))
+      }
+      rbindlist(speciesCompListAll[inComp])
     })
     SpPSPList <- lapply(speciesCompList, function(speciesCompInner) {
       SpPSP[MeasureID %in% speciesCompInner$MeasureID][spDom > 0.2]
