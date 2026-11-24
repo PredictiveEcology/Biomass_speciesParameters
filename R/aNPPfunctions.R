@@ -33,8 +33,17 @@ prepPSPaNPP <- function(studyAreaANPP, PSPgis, PSPmeasure, PSPplot, sppEquivLong
   PSPmeasure <- PSPmeasure[OrigPlotID1 %in% forestPlots$OrigPlotID1, ]
   PSPplot <- PSPplot[OrigPlotID1 %in% PSPmeasure$OrigPlotID1, ]
 
-  ## Restrict to trees >= ## DBH. Maybe necessary to get rid of small trees when they are inconsistently recorded
-  PSPmeasure <- PSPmeasure[DBH >= minDBH,]
+  ## Restrict to trees >= minDBH. Maybe necessary to get rid of small trees when they are inconsistently
+  ## recorded. Each plot's own recorded minimum DBH (PSPplot's `minDBH` column, added by the join above)
+  ## is a floor: a tree is kept if its DBH reaches the larger of the two, so the default minDBH = 0 keeps
+  ## the trees at or above their plot's minimum. Computed outside `[`, where that column would mask the
+  ## argument
+  dbhFloor <- minDBH
+  if ("minDBH" %in% names(PSPmeasure)) {
+    dbhFloor <- pmax(minDBH, PSPmeasure[["minDBH"]])
+  }
+  keepTrees <- PSPmeasure$DBH >= dbhFloor
+  PSPmeasure <- PSPmeasure[keepTrees]
   ## decide what to do about above line and stem/density. PES approach is to just fix the data...
   
   #get column for estimating biomass
@@ -161,8 +170,17 @@ buildGrowthCurves <- function(PSPdata, speciesCol, sppEquiv, quantileAgeSubset,
     gcSpecies2 <- unique(speciesComp$spComp) |> setNames(nm = _)
     speciesForSplit <- if (isTRUE(speciesFittingApproach == "pairwise")) gcSpecies2 else gcSpecies1
     speciesCompListAll <- split(speciesComp, speciesComp$spComp)
+    ## The plots of each fit: under "pairwise", those of its own pair; under "focal", those of every
+    ## composition the species is part of. Species codes are matched whole: matched as substrings
+    ## (grepl), a code that is part of another (Pice_eng in Pice_eng_gla) drew that species' plots.
+    compMembers <- strsplit(names(speciesCompListAll), "__", fixed = TRUE)
     speciesCompList <- lapply(speciesForSplit, function(spName) {
-      rbindlist(speciesCompListAll[grepl(spName, names(speciesCompListAll))])
+      inComp <- if (isTRUE(speciesFittingApproach == "pairwise")) {
+        names(speciesCompListAll) == spName
+      } else {
+        vapply(compMembers, function(members) spName %in% members, logical(1))
+      }
+      rbindlist(speciesCompListAll[inComp])
     })
     SpPSPList <- lapply(speciesCompList, function(speciesCompInner) {
       SpPSP[MeasureID %in% speciesCompInner$MeasureID][spDom > 0.2]
