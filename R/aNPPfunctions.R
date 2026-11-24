@@ -358,13 +358,16 @@ buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
                        biomass = spPlotBiomass[1], spDom = spDom[1]),
                    by = .(speciesTemp, MeasureYear, OrigPlotID1)]
 
-  ## test if there are sufficient plots to estimate traits
-  if (nrow(standData) < minSize) {
+  ## test if there are sufficient plots to estimate traits: the plot-years each curve is fitted to.
+  ## Counting the rows of `standData` counted a plot-year twice under "focal" when another species was
+  ## also co-dominant (its "Other" row is not fitted), and under "pairwise" once per species of the pair.
+  nPlotYears <- fittedPlotYears(standData)
+  if (nPlotYears < minSize) {
     GC <- "insufficient data"
     names(GC) <- species
 
-    warning("insufficient PSP data to estimate traits:\n",
-            "(have ", nrow(standData), " rows; requested minimum ", minSize, " rows)")
+    warning("insufficient PSP data to estimate traits for ", species, ": ", nPlotYears,
+            " plot-years (plot x measurement year), fewer than minimumPlots (", minSize, ")")
 
     return(GC)
   }
@@ -609,4 +612,16 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
 
   gc()
   return(list(bestTraits = bestTraits, bestTraitsAll = bestTraitsAll, fullData = candFB, ll = ll))
+}
+
+## The number of plot-years (unique plot x measurement year) that buildModels() fits each curve to:
+## the smallest over the species fitted, i.e. all in `standData` except the co-dominant species that
+## the "focal" approach pools as "Other", which are not fitted. 0 if there are none.
+fittedPlotYears <- function(standData) {
+  fitted <- standData[!is.na(speciesTemp) & speciesTemp != "Other"]
+  if (nrow(fitted) == 0L) {
+    return(0L)
+  }
+  plotYears <- unique(fitted, by = c("speciesTemp", "MeasureYear", "OrigPlotID1"))
+  min(plotYears[, .N, by = "speciesTemp"]$N)
 }
