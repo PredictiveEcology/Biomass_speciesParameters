@@ -1,6 +1,6 @@
 ---
 title: "LandR _Biomass_speciesParameters_ Manual"
-date: "Last updated: 2026-11-09"
+date: "Last updated: 2026-11-24"
 output:
   bookdown::html_document2:
     toc: true
@@ -28,7 +28,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters7f3594a4666c1200b17bf7d2ffe3ad71050b1f2b)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters7585d2d34d6f25f12d42bf6a3dc5854d8456ea4d)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
 
@@ -79,7 +79,7 @@ data/calibration module that does so (e.g., *Biomass_borealDataPrep*). However
 it can be used stand-alone in an initial developmental phase for easier
 inspection of the statistical calibration procedure employed.
 
-As of November 09, 2026, the *raw* PSP data used in this
+As of November 24, 2026, the *raw* PSP data used in this
 module is not freely available, and data sharing agreements must be obtained
 from the governments of some provinces (e.g., SK and AB) to obtain it. However, the *processed and
 anonymized* PSP data is provided via a Google Drive folder accessed
@@ -470,7 +470,7 @@ determining the geographic extent of the PSP data.
   <tr>
    <td style="text-align:left;"> cohortDataFactorial_path </td>
    <td style="text-align:left;"> fs_path </td>
-   <td style="text-align:left;"> Path where the `cohortDataFactorial` object is saved as an `arrow` dataset. A large `cohortData` table ( sensu `Biomass_core`) with columns `age`, `B`, and `speciesCode` that joins with `speciesTableFactorial`. See `PredictiveEcology/Biomass_factorial` for further information. </td>
+   <td style="text-align:left;"> Path where the `cohortDataFactorial` object is saved as an `arrow` dataset. A large `cohortData` table ( sensu `Biomass_core`) with columns `age`, `B`, and `speciesCode` that joins with `speciesTableFactorial`. See `PredictiveEcology/Biomass_speciesFactorial` for further information. </td>
    <td style="text-align:left;"> https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/ </td>
   </tr>
   <tr>
@@ -500,7 +500,7 @@ determining the geographic extent of the PSP data.
   <tr>
    <td style="text-align:left;"> species </td>
    <td style="text-align:left;"> data.table </td>
-   <td style="text-align:left;"> A table of invariant species traits with the following trait colums: 'species', 'Area', 'longevity', 'sexualmature', 'shadetolerance', 'firetolerance', 'seeddistance_eff', 'seeddistance_max', 'resproutprob', 'mortalityshape', 'growthcurve', 'resproutage_min', 'resproutage_max', 'postfireregen', 'wooddecayrate', 'leaflongevity' 'leafLignin', and 'hardsoft'. Only 'growthcurve', 'hardsoft', and 'mortalityshape' are used in this module. Default is from Dominic Cyr and Yan Boulanger's applications of LANDIS-II </td>
+   <td style="text-align:left;"> A table of invariant species traits with the following trait colums: 'species', 'Area', 'longevity', 'sexualmature', 'shadetolerance', 'firetolerance', 'seeddistance_eff', 'seeddistance_max', 'resproutprob', 'mortalityshape', 'growthcurve', 'resproutage_min', 'resproutage_max', 'postfireregen', 'wooddecayrate', 'leaflongevity' 'leafLignin', and 'hardsoft'. Only 'species', 'longevity' and 'hardsoft' are used in this module; 'longevity', 'growthcurve' and 'mortalityshape' of the fitted species are replaced by estimated values. Default is from Dominic Cyr and Yan Boulanger's applications of LANDIS-II </td>
    <td style="text-align:left;"> https://raw.githubusercontent.com/dcyr/LANDIS-II_IA_generalUseFiles/master/speciesTraits.csv </td>
   </tr>
   <tr>
@@ -512,7 +512,7 @@ determining the geographic extent of the PSP data.
   <tr>
    <td style="text-align:left;"> speciesTableFactorial_path </td>
    <td style="text-align:left;"> fs_path </td>
-   <td style="text-align:left;"> Path where the `speciesTableFactorial` object is saved as an `arrow` dataset. A large species table ( sensu `Biomass_core`) with all columns used by Biomass_core, e.g., `longevity`, `growthcurve`, `mortalityshape`, etc., when it was used to generate `cohortDataFactorial`. See `PredictiveEcology/Biomass_factorial` for futher information. </td>
+   <td style="text-align:left;"> Path where the `speciesTableFactorial` object is saved as an `arrow` dataset. A large species table ( sensu `Biomass_core`) with all columns used by Biomass_core, e.g., `longevity`, `growthcurve`, `mortalityshape`, etc., when it was used to generate `cohortDataFactorial`. See `PredictiveEcology/Biomass_speciesFactorial` for further information. </td>
    <td style="text-align:left;"> https://drive.google.com/file/d/1NH7OpAnWtLyO8JVnhwdMJakOyapBnuBH/ </td>
   </tr>
   <tr>
@@ -916,6 +916,129 @@ If `sppEquiv` has no species (a study area with no trees), the module does
 nothing. If `P(sim)$PSPdataTypes` is `"none"`, steps 2 to 4 are skipped, but
 `maxB` and `maxANPP` are still updated (with `maxANPP` as `maxB / 30` if the
 `species` table has no `mANPPproportion` column).
+
+
+
+<div class="figure">
+<img src="figures/Biomass_speciesParameters_eventFlow.png" alt="(ref:Biomass-speciesParameters) events, as read from the module code with its default parameters." width="100%" />
+<p class="caption">(\#fig:eventFlow-Biomass-speciesParameters)(ref:Biomass-speciesParameters) events, as read from the module code with its default parameters.</p>
+</div>
+
+Table \@ref(tab:eventObjects-Biomass-speciesParameters) lists, for each object, the code that writes it and the code that only reads it.
+
+<table class="table" style="width: auto !important; ">
+<caption>(\#tab:eventObjects-Biomass-speciesParameters)Where each object of (ref:Biomass-speciesParameters) is written and read, in run order.</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Object </th>
+   <th style="text-align:left;"> Written by </th>
+   <th style="text-align:left;"> Read by </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr grouplength="9"><td colspan="3" style="border-bottom: 1px solid;"><strong>Inputs</strong></td></tr>
+<tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> BECzonesBC </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> cohortDataFactorial_path </td>
+   <td style="text-align:left;"> .inputObjects (default) </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> PSPgis_sppParams </td>
+   <td style="text-align:left;"> .inputObjects (default) </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> PSPmeasure_sppParams </td>
+   <td style="text-align:left;"> .inputObjects (default) </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> PSPplot_sppParams </td>
+   <td style="text-align:left;"> .inputObjects (default) </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> speciesTableFactorial_path </td>
+   <td style="text-align:left;"> .inputObjects (default) </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> sppEquiv </td>
+   <td style="text-align:left;"> .inputObjects (default) </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> sppEquivLong </td>
+   <td style="text-align:left;"> .inputObjects (default) </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> studyAreaANPP </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr grouplength="2"><td colspan="3" style="border-bottom: 1px solid;"><strong>Inputs the module also updates</strong></td></tr>
+<tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> species </td>
+   <td style="text-align:left;"> .inputObjects (default), init: Init(), init: updateSpeciesTables() </td>
+   <td style="text-align:left;">  </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> speciesEcoregion </td>
+   <td style="text-align:left;"> .inputObjects (default), init: updateSpeciesTables() </td>
+   <td style="text-align:left;"> init: Init() </td>
+  </tr>
+  <tr grouplength="4"><td colspan="3" style="border-bottom: 1px solid;"><strong>Outputs</strong></td></tr>
+<tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> speciesBalanceCheck </td>
+   <td style="text-align:left;"> init: Init() </td>
+   <td style="text-align:left;">  </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> speciesGrowthCurves </td>
+   <td style="text-align:left;"> init: Init() </td>
+   <td style="text-align:left;">  </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> speciesGrowthCurvesLandis </td>
+   <td style="text-align:left;"> init: Init() </td>
+   <td style="text-align:left;">  </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;padding-left: 2em;" indentlevel="1"> speciesGrowthCurvesPSP </td>
+   <td style="text-align:left;"> init: Init() </td>
+   <td style="text-align:left;">  </td>
+  </tr>
+</tbody>
+</table>
+
+
+#### .inputObjects {-}
+
+during simInit: defaults for inputs not supplied
+
+![](figures/Biomass_speciesParameters_io_.inputObjects.png){width=100%}
+
+
+
+#### Init() {-}
+
+init event, step 1 of 2
+
+![](figures/Biomass_speciesParameters_io_init_Init.png){width=100%}
+
+
+
+#### updateSpeciesTables() {-}
+
+init event, step 2 of 2
+
+![](figures/Biomass_speciesParameters_io_init_updateSpeciesTables.png){width=100%}
 
 ## Usage example {#bsppparam-example}
 
