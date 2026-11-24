@@ -281,9 +281,10 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   newTraits[, AICWeights := exp( -0.5 * llNonLinDelta)]
   newTraits[, AICWeightsStd := AICWeights/sum(AICWeights), by = "species"]
 
-  ## Showing species-level averages -- this is not assigned to object
+  ## AIC-weighted traits per species, written over the species table's below. Not `longevity`: it only
+  ## selects the factorial curves to fit from (limitToSpeciesLongevity()), and its weighted mean is a mix
+  ## of the grid longevities either side of the species' own, or the grid's largest for a longer-lived one
   bestWeighted <- newTraits[, .(growthcurve = sum(AICWeightsStd * growthcurve),
-                                longevity = round(sum(AICWeightsStd * longevity), 0),
                                 mortalityshape = round(sum(AICWeightsStd * mortalityshape), 0),
                                 mANPPproportion = sum(AICWeightsStd * mANPPproportion),
                                 inflationFactor = round(sum(AICWeightsStd * inflationFactor), 3)),

@@ -100,9 +100,10 @@ test_that("modifySpeciesTable with default settings gives the unchanged species 
   attachModuleDeps()
   inputs <- makeModifySpeciesTableInputs()
   res <- suppressMessages(suppressWarnings(do.call(modifySpeciesTable, inputs)))
-  ## captured from the module before `balanceGrowth` existed (development at ba70f74); Betu_pap has no fit
+  ## captured from the module before `balanceGrowth` existed (development at ba70f74); Betu_pap has no fit.
+  ## longevity is the input's: modifySpeciesTable() no longer overwrites it (test-modifySpeciesTable.R)
   expect_equal(as.data.frame(res$best),
-               data.frame(species = c("Abie_las", "Pice_eng", "Betu_pap"), longevity = c(225L, 300L, 150L),
+               data.frame(species = c("Abie_las", "Pice_eng", "Betu_pap"), longevity = c(250L, 450L, 150L),
                           growthcurve = c(0.7, 0.7, 0.9), mortalityshape = c(20L, 20L, 15L),
                           mANPPproportion = c(5.398, 3.808, 9), inflationFactor = c(1.044, 1.038, 1)))
   ## the unrounded fits behind it are what `balanceGrowth` starts from

@@ -2,9 +2,10 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
+* A fitted species keeps the `longevity` it was given. `modifySpeciesTable()` fits a species' traits from the factorial curves at the grid longevities either side of its own, and then wrote the AIC-weighted mean of those grid longevities over the species' own, so the species ended up between its two grid neighbours, or at the grid's largest longevity if it lived longer than that. On *Biomass_speciesFactorial*'s "small" grid (125 to 525 in steps of 100), a 700-year species got 525, and a 250-year one a value between 225 and 325. Species without a fitted growth curve, and the other fitted traits, are unaffected.
 * The README shows the module's events, the objects each reads and writes, and a figure per event, generated from the code (needs SpaDES.core 3.2.1.9068 or later; older versions leave them out).
 * The message for species with too few PSP plots to fit said they keep their original parameters. They do not: `growthcurve`, `mortalityshape`, `mANPPproportion` and `inflationFactor` become the average of the fitted species with the same `hardsoft` value. The message now says so. No results change.
-* Corrected the `species` input description (the module uses `species`, `longevity` and `hardsoft`, and replaces `longevity`, `growthcurve` and `mortalityshape` of the fitted species), and the name of the factorial module in the `cohortDataFactorial_path` and `speciesTableFactorial_path` descriptions (`Biomass_speciesFactorial`).
+* Corrected the `species` input description (the module uses `species`, `longevity` and `hardsoft`, and replaces `growthcurve` and `mortalityshape` of the fitted species), and the name of the factorial module in the `cohortDataFactorial_path` and `speciesTableFactorial_path` descriptions (`Biomass_speciesFactorial`).
 * `speciesFittingApproach = "all"` is removed. It was meant to pool all species into one fit and give every species the same traits, but it has stopped with an error (`object 'gcSpecies1' not found`) since December 2021, and the current fitting has no pooled fit to give it. It now stops at once with a message saying so; use `"focal"` (default), `"pairwise"` or `"single"`. An unknown value also stops with a clear message.
 
 # Biomass_speciesParameters 3.1.0
