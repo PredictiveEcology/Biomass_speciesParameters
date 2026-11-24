@@ -2,6 +2,7 @@ Known issues: <https://github.com/PredictiveEcology/Biomass_speciesParameters/is
 
 # Biomass_speciesParameters (development version)
 
+* A study area in which no species gets a growth curve (every species below `minimumPlots`, or every fit failed) no longer stops the run. `modifySpeciesTable()` stopped with "non-existing column(s): cols[1]='species'", joining an empty trait table in `limitToSpeciesLongevity()`. The module now warns, naming each species and why, and continues as with `PSPdataTypes = "none"`: the species traits given as input are used unchanged.
 * The README shows the module's events, the objects each reads and writes, and a figure per event, generated from the code (needs SpaDES.core 3.2.1.9068 or later; older versions leave them out).
 * The message for species with too few PSP plots to fit said they keep their original parameters. They do not: `growthcurve`, `mortalityshape`, `mANPPproportion` and `inflationFactor` become the average of the fitted species with the same `hardsoft` value. The message now says so. No results change.
 * Corrected the `species` input description (the module uses `species`, `longevity` and `hardsoft`, and replaces `longevity`, `growthcurve` and `mortalityshape` of the fitted species), and the name of the factorial module in the `cohortDataFactorial_path` and `speciesTableFactorial_path` descriptions (`Biomass_speciesFactorial`).
