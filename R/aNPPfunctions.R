@@ -291,6 +291,19 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   rm(GCtrans, factorialBiomass, factorialTraitsVarying)
   gc()
   newTraits <- limitToSpeciesLongevity(newTraits, speciesTable)
+  ## A species longer- or shorter-lived than the whole factorial grid gets the traits fitted at the
+  ## grid's largest or smallest longevity only, not a mix of the two either side of its own, and the
+  ## species keeps its own longevity below, so those traits (inflationFactor in particular) do not
+  ## quite match it.
+  offGrid <- longevityOutsideGrid(newTraits, speciesTable)
+  if (nrow(offGrid)) {
+    warning("Longevity outside the factorial's range of longevities: ",
+            paste0(offGrid$species, " (", offGrid$longevity, "; traits fitted at ",
+                   offGrid$gridLongevity, ")", collapse = ", "),
+            ". Their growthcurve, mortalityshape, mANPPproportion and inflationFactor are those fitted",
+            " at that one grid longevity, and inflationFactor depends on longevity. A factorial whose",
+            " longevities bracket theirs avoids this.", call. = FALSE)
+  }
   llTable <- limitToSpeciesLongevity(newTraitsAll, speciesTable)[, c("species", "growthcurve", "mANPPproportion",
                                                                     "llNonLinDelta")]
   rm(newTraitsAll)
@@ -299,9 +312,10 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   newTraits[, AICWeights := exp( -0.5 * llNonLinDelta)]
   newTraits[, AICWeightsStd := AICWeights/sum(AICWeights), by = "species"]
 
-  ## Showing species-level averages -- this is not assigned to object
+  ## AIC-weighted traits per species, written over the species table's below. Not `longevity`: it only
+  ## selects the factorial curves to fit from (limitToSpeciesLongevity()), and its weighted mean is a mix
+  ## of the grid longevities either side of the species' own, or the grid's largest for a longer-lived one
   bestWeighted <- newTraits[, .(growthcurve = sum(AICWeightsStd * growthcurve),
-                                longevity = round(sum(AICWeightsStd * longevity), 0),
                                 mortalityshape = round(sum(AICWeightsStd * mortalityshape), 0),
                                 mANPPproportion = sum(AICWeightsStd * mANPPproportion),
                                 inflationFactor = round(sum(AICWeightsStd * inflationFactor), 3)),
@@ -348,6 +362,19 @@ modifySpeciesTable <- function(GCs, speciesTable, factorialTraits, factorialBiom
   ## mode (`P(sim)$landis`); harmless otherwise.
   return(list(best = bestWeighted, bestUnrounded = bestUnrounded, llTable = llTable,
               gg = gg, landisCurves = bestIndCurves, psp = originalData))
+}
+
+## The fitted species whose own longevity is outside the grid longevities their traits were fitted at.
+## limitToSpeciesLongevity() keeps the factorial curves at the grid longevities either side of each
+## species' own, so these are the species longer- or shorter-lived than the whole grid, fitted at its
+## largest or smallest longevity only. `newTraits` is limitToSpeciesLongevity()'s output.
+longevityOutsideGrid <- function(newTraits, speciesTable) {
+  grid <- unique(newTraits[, c("species", "longevity")])
+  grid <- grid[, .(gridMin = min(longevity), gridMax = max(longevity)), by = "species"]
+  own <- speciesTable[species %in% grid$species, c("species", "longevity")]
+  out <- grid[own, on = "species"]
+  out[longevity > gridMax | longevity < gridMin,
+      .(species, longevity, gridLongevity = ifelse(longevity > gridMax, gridMax, gridMin))]
 }
 
 ## Limit traits to those nearest to the longevity provided in the species table
