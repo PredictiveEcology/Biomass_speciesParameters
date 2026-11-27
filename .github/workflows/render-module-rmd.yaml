@@ -45,3 +45,7 @@ jobs:
     uses: PredictiveEcology/actions/.github/workflows/render-module-rmd.yaml@main
     with:
       module: Biomass_speciesParameters
+    ## The main ruleset rejects a push by GitHub Actions; the docs-bot app may bypass
+    ## it, so the rendered .md is pushed as the app.
+    secrets:
+      DOCS_BOT_KEY: ${{ secrets.DOCS_BOT_KEY }}

@@ -505,6 +505,34 @@ buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
   return(sppGrowthCurves)
 }
 
+## TRUE if `GC`, an element of buildGrowthCurves()'s output, has a fitted growth curve for each of
+## its species, which editSpeciesTraits() needs to estimate traits. FALSE for "insufficient data"
+## (fewer than `minimumPlots` PSP plots) and when every model of a species failed.
+isFittedGC <- function(GC) {
+  if (!is.list(GC)) {
+    return(FALSE)
+  }
+  classesNonLinear <- unlist(lapply(GC$NonLinearModel, class))
+  !is.null(classesNonLinear) && !"try-error" %in% classesNonLinear
+}
+
+## The warning for a study area in which no species (or pair, under "pairwise") has a fitted growth
+## curve: each one, and why. `GCs` is buildGrowthCurves()'s output.
+noFittedCurvesMessage <- function(GCs, minimumPlots, studyAreaName = NA_character_) {
+  tooFew <- vapply(GCs, function(GC) identical(as.vector(GC), "insufficient data"), logical(1))
+  paste0(
+    "No growth curve could be fitted from the PSP data",
+    if (length(studyAreaName) && !is.na(studyAreaName)) paste0(" in ", studyAreaName),
+    if (any(tooFew)) paste0("; fewer than minimumPlots (", minimumPlots, ") PSP plots: ",
+                            paste(names(GCs)[tooFew], collapse = ", ")),
+    if (any(!tooFew)) paste0("; every fit failed: ",
+                             paste(names(GCs)[!tooFew], collapse = ", ")),
+    if (!length(GCs)) "; no species to fit",
+    ". Bypassing species traits estimation from PSP data, as with PSPdataTypes = 'none':",
+    " the species traits given as input are used unchanged."
+  )
+}
+
 editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, maxBInFactorial,
                               standAge, standAgesForFitting = c(0, 150), approach) {
 
@@ -519,24 +547,18 @@ editSpeciesTraits <- function(name, GC, traits, fT, fB, speciesEquiv, sppCol, ma
   traits <- traits[species %in% name]
   ## with two species - the gc might converge for one only
   ## this structure is to catch try-errors in both pairwise and single
-  if (class(GC) == "try-error" || class(GC) == "character") {
-    message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
-    message(paste(GC))
-    return(NULL)
-  } else {
-    ## catch when not all models converged
-    classesNonLinear <- unlist(lapply(GC$NonLinearModel, class))
-    ## decided to allow non-converged GCs, if non-linear converged
-    if (any("try-error" %in% c(classesNonLinear)) || is.null(classesNonLinear)) {
-      msg <- if (is.null(classesNonLinear)) {
-        "NULL"
-      } else {
-        paste(GC$NonLinearModel)
-      }
-      message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
-      message(msg)
-      return(NULL)
+  ## (Init() bypasses trait estimation when no GC passes isFittedGC(), so the two must agree)
+  if (!isFittedGC(GC)) {
+    msg <- if (!is.list(GC)) {
+      paste(GC)
+    } else if (length(GC$NonLinearModel)) {
+      paste(GC$NonLinearModel)
+    } else {
+      "NULL"
     }
+    message("not estimating traits for ", name, " as model was not fit. Output of fitting attempt:")
+    message(msg)
+    return(NULL)
   }
 
   #under focal or pairwise, there will be two species in original data

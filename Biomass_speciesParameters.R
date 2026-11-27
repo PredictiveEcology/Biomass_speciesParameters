@@ -234,7 +234,7 @@ defineModule(sim, list(
 ## event types
 #   - type `init` is required for initialization
 
-doEvent.Biomass_speciesParameters = function(sim, eventTime, eventType) {
+doEvent.Biomass_speciesParameters <- function(sim, eventTime, eventType) {
   switch(
     eventType,
     init = {
@@ -405,7 +405,16 @@ Init <- function(sim) {
     noDataSpp <- vapply(sim$speciesGrowthCurves[classes == "character"], FUN = function(x) {
       x == "insufficient data"
     }, FUN.VALUE = logical(1))
-    
+
+    ## No species has a fitted growth curve, so there are no traits to estimate:
+    ## modifySpeciesTable() stopped in limitToSpeciesLongevity(), joining its empty trait table on
+    ## `species`. Leave the species traits as given, as with PSPdataTypes = "none".
+    if (!any(vapply(sim$speciesGrowthCurves, isFittedGC, logical(1)))) {
+      warning(noFittedCurvesMessage(sim$speciesGrowthCurves, P(sim)$minimumPlots,
+                                    P(sim)$.studyAreaName), call. = FALSE)
+      return(sim)
+    }
+
     if (any(noDataSpp)) {
       message(cli::col_yellow(
         "Insufficient data to estimate species parameters for ",

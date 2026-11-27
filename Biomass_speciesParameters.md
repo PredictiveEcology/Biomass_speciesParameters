@@ -1,6 +1,6 @@
 ---
 title: "LandR _Biomass_speciesParameters_ Manual"
-date: "Last updated: 2026-11-24"
+date: "Last updated: 2026-11-25"
 output:
   bookdown::html_document2:
     toc: true
@@ -28,7 +28,7 @@ always_allow_html: true
 
 
 
-[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParametersd4bf4c6b5f6bb070ba0e1f8b3af2a4589b3fddca)
+[![module-version-Badge](figures/moduleVersionBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters5f30b4d820c064be073c3db25f893c35f0ee24be)
 
 [![Issues-badge](figures/issuesBadge.png)](https://github.com/PredictiveEcology/Biomass_speciesParameters/issues)
 
@@ -79,7 +79,7 @@ data/calibration module that does so (e.g., *Biomass_borealDataPrep*). However
 it can be used stand-alone in an initial developmental phase for easier
 inspection of the statistical calibration procedure employed.
 
-As of November 24, 2026, the *raw* PSP data used in this
+As of November 25, 2026, the *raw* PSP data used in this
 module is not freely available, and data sharing agreements must be obtained
 from the governments of some provinces (e.g., SK and AB) to obtain it. However, the *processed and
 anonymized* PSP data is provided via a Google Drive folder accessed
@@ -970,7 +970,7 @@ Table \@ref(tab:eventObjects-Biomass-speciesParameters) lists, for each object, 
   <tr>
    <td style="text-align:left;padding-left: 2em;" indentlevel="1"> sppEquiv </td>
    <td style="text-align:left;"> .inputObjects (default) </td>
-   <td style="text-align:left;"> init: Init() </td>
+   <td style="text-align:left;"> init: Init(), init (own code) </td>
   </tr>
   <tr>
    <td style="text-align:left;padding-left: 2em;" indentlevel="1"> sppEquivLong </td>
@@ -1039,6 +1039,14 @@ init event, step 1 of 2
 init event, step 2 of 2
 
 ![](figures/Biomass_speciesParameters_io_init_updateSpeciesTables.png){width=100%}
+
+
+
+#### init (own code) {-}
+
+the init event's own code, outside the functions it calls
+
+![](figures/Biomass_speciesParameters_io_init_own.png){width=100%}
 
 ## Usage example {#bsppparam-example}
 
