@@ -62,7 +62,14 @@ defineModule(sim, list(
                                  "'Picea engelmannii x glauca' so they count as Pice_eng, except in the BEC zones",
                                  "of `excludeBECzonesHybridSpruce`. 'white' and NA do not relabel.")),
     defineParameter("minimumPlots", "numeric", 50, 10, NA,
-                    desc = paste("Minimum number of PSP plots per species")),
+                    desc = paste("Minimum number of PSP plot-years (plot x measurement year) a growth curve is",
+                                 "fitted to. Under 'focal', the plot-years where the species has more than 20%",
+                                 "of plot biomass (the co-dominant species pooled as 'Other' are not counted);",
+                                 "under 'pairwise', those where the two species of the pair are the only ones",
+                                 "above 20%; under 'single', those where the species has more than 50%.",
+                                 "Species with fewer are not fitted and, like species whose fit fails, get",
+                                 "the mean `growthcurve`, `mortalityshape`, `mANPPproportion` and",
+                                 "`inflationFactor` of the fitted species of their `hardsoft` class.")),
     defineParameter("minDBH", "integer", 0L, 0L, NA,
                     desc = paste("Minimum diameter at breast height (DBH), in cm, of the PSP trees used",
                                  "to fit growth curves. Each plot's own recorded minimum DBH (the `minDBH`",
@@ -412,6 +419,7 @@ Init <- function(sim) {
       message(cli::col_yellow(
         "Insufficient data to estimate species parameters for ",
         paste(names(noDataSpp), collapse = ", "),
+        " (fewer than minimumPlots = ", P(sim)$minimumPlots, " PSP plot-years)",
         " - will use the average of the estimated species with the same 'hardsoft' value",
         " for 'growthcurve', 'mortalityshape', 'mANPPproportion' and 'inflationFactor'"
       ))
