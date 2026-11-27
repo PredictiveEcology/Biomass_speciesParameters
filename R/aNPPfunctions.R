@@ -367,7 +367,39 @@ limitToSpeciesLongevity <- function(newTraits, speciesTable) {
   newTraits[speciesTableNew, on = c("species", "longevity")]
 }
 
-buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
+## Seed the RNG and return a function that restores the caller's RNG state (call it on exit), so a
+## function's random draws neither depend on nor change the RNG stream it was called from.
+localSeed <- function(seed) {
+  hadSeed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+  oldSeed <- if (hadSeed) get(".Random.seed", envir = globalenv(), inherits = FALSE)
+  set.seed(seed)
+  function() {
+    if (hadSeed) {
+      assign(".Random.seed", oldSeed, envir = globalenv())
+    } else if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
+      rm(".Random.seed", envir = globalenv())
+    }
+  }
+}
+
+## Names of the fitted parameters that sit on a bound of a bounded ("port") fit: the data do not pin
+## them down, so the curve is not identified.
+paramsOnBound <- function(cf, lower, upper, tol = 1e-4) {
+  nm <- intersect(names(cf), names(lower))
+  span <- pmax(abs(upper[nm] - lower[nm]), .Machine$double.eps)
+  nm[abs(cf[nm] - lower[nm]) <= tol * span | abs(cf[nm] - upper[nm]) <= tol * span]
+}
+
+## A "try-error" for a model whose bounded optimum is on a bound, so editSpeciesTraits() and the AIC
+## selection treat it like any other model that was not fit.
+notIdentifiable <- function(model, onBound) {
+  msg <- paste0("Error : ", model, " optimum on parameter bound(s) ", paste(onBound, collapse = ", "),
+                ": the curve is not identifiable from these data\n")
+  structure(msg, class = "try-error",
+            condition = simpleError(trimws(sub("^Error : ", "", msg))))
+}
+
+buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q, seed = 1L) {
   if (class(q) == "list") {
     q <- q[[species]]
   }
@@ -386,6 +418,13 @@ buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
 
     return(GC)
   }
+
+  ## The random draws below (synthetic young stands, their spread, the fits' start values) come from
+  ## this function's own `seed`, and the caller's RNG state is restored on exit: drawn from the
+  ## simulation's RNG stream, whether a species' curve could be fit changed with anything that used
+  ## random numbers earlier in the run.
+  restoreRNG <- localSeed(seed)
+  on.exit(restoreRNG(), add = TRUE)
 
   ## By default removing the 95th percentile of age - these points are usually too scattered to produce reliable estimates
   standData <- standData[standAge < quantile(standData$standAge, probs = q/100),]
@@ -457,6 +496,7 @@ buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
   message(cli::col_yellow(
     speciesForFitsMessage, ": fitting Non-linear equations (Chapman-Richards, Logistic, Gompertz)"
   ))
+  maxBoundHits <- 20L
   nlsouts <- lapply(speciesForFits, function(sp, spFitData = simData2) {
     datForFit <- spFitData[is.na(spFitData$speciesTemp) | spFitData$speciesTemp %in% sp]
     nlsoutInner <- list()
@@ -465,26 +505,46 @@ buildModels <- function(species, psp, speciesEquiv, sppCol, minSize, q) {
       plim <- models[[model]]$plim
       Alim <- models[[model]]$Alim
       klim <- models[[model]]$klim
+      ## Bounded fits: k and p within the model's own ranges, A within 0.1-2 x the largest biomass.
+      ## Unbounded, a curve the data cannot pin down (e.g. plateau already reached by the youngest
+      ## real stands) has its optimum at an extreme rate, so the fit either fails or converges by
+      ## luck of the random starts. A fit whose optimum sits on a bound is rejected below.
+      maxB <- max(simData2$biomass)
+      lower <- c(A = 0.1 * maxB, k = klim[["min"]], p = plim[["min"]])
+      upper <- c(A = 2 * maxB, k = klim[["max"]], p = plim[["max"]])
+      onBound <- character(0)
+      nBoundHits <- 0L
       for (ii in 1:700) {
         # Chapman Richards
         # https://www.srs.fs.usda.gov/pubs/gtr/gtr_srs092/gtr_srs092-068-coble.pdf
-        nlsoutInner[[model]] <- try({
+        fit <- try({
           robustbase::nlrob(as.formula(eqnChar, env = .GlobalEnv),
-                            data = datForFit, #maxit = 200,
+                            data = datForFit,
                             weights = Weights,
                             maxit = 200,
                             start = list(A = runif(1, Alim[["min"]], Alim[["max"]]),
                                          k = runif(1, klim[["min"]], klim[["max"]]),
                                          p = runif(1, plim[["min"]], plim[["max"]])
                             ),
+                            algorithm = "port", lower = lower, upper = upper,
                             trace = FALSE)
         }, silent = TRUE
         )
-        #})
-
-        if (!is(nlsoutInner[[model]], "try-error")) {
-          break
+        nlsoutInner[[model]] <- fit
+        if (!is(fit, "try-error")) {
+          onBound <- paramsOnBound(coef(fit), lower, upper)
+          if (!length(onBound)) {
+            break
+          }
+          ## another start may still find an interior optimum; give up after a few bound hits
+          nBoundHits <- nBoundHits + 1L
+          if (nBoundHits >= maxBoundHits) {
+            break
+          }
         }
+      }
+      if (length(onBound)) {
+        nlsoutInner[[model]] <- notIdentifiable(model, onBound)
       }
     }
     nlsoutInner
